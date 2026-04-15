@@ -1,0 +1,200 @@
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { generateIncidentCode } from "../src/utils/incidentCode.js";
+
+const prisma = new PrismaClient();
+
+const talisayBarangays = [
+  {
+    name: "Zone 1",
+    municipality: "Talisay",
+    city: "Negros Occidental",
+    boundary_geojson: {
+      type: "Polygon",
+      coordinates: [[[122.9595, 10.736], [122.966, 10.736], [122.966, 10.742], [122.9595, 10.742], [122.9595, 10.736]]],
+    },
+  },
+  {
+    name: "Zone 2",
+    municipality: "Talisay",
+    city: "Negros Occidental",
+    boundary_geojson: {
+      type: "Polygon",
+      coordinates: [[[122.966, 10.736], [122.972, 10.736], [122.972, 10.742], [122.966, 10.742], [122.966, 10.736]]],
+    },
+  },
+  {
+    name: "Zone 3",
+    municipality: "Talisay",
+    city: "Negros Occidental",
+    boundary_geojson: {
+      type: "Polygon",
+      coordinates: [[[122.972, 10.736], [122.978, 10.736], [122.978, 10.742], [122.972, 10.742], [122.972, 10.736]]],
+    },
+  },
+  {
+    name: "Zone 4",
+    municipality: "Talisay",
+    city: "Negros Occidental",
+    boundary_geojson: {
+      type: "Polygon",
+      coordinates: [[[122.9595, 10.742], [122.966, 10.742], [122.966, 10.748], [122.9595, 10.748], [122.9595, 10.742]]],
+    },
+  },
+  {
+    name: "Zone 5",
+    municipality: "Talisay",
+    city: "Negros Occidental",
+    boundary_geojson: {
+      type: "Polygon",
+      coordinates: [[[122.966, 10.742], [122.972, 10.742], [122.972, 10.748], [122.966, 10.748], [122.966, 10.742]]],
+    },
+  },
+];
+
+const incidentTypeSeed = [
+  { name: "Fire", color_code: "#F97316", icon_label: "Flame", description: "Structural or open fire incident" },
+  { name: "Accident/Medical", color_code: "#EF4444", icon_label: "Ambulance", description: "Accident and medical emergencies" },
+  { name: "Crime", color_code: "#8B5CF6", icon_label: "ShieldAlert", description: "Crime-related incident" },
+  { name: "Infrastructure Damage", color_code: "#F59E0B", icon_label: "Construction", description: "Road/bridge/public utility damage" },
+  { name: "Public Disturbance", color_code: "#3B82F6", icon_label: "Users", description: "Public order disturbance" },
+];
+
+async function main() {
+  await prisma.incidentAssignment.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.evidence.deleteMany();
+  await prisma.incidentStatusLog.deleteMany();
+  await prisma.incident.deleteMany();
+  await prisma.generatedReport.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.responseUnit.deleteMany();
+  await prisma.incidentType.deleteMany();
+  await prisma.barangay.deleteMany();
+
+  const passwordAdmin = await bcrypt.hash("Admin@2026", 12);
+  const passwordFire = await bcrypt.hash("Fire@2026", 12);
+  const passwordPolice = await bcrypt.hash("Police@2026", 12);
+  const passwordMedical = await bcrypt.hash("Medical@2026", 12);
+  const passwordReporter = await bcrypt.hash("Reporter@2026", 12);
+
+  const barangays = [];
+  for (const barangay of talisayBarangays) {
+    const created = await prisma.barangay.create({ data: barangay });
+    barangays.push(created);
+  }
+
+  const incidentTypes = [];
+  for (const incidentType of incidentTypeSeed) {
+    const created = await prisma.incidentType.create({ data: incidentType });
+    incidentTypes.push(created);
+  }
+
+  const fireUnit = await prisma.responseUnit.create({
+    data: {
+      unit_name: "Talisay Fire Unit Alpha",
+      unit_type: "FIRE",
+      contact_number: "+639171110001",
+      latitude: 10.7421,
+      longitude: 122.9688,
+      barangay_id: barangays[0].barangay_id,
+      availability_status: "AVAILABLE",
+    },
+  });
+
+  const policeUnit = await prisma.responseUnit.create({
+    data: {
+      unit_name: "Talisay Police Unit Bravo",
+      unit_type: "POLICE",
+      contact_number: "+639171110002",
+      latitude: 10.7446,
+      longitude: 122.9712,
+      barangay_id: barangays[1].barangay_id,
+      availability_status: "AVAILABLE",
+    },
+  });
+
+  const medicalUnit = await prisma.responseUnit.create({
+    data: {
+      unit_name: "Talisay Medical Unit Charlie",
+      unit_type: "MEDICAL",
+      contact_number: "+639171110003",
+      latitude: 10.7413,
+      longitude: 122.9654,
+      barangay_id: barangays[2].barangay_id,
+      availability_status: "AVAILABLE",
+    },
+  });
+
+  const adminUser = await prisma.user.create({
+    data: {
+      name: "System Admin",
+      email: "admin@gaoirs.com",
+      password_hash: passwordAdmin,
+      role: "ADMIN",
+      contact_number: "+639170001111",
+      barangay_id: barangays[0].barangay_id,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: "Fire Unit Officer",
+      email: "fire@gaoirs.com",
+      password_hash: passwordFire,
+      role: "RESPONSE_UNIT",
+      contact_number: "+639171110001",
+      unit_id: fireUnit.unit_id,
+      barangay_id: fireUnit.barangay_id,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: "Police Unit Officer",
+      email: "police@gaoirs.com",
+      password_hash: passwordPolice,
+      role: "RESPONSE_UNIT",
+      contact_number: "+639171110002",
+      unit_id: policeUnit.unit_id,
+      barangay_id: policeUnit.barangay_id,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: "Medical Unit Officer",
+      email: "medical@gaoirs.com",
+      password_hash: passwordMedical,
+      role: "RESPONSE_UNIT",
+      contact_number: "+639171110003",
+      unit_id: medicalUnit.unit_id,
+      barangay_id: medicalUnit.barangay_id,
+    },
+  });
+
+  const reporter = await prisma.user.create({
+    data: {
+      name: "Community Reporter",
+      email: "reporter@gaoirs.com",
+      password_hash: passwordReporter,
+      role: "REPORTER",
+      contact_number: "+639179999999",
+      barangay_id: barangays[3].barangay_id,
+    },
+  });
+
+  // eslint-disable-next-line no-console
+  console.log("Seed complete: users, units, barangays, and incident types created. (No dummy incidents for Capstone)");
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

@@ -1,0 +1,53 @@
+import { Server } from "socket.io";
+
+let io;
+
+export const initSocket = (server) => {
+	io = new Server(server, {
+		cors: {
+			origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
+			credentials: true,
+		},
+	});
+
+	io.on("connection", (socket) => {
+		socket.on("join_admin", () => {
+			socket.join("admin");
+		});
+
+		socket.on("join_unit", (unitId) => {
+			if (unitId) {
+				socket.join(`unit-${unitId}`);
+			}
+		});
+
+		socket.on("join_reporter", (userId) => {
+			if (userId) {
+				socket.join(`reporter-${userId}`);
+			}
+		});
+	});
+
+	return io;
+};
+
+export const getIO = () => {
+	if (!io) {
+		throw new Error("Socket.io not initialized");
+	}
+	return io;
+};
+
+export const socketEvents = {
+	newIncident: (payload) => getIO().to("admin").emit("new_incident", payload),
+	incidentAssigned: (unitId, payload) => getIO().to(`unit-${unitId}`).emit("incident_assigned", payload),
+	incidentUpdated: (reporterId, payload) => {
+		getIO().to("admin").emit("incident_updated", payload);
+		if (reporterId) {
+			getIO().to(`reporter-${reporterId}`).emit("incident_updated", payload);
+		}
+	},
+	alertReceived: (unitId, payload) => getIO().to(`unit-${unitId}`).emit("alert_received", payload),
+	statusChanged: (payload) => getIO().to("admin").emit("status_changed", payload),
+	dashboardRefresh: (payload = { refresh: true }) => getIO().to("admin").emit("dashboard_refresh", payload),
+};

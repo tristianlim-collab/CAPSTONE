@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  user_id        String               @id @default(uuid())
+  name           String
+  email          String               @unique
+  password_hash  String
+  contact_number String?
+  role           Role
+  barangay_id    String?
+  unit_id        String?
+  created_at     DateTime             @default(now())
+  evidence       Evidence[]           @relation("UploadedBy")
+  reports        GeneratedReport[]    @relation("GeneratedBy")
+  incidents      Incident[]           @relation("ReportedBy")
+  assignments    IncidentAssignment[] @relation("AssignedByUser")
+  status_logs    IncidentStatusLog[]  @relation("ChangedBy")
+  notifications  Notification[]       @relation("AssignedTo")
+  barangay       Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  unit           ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
+
+  @@map("USER")
+}
+
+model Barangay {
+  barangay_id      String         @id @default(uuid())
+  name             String
+  municipality     String
+  city             String?
+  boundary_geojson Json
+  created_at       DateTime       @default(now())
+  incidents        Incident[]
+  response_units   ResponseUnit[]
+  users            User[]
+
+  @@map("BARANGAYS")
+}
+
+model ResponseUnit {
+  unit_id             String               @id @default(uuid())
+  unit_name           String
+  unit_type           UnitType
+  contact_number      String?
+  latitude            Float?
+  longitude           Float?
+  barangay_id         String?
+  availability_status UnitStatus           @default(AVAILABLE)
+  last_updated        DateTime             @updatedAt
+  assignments         IncidentAssignment[]
+  notifications       Notification[]
+  barangay            Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  users               User[]               @relation("UnitUser")
+
+  @@map("RESPONSE_UNIT")
+}
+
+model IncidentType {
+  type_id     String     @id @default(uuid())
+  name        String
+  color_code  String
+  icon_label  String
+  description String?
+  incidents   Incident[]
+
+  @@map("INCIDENT_TYPES")
+}
+
+model Incident {
+  incident_id      String               @id @default(uuid())
+  incident_code    String               @unique
+  reported_by      String
+  incident_type_id String
+  barangay_id      String?
+  description      String
+  latitude         Float
+  longitude        Float
+  map_pin_address  String?
+  status           IncidentStatus       @default(REPORTED)
+  severity         Severity             @default(MEDIUM)
+  reported_at      DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+  evidence         Evidence[]
+  barangay         Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  incident_type    IncidentType         @relation(fields: [incident_type_id], references: [type_id])
+  reporter         User                 @relation("ReportedBy", fields: [reported_by], references: [user_id])
+  assignments      IncidentAssignment[]
+  status_logs      IncidentStatusLog[]
+  notifications    Notification[]
+
+  @@map("INCIDENT")
+}
+
+model IncidentAssignment {
+  assignment_id    String           @id @default(uuid())
+  incident_id      String
+  unit_id          String
+  assigned_by      String
+  status           AssignmentStatus @default(PENDING)
+  assigned_at      DateTime         @default(now())
+  acknowledged_at  DateTime?
+  arrived_at       DateTime?
+  resolved_at      DateTime?
+  updated_at       DateTime         @updatedAt
+  assigned_by_user User             @relation("AssignedByUser", fields: [assigned_by], references: [user_id])
+  incident         Incident         @relation(fields: [incident_id], references: [incident_id])
+  unit             ResponseUnit     @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("INCIDENT_ASSIGNMENTS")
+}
+
+model IncidentStatusLog {
+  log_id      String         @id @default(uuid())
+  incident_id String
+  changed_by  String
+  status      IncidentStatus
+  remarks     String?
+  changed_at  DateTime       @default(now())
+  user        User           @relation("ChangedBy", fields: [changed_by], references: [user_id])
+  incident    Incident       @relation(fields: [incident_id], references: [incident_id])
+
+  @@map("INCIDENT_STATUS_LOG")
+}
+
+model Evidence {
+  evidence_id String   @id @default(uuid())
+  incident_id String
+  uploaded_by String
+  file_path   String
+  file_type   String
+  uploaded_at DateTime @default(now())
+  incident    Incident @relation(fields: [incident_id], references: [incident_id])
+  uploader    User     @relation("UploadedBy", fields: [uploaded_by], references: [user_id])
+
+  @@map("EVIDENCE")
+}
+
+model Notification {
+  notification_id String         @id @default(uuid())
+  incident_id     String
+  unit_id         String?
+  assigned_by     String?
+  channel         AlertChannel
+  message_body    String
+  delivery_status DeliveryStatus @default(PENDING)
+  sent_at         DateTime       @default(now())
+  assigned_to     User?          @relation("AssignedTo", fields: [assigned_by], references: [user_id])
+  incident        Incident       @relation(fields: [incident_id], references: [incident_id])
+  unit            ResponseUnit?  @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("NOTIFICATIONS")
+}
+
+model GeneratedReport {
+  report_id       String     @id @default(uuid())
+  generated_by    String
+  report_title    String
+  report_type     ReportType
+  file_format     FileFormat
+  filters_applied Json?
+  file_path       String
+  generated_at    DateTime   @default(now())
+  generator       User       @relation("GeneratedBy", fields: [generated_by], references: [user_id])
+
+  @@map("GENERATED_REPORTS")
+}
+
+enum Role {
+  ADMIN
+  RESPONSE_UNIT
+  REPORTER
+}
+
+enum UnitType {
+  FIRE
+  POLICE
+  MEDICAL
+  BARANGAY
+  DRRMO
+}
+
+enum UnitStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+  ON_BREAK
+}
+
+enum IncidentStatus {
+  REPORTED
+  VERIFIED
+  RESPONDING
+  RESOLVED
+  CLOSED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  RESPONDING
+  RESOLVED
+}
+
+enum AlertChannel {
+  SMS
+  EMAIL
+  DASHBOARD
+  PUSH
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ReportType {
+  INCIDENT_SUMMARY
+  AREA_REPORT
+  RESPONSE_TIME
+  FULL_EXPORT
+}
+
+enum FileFormat {
+  PDF
+  EXCEL
+  CSV
+}

@@ -1,0 +1,98 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute, PublicRoute } from './components/common/ProtectedRoute';
+
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import Unauthorized from './pages/auth/Unauthorized';
+
+import ReporterHome from './pages/reporter/ReporterHome';
+import ReportStep1 from './pages/reporter/ReportStep1';
+import ReportStep2 from './pages/reporter/ReportStep2';
+import ReportSuccess from './pages/reporter/ReportSuccess';
+import ReporterProfile from './pages/reporter/ReporterProfile';
+import MyReports from './pages/reporter/MyReports';
+
+import ShiftStart from './pages/response/ShiftStart';
+import ResponseDashboard from './pages/response/ResponseDashboard';
+import ResponseIncidents from './pages/response/ResponseIncidents';
+import ResponseMap from './pages/response/ResponseMap';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import RolesPermissions from './pages/admin/RolesPermissions';
+import IncidentManagement from './pages/admin/IncidentManagement';
+import SystemMonitoring from './pages/admin/SystemMonitoring';
+import Analytics from './pages/admin/Analytics';
+import NotificationSettings from './pages/admin/NotificationSettings';
+import SystemSettings from './pages/admin/SystemSettings';
+
+// Administration Layouts
+import AdminLayout from './components/layout/AdminLayout';
+import ResponseLayout from './components/layout/ResponseLayout';
+
+const EmptyResponsePage = ({ title }) => (
+  <div className="flex flex-col h-full space-y-6 animate-fade-in max-w-6xl mx-auto w-full">
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{title}</h2>
+      <p className="text-slate-500 mt-2">This module is part of the next development phase.</p>
+    </div>
+  </div>
+);
+
+const App = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="roles" element={<RolesPermissions />} />
+            <Route path="categories" element={<IncidentManagement />} />
+            <Route path="monitoring" element={<SystemMonitoring />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="notifications" element={<NotificationSettings />} />
+            <Route path="settings" element={<SystemSettings />} />
+          </Route>
+
+          {/* Response Unit Routes */}
+          <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
+          
+          <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/response/dashboard" replace />} />
+            <Route path="dashboard" element={<ResponseDashboard />} />
+            <Route path="incidents" element={<ResponseIncidents />} />
+            <Route path="map" element={<ResponseMap />} />
+            <Route path="notifications" element={<EmptyResponsePage title="Notifications" />} />
+            <Route path="profile" element={<EmptyResponsePage title="Profile Settings" />} />
+          </Route>
+
+          {/* Reporter Routes */}
+          <Route path="/reporter/home" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
+          <Route path="/reporter/report/step1" element={<ProtectedRoute role="REPORTER"><ReportStep1 /></ProtectedRoute>} />
+          <Route path="/reporter/report/step2" element={<ProtectedRoute role="REPORTER"><ReportStep2 /></ProtectedRoute>} />
+          <Route path="/reporter/report/success" element={<ProtectedRoute role="REPORTER"><ReportSuccess /></ProtectedRoute>} />
+          <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
+          <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />
+          <Route path="/reporter/*" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
+
+          {/* Default */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <Toaster position="top-right" />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
+export default App;
