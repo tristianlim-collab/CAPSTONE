@@ -68,27 +68,11 @@ export default function AdminDashboard() {
               <h4 className="font-bold text-slate-800 text-[15px] mb-1">INC-102: Structure Fire</h4>
               <p className="text-sm font-medium text-slate-600">Assigned <span className="font-bold text-rose-700">Engine 04</span> en route</p>
             </div>
-
-            <div className="group p-4 border border-blue-100 bg-blue-50/30 rounded-2xl relative overflow-hidden transition-all hover:bg-blue-50 hover:shadow-sm cursor-pointer">
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-              <div className="flex items-center justify-between mb-1 text-xs font-bold uppercase tracking-wider text-blue-500">
-                <span>Medical</span>
-                <span>8m ago</span>
-              </div>
-              <h4 className="font-bold text-slate-800 text-[15px] mb-1">INC-892: Traffic Collision</h4>
-              <p className="text-sm font-medium text-slate-600">Resolved by <span className="font-bold text-blue-700">Ambulance 02</span></p>
-            </div>
-
-            <div className="group p-4 border border-orange-100 bg-orange-50/30 rounded-2xl relative overflow-hidden transition-all hover:bg-orange-50 hover:shadow-sm cursor-pointer">
-              <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-              <div className="flex items-center justify-between mb-1 text-xs font-bold uppercase tracking-wider text-orange-500">
-                <span>Rescue</span>
-                <span>23m ago</span>
-              </div>
-              <h4 className="font-bold text-slate-800 text-[15px] mb-1">INC-715: Flooding Report</h4>
-              <p className="text-sm font-medium text-slate-600">Report verified in <span className="font-bold text-orange-700">Brgy. Pinyahan</span></p>
-            </div>
             
+            <div className="text-center text-slate-400 py-4 text-sm font-medium">
+              No recent dispatches.
+            </div>
+
             <button className="w-full py-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors mt-2">
               View All Dispatches
             </button>

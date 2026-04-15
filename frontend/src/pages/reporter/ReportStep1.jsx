@@ -3,8 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../components/common/Button';
 import { 
   ArrowLeft, MapPin, Navigation2, Flame, 
-  Stethoscope, ShieldAlert, LifeBuoy, AlertTriangle, Crosshair
+  Stethoscope, ShieldAlert, LifeBuoy, AlertTriangle, Crosshair, Car, FileText
 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix leaflet icon paths
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function LocationMarker({ location, setLocation }) {
+  useMapEvents({
+    click(e) {
+      setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+
+  return location ? <Marker position={[location.lat, location.lng]} /> : null;
+}
 
 export default function ReportStep1() {
   const navigate = useNavigate();
@@ -14,10 +35,11 @@ export default function ReportStep1() {
   const [selectedType, setSelectedType] = useState('');
 
   const emergencyTypes = [
-    { id: 'FIRE', name: 'Fire', icon: <Flame size={24} />, color: 'bg-orange-50 text-orange-600 border-orange-200' },
-    { id: 'MEDICAL', name: 'Medical', icon: <Stethoscope size={24} />, color: 'bg-blue-50 text-blue-600 border-blue-200' },
-    { id: 'POLICE', name: 'Police', icon: <ShieldAlert size={24} />, color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
-    { id: 'RESCUE', name: 'Rescue', icon: <LifeBuoy size={24} />, color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    { id: 'FIRE', name: 'FIRE', icon: <Flame size={24} />, color: 'bg-orange-50 text-orange-600 border-orange-200' },
+    { id: 'MEDICAL', name: 'MEDICAL EMERGENCY', icon: <Stethoscope size={24} />, color: 'bg-rose-50 text-rose-600 border-rose-200' },
+    { id: 'ACCIDENT', name: 'ACCIDENT', icon: <Car size={24} />, color: 'bg-blue-50 text-blue-600 border-blue-200' },
+    { id: 'CRIME', name: 'CRIME-RELATED', icon: <AlertTriangle size={24} />, color: 'bg-amber-50 text-amber-600 border-amber-200' },
+    { id: 'OTHER', name: 'OTHER', icon: <FileText size={24} />, color: 'bg-slate-50 text-slate-600 border-slate-200' },
   ];
 
   useEffect(() => {
@@ -56,7 +78,7 @@ export default function ReportStep1() {
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
               <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Step 1 of 2</p>
+            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Step 1/5</p>
           </div>
         </div>
       </div>
@@ -98,42 +120,67 @@ export default function ReportStep1() {
 
         {/* Location Box */}
         <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase mb-3 flex items-center gap-2">
-          <MapPin size={16} className="text-blue-500" /> Current Location
+          <MapPin size={16} className="text-blue-500" /> Where did it happen?
         </h3>
+        <p className="text-xs text-slate-500 mb-3">Pin the exact location on the map.</p>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-          {/* Subtle map pattern background */}
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
-          
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex-1">
-              {location ? (
-                <>
-                  <p className="text-sm font-semibold text-slate-900 mb-0.5 flex items-center gap-1.5">
-                    <Crosshair size={14} className="text-emerald-500" /> Location Acquired
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Lat: {location.lat.toFixed(5)}<br /> 
-                    Lng: {location.lng.toFixed(5)}
-                  </p>
-                </>
-              ) : locError ? (
-                <div className="text-rose-500 text-sm font-medium">
-                  <p>{locError}</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin"></div>
-                  <p className="text-sm font-medium text-slate-600 tracking-wide">Acquiring GPS...</p>
-                </div>
-              )}
-            </div>
-
-            <button className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 hover:bg-blue-100 transition-colors">
+        <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group mb-4">
+          <div className="h-[240px] w-full rounded-xl overflow-hidden bg-slate-100 z-0 relative">
+            {location ? (
+              <MapContainer 
+                center={[location.lat, location.lng]} 
+                zoom={14} 
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+              >
+                <TileLayer
+                  attribution='&copy; OpenStreetMap'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <LocationMarker location={location} setLocation={setLocation} />
+              </MapContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {locError ? (
+                  <p className="text-rose-500 text-sm font-medium px-4 text-center">{locError}</p>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin mb-2"></div>
+                    <p className="text-sm font-medium text-slate-600 tracking-wide">Acquiring GPS...</p>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {/* Find Me Button overlaid on map */}
+            <button 
+              onClick={() => {
+                if ('geolocation' in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+                  );
+                }
+              }}
+              className="absolute bottom-4 right-4 z-[400] w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
+            >
               <Navigation2 size={18} />
             </button>
           </div>
         </div>
+
+        {/* Coordinate Text Boxes like in the screenshot */}
+        {location && (
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Latitude</span>
+              <span className="text-sm font-semibold text-slate-800">{location.lat.toFixed(6)}</span>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Longitude</span>
+              <span className="text-sm font-semibold text-slate-800">{location.lng.toFixed(6)}</span>
+            </div>
+          </div>
+        )}
 
       </div>
 

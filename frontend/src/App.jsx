@@ -19,6 +19,8 @@ import ShiftStart from './pages/response/ShiftStart';
 import ResponseDashboard from './pages/response/ResponseDashboard';
 import ResponseIncidents from './pages/response/ResponseIncidents';
 import ResponseMap from './pages/response/ResponseMap';
+import ResponseProfile from './pages/response/ResponseProfile';
+import ResponseNotifications from './pages/response/ResponseNotifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import RolesPermissions from './pages/admin/RolesPermissions';
@@ -72,8 +74,8 @@ const App = () => {
             <Route path="dashboard" element={<ResponseDashboard />} />
             <Route path="incidents" element={<ResponseIncidents />} />
             <Route path="map" element={<ResponseMap />} />
-            <Route path="notifications" element={<EmptyResponsePage title="Notifications" />} />
-            <Route path="profile" element={<EmptyResponsePage title="Profile Settings" />} />
+            <Route path="notifications" element={<ResponseNotifications />} />
+            <Route path="profile" element={<ResponseProfile />} />
           </Route>
 
           {/* Reporter Routes */}

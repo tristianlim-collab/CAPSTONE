@@ -5,12 +5,11 @@ const IncidentManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const categories = [
-    { id: 1, code: 'FIRE', name: 'Fire / Explosion', severity: 'HIGH', count: 124, status: 'Active', color: 'orange' },
-    { id: 2, code: 'MED', name: 'Medical Emergency', severity: 'HIGH', count: 489, status: 'Active', color: 'blue' },
-    { id: 3, code: 'POL', name: 'Crime / Police', severity: 'CRITICAL', count: 56, status: 'Active', color: 'indigo' },
-    { id: 4, code: 'RESCUE', name: 'Rescue / Disaster', severity: 'HIGH', count: 21, status: 'Active', color: 'emerald' },
-    { id: 5, code: 'TRF', name: 'Traffic / Accident', severity: 'MEDIUM', count: 320, status: 'Active', color: 'yellow' },
-    { id: 6, code: 'ANML', name: 'Animal Control', severity: 'LOW', count: 8, status: 'Disabled', color: 'slate' },
+    { id: 1, code: 'FIRE', name: 'Fire / Explosion', severity: 'HIGH', count: 0, status: 'Active', color: 'orange' },
+    { id: 2, code: 'MED', name: 'Medical Emergency', severity: 'HIGH', count: 0, status: 'Active', color: 'blue' },
+    { id: 3, code: 'POL', name: 'Crime / Police', severity: 'CRITICAL', count: 0, status: 'Active', color: 'indigo' },
+    { id: 5, code: 'TRF', name: 'Traffic / Accident', severity: 'MEDIUM', count: 0, status: 'Active', color: 'yellow' },
+    { id: 6, code: 'ANML', name: 'Animal Control', severity: 'LOW', count: 0, status: 'Disabled', color: 'slate' },
   ];
 
   return (

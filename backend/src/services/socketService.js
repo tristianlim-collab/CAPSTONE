@@ -5,6 +5,9 @@ export default {
     io = new Server(server, { cors: { origin: process.env.FRONTEND_URL || '*', methods: ['GET', 'POST'] } });
     io.on('connection', (socket) => {
       socket.on('join_room', (room) => socket.join(room));
+      socket.on('join_admin', () => socket.join('ADMIN'));
+      socket.on('join_unit', (unitId) => socket.join(`UNIT_${unitId}`));
+      socket.on('join_reporter', (userId) => socket.join(`REPORTER_${userId}`));
     });
     return io;
   },

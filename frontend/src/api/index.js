@@ -47,6 +47,7 @@ export const incidentAPI = {
   getAll: (params) => api.get('/incidents', { params }),
   getById: (id) => api.get(`/incidents/${id}`),
   updateStatus: (id, data) => api.patch(`/incidents/${id}/status`, data),
+  getAssignedIncidents: () => api.get('/incidents'),
 };
 
 // Upload endpoints

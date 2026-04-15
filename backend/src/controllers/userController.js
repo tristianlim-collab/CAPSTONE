@@ -65,13 +65,13 @@ export const deleteUser = async (req, res) => {
 
 export const toggleStatus = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    const user = await prisma.user.findUnique({ where: { user_id: req.params.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
     
     const updatedUser = await prisma.user.update({
-      where: { id: req.params.id },
+      where: { user_id: req.params.id },
       data: { is_active: !user.is_active },
-      select: { id: true, is_active: true, name: true }
+      select: { user_id: true, is_active: true, name: true }
     });
     
     res.json(updatedUser);
