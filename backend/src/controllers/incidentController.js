@@ -13,6 +13,19 @@ export const createIncident = async (req, res) => {
     // Generate unique code (e.g. INC-Date-Rand)
     const incident_code = `INC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
 
+    const incidentType = await prisma.incidentType.findUnique({ where: { type_id: incident_type_id } });
+    
+    // Attempt Auto-Assignment
+    let targetUnitType = null;
+    if (incidentType) {
+      const name = incidentType.name.toUpperCase();
+      if (name.includes('FIRE')) targetUnitType = 'FIRE';
+      else if (name.includes('POLICE') || name.includes('CRIME')) targetUnitType = 'POLICE';
+      else if (name.includes('MEDICAL') || name.includes('EMERGENCY') || name.includes('HEALTH')) targetUnitType = 'MEDICAL';
+      else if (name.includes('DRRMO') || name.includes('DISASTER')) targetUnitType = 'DRRMO';
+      else targetUnitType = 'BARANGAY';
+    }
+
     const incident = await prisma.incident.create({
       data: {
         incident_code,
@@ -26,6 +39,33 @@ export const createIncident = async (req, res) => {
         barangay_id: detectedBarangayId
       }
     });
+
+    const nearestUnits = await geoService.findNearestUnits(latitude, longitude, 1, targetUnitType);
+    if (nearestUnits && nearestUnits.length > 0) {
+      const assignedUnit = nearestUnits[0];
+      
+      const assignment = await prisma.incidentAssignment.create({
+        data: {
+          incident_id: incident.incident_id,
+          unit_id: assignedUnit.unit_id,
+          assigned_by: req.user.id, // automated assignment usually attributed to system or reporter
+          status: 'PENDING'
+        }
+      });
+
+      await prisma.notification.create({
+        data: {
+          incident_id: incident.incident_id,
+          unit_id: assignedUnit.unit_id,
+          channel: 'DASHBOARD',
+          message_body: `New ${incidentType?.name || 'Emergency'} Dispatch: ${incident.incident_code}`,
+          delivery_status: 'SENT'
+        }
+      });
+
+      // trigger socket event and potential SMS/Email depending on unit configuration via alertService
+      await alertService.notifyUnitDispatch(incident, assignedUnit, assignment, null).catch(err => console.error("Alert delivery error:", err));
+    }
 
     // Automatically emit socket event
     socketService.emitNewIncident(incident);
@@ -52,6 +92,15 @@ export const getIncidents = async (req, res) => {
 
     if (req.user.role === 'REPORTER') {
       where.reported_by = req.user.id;
+    } else if (req.user.role === 'RESPONSE_UNIT') {
+      // Map to limit Response Unit viewing solely to their own unit's dispatches.
+      where.assignments = {
+        some: {
+          unit: {
+            users: { some: { user_id: req.user.id } }
+          }
+        }
+      };
     }
 
     const incidents = await prisma.incident.findMany({

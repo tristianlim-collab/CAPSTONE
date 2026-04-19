@@ -17,7 +17,7 @@ const ResponseMap = () => {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // default center somewhere around central Negros (or exact base)
+  // Default center: Negros Island Region, Philippines
   const defaultCenter = [10.0000, 122.9000];
 
   // Bounds strictly for Negros Island Region (NIR)
@@ -34,7 +34,7 @@ const ResponseMap = () => {
     try {
       setLoading(true);
       const res = await incidentAPI.getAssignedIncidents();
-      if (res.data?.success) {
+      if (res.data?.data) {
         setIncidents(res.data.data.filter(inc => inc.latitude && inc.longitude && ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status)));
       }
     } catch (error) {
@@ -120,7 +120,7 @@ const ResponseMap = () => {
                     <div className="flex items-start justify-between mb-3 border-b border-slate-100 pb-3">
                       <div>
                         <span className="font-bold text-slate-800 text-sm block">{incident.incident_code}</span>
-                        <span className="text-xs text-slate-400 block mt-0.5">{incident.type || 'Unknown Type'}</span>
+                        <span className="text-xs text-slate-400 block mt-0.5">{incident.incident_type?.name || 'Unknown Type'}</span>
                       </div>
                       <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full text-white ${getStatusColor(incident.status)} shadow-sm`}>
                         {incident.status}

@@ -1,48 +1,149 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '../../components/common/Button';
-import { incidentAPI, uploadAPI } from '../../api';
+import { incidentAPI } from '../../api';
+import api from '../../api';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Camera, Image as ImageIcon, Send, FileText, CheckCircle2 } from 'lucide-react';
+import { 
+  ArrowLeft, Camera, Image as ImageIcon, Send, FileText, CheckCircle2, 
+  MapPin, ShieldAlert, X, Clock, AlertTriangle
+} from 'lucide-react';
 
 export default function ReportStep2() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
-  const [photo, setPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]); // support multiple photos
+  const [incidentTypes, setIncidentTypes] = useState([]);
+  const [locationAddress, setLocationAddress] = useState('');
+  const [addressLoading, setAddressLoading] = useState(true);
+
+  // Retrieve data from step 1
+  const location = JSON.parse(sessionStorage.getItem('incidentLocation') || 'null');
+  const incidentTypeKey = sessionStorage.getItem('incidentType') || '';
+
+  // Fetch incident types from DB on mount
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const res = await api.get('/incident-types');
+        setIncidentTypes(res.data);
+      } catch (err) {
+        console.error('Failed to fetch incident types:', err);
+      }
+    };
+    fetchTypes();
+  }, []);
+
+  // Reverse geocode the location to get address
+  useEffect(() => {
+    if (location && location.lat && location.lng) {
+      setAddressLoading(true);
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lng}&zoom=18&addressdetails=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.display_name) {
+            // Build a shorter, readable address
+            const addr = data.address || {};
+            const parts = [
+              addr.road || addr.hamlet || addr.neighbourhood,
+              addr.suburb || addr.village || addr.town,
+              addr.city || addr.municipality,
+              addr.state || addr.province
+            ].filter(Boolean);
+            setLocationAddress(parts.length > 0 ? parts.join(', ') : data.display_name);
+          } else {
+            setLocationAddress('Unknown location');
+          }
+          setAddressLoading(false);
+        })
+        .catch(() => {
+          setLocationAddress('Could not resolve address');
+          setAddressLoading(false);
+        });
+    } else {
+      setAddressLoading(false);
+    }
+  }, []);
+
+  // Find matching incident type ID from DB types
+  const getIncidentTypeId = () => {
+    if (incidentTypes.length === 0) return null;
+    // Try to match by name (case-insensitive partial match)
+    const match = incidentTypes.find(t => 
+      t.name.toUpperCase().includes(incidentTypeKey.toUpperCase()) || 
+      incidentTypeKey.toUpperCase().includes(t.name.toUpperCase())
+    );
+    return match ? match.type_id : incidentTypes[0]?.type_id;
+  };
 
   const handleSubmit = async () => {
+    if (!description.trim()) {
+      toast.error('Please describe the incident');
+      return;
+    }
+
+    const typeId = getIncidentTypeId();
+    if (!typeId) {
+      toast.error('Incident types not loaded yet. Please wait.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const loc = JSON.parse(sessionStorage.getItem('incidentLocation') || '{}');
-      const incType = sessionStorage.getItem('incidentType') || 'UNKNOWN';
-      
-      // 1. Create incident (Using mocked '1' for type, refine on backend if needed)
+      // 1. Create the incident
       const incRes = await incidentAPI.create({
-        incident_type_id: '1', 
-        description: `${incType}: ${description}`,
-        latitude: loc.lat || 0,
-        longitude: loc.lng || 0,
+        incident_type_id: typeId,
+        description: description.trim(),
+        latitude: location?.lat || 0,
+        longitude: location?.lng || 0,
+        map_pin_address: locationAddress || undefined,
         severity: 'HIGH'
       });
 
-      // 2. Upload photo if exists
-      if (photo) {
-        await uploadAPI.uploadPhoto(photo, incRes.data.incident_id);
+      // 3. If we have photos, upload them as evidence linked to the incident
+      const incidentId = incRes.data?.incident_id;
+      if (incidentId && photos.length > 0) {
+        for (const photo of photos) {
+          try {
+            const formData = new FormData();
+            formData.append('file', photo);
+            formData.append('incident_id', incidentId);
+            await api.post('/evidence', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+          } catch (evErr) {
+            console.error('Evidence upload failed:', evErr);
+          }
+        }
       }
 
-      toast.success("Incident Reported successfully");
+      toast.success('Incident reported successfully!');
       navigate('/reporter/report/success');
     } catch (err) {
-      toast.error('Failed to submit emergency report');
+      console.error('Submit error:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit emergency report');
       setLoading(false);
     }
   };
 
   const handlePhotoChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setPhoto(e.target.files[0]);
+    if (e.target.files) {
+      const newPhotos = [...photos, ...Array.from(e.target.files)].slice(0, 5); // max 5
+      setPhotos(newPhotos);
     }
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Emergency type display name
+  const typeNames = {
+    'FIRE': 'Fire',
+    'MEDICAL': 'Medical Emergency', 
+    'ACCIDENT': 'Accident',
+    'CRIME': 'Crime-Related',
+    'OTHER': 'Other'
   };
 
   return (
@@ -82,42 +183,102 @@ export default function ReportStep2() {
           </div>
         </div>
 
-        {/* Media Upload */}
+        {/* Summary Cards: Type + Location */}
+        <div className="space-y-3 mb-6">
+          {/* Emergency Type */}
+          <div className="bg-white rounded-2xl px-4 py-3 border border-slate-200 shadow-sm flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+              <AlertTriangle size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Emergency Type</p>
+              <p className="text-sm font-bold text-slate-800">{typeNames[incidentTypeKey] || incidentTypeKey}</p>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="bg-white rounded-2xl px-4 py-3 border border-slate-200 shadow-sm flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+              <MapPin size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Location</p>
+              {addressLoading ? (
+                <p className="text-sm text-slate-400">Resolving address...</p>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-slate-800 truncate">{locationAddress}</p>
+                  {location && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="bg-white rounded-2xl px-4 py-3 border border-slate-200 shadow-sm flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">
+              <Clock size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Time</p>
+              <p className="text-sm font-bold text-slate-800">{new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Description Field (on top as requested) */}
         <div className="mb-6">
-          <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase mb-3 flex items-center gap-2">
-            <Camera size={16} className="text-blue-500" /> Evidence Photo
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2">
+              <FileText size={16} className="text-blue-500" /> Description
+            </h3>
+            <span className="text-xs text-slate-400">{description.length}/500</span>
+          </div>
           
-          <div className="relative group">
-            {photo ? (
-              <div className="relative w-full h-48 bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-sm">
+          <textarea 
+            rows="4"
+            value={description}
+            maxLength={500}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe what happened, injuries, hazards, or specific landmarks..."
+            className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm resize-none transition-all"
+          ></textarea>
+        </div>
+
+        {/* Photo Evidence */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2">
+              <Camera size={16} className="text-blue-500" /> Photo Evidence
+            </h3>
+            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-bold uppercase">Optional</span>
+          </div>
+          
+          {/* Photo Grid */}
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {photos.map((photo, index) => (
+              <div key={index} className="relative aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-200">
                 <img 
                   src={URL.createObjectURL(photo)} 
-                  alt="Incident Evidence" 
-                  className="w-full h-full object-cover opacity-90 transition-transform duration-500 hover:scale-105"
+                  alt={`Evidence ${index + 1}`}
+                  className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex items-end p-4">
-                  <div className="flex items-center gap-2 text-white">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span className="text-sm font-medium">Photo attached</span>
-                  </div>
-                </div>
                 <button 
-                  onClick={() => setPhoto(null)}
-                  className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-500/80 transition-colors"
+                  onClick={() => removePhoto(index)}
+                  className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 backdrop-blur rounded-full text-white flex items-center justify-center hover:bg-red-500 transition-colors"
                 >
-                  <ArrowLeft size={16} className="rotate-45" /> {/* Used as a creative 'X' fallback */}
+                  <X size={12} />
                 </button>
               </div>
-            ) : (
-              <div className="w-full h-40 border-2 border-dashed border-blue-200 bg-blue-50 hover:bg-blue-100/50 transition-colors rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer shadow-sm relative overflow-hidden">
-                <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-blue-500">
-                  <ImageIcon size={24} />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-slate-700">Tap to upload photo</p>
-                  <p className="text-xs text-slate-500 mt-1">Supports JPG, PNG (Max 5MB)</p>
-                </div>
+            ))}
+
+            {/* Add Photo Button */}
+            {photos.length < 5 && (
+              <div className="relative aspect-square border-2 border-dashed border-blue-200 bg-blue-50 hover:bg-blue-100/50 transition-colors rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+                <Camera size={20} className="text-blue-400 mb-1" />
+                <span className="text-[10px] font-bold text-blue-400">Add Photo</span>
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -128,24 +289,9 @@ export default function ReportStep2() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Description Field */}
-        <div className="mb-6 flex-1">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2">
-              <FileText size={16} className="text-blue-500" /> Description
-            </h3>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-full">Optional</span>
-          </div>
-          
-          <textarea 
-            rows="5"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what happened, injuries, hazards, or specific landmarks..."
-            className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm resize-none transition-all"
-          ></textarea>
+          {photos.length > 0 && (
+            <p className="text-[11px] text-slate-400">{photos.length}/5 photos attached</p>
+          )}
         </div>
 
       </div>
@@ -155,8 +301,12 @@ export default function ReportStep2() {
         <div className="max-w-[430px] mx-auto">
           <button 
             onClick={handleSubmit} 
-            disabled={loading}
-            className="w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg bg-red-600 text-white hover:bg-red-700 shadow-red-600/30 disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={loading || !description.trim()}
+            className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
+              !loading && description.trim()
+                ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+            }`}
           >
             {loading ? (
               <>

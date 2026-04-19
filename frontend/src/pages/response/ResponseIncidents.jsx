@@ -21,7 +21,7 @@ const ResponseIncidents = () => {
   const fetchIncidents = async () => {
     try {
       const response = await incidentAPI.getAll();
-      setIncidents(response.data.data.incidents);
+      setIncidents(response.data.data || []);
     } catch (error) {
       toast.error('Failed to load incidents');
     } finally {
@@ -142,7 +142,7 @@ const ResponseIncidents = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredIncidents.map((incident) => (
-                  <tr key={incident.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr key={incident.incident_id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-mono text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
                         {incident.incident_code}
@@ -152,7 +152,7 @@ const ResponseIncidents = () => {
                       <div className="flex items-center gap-2">
                         <AlertCircle size={14} className="text-slate-400" />
                         <span className="text-sm font-bold text-slate-700 capitalize">
-                          {incident.type.replace('_', ' ').toLowerCase()}
+                          {(incident.incident_type?.name || 'Unknown').replace('_', ' ').toLowerCase()}
                         </span>
                       </div>
                     </td>

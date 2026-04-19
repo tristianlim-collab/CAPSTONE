@@ -11,6 +11,7 @@ import evidenceRoutes from "./routes/evidenceRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 import { success, error } from "./utils/apiResponse.js";
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/evidence", evidenceRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.get("/api/health", (_req, res) => {
 	return res.status(200).json(

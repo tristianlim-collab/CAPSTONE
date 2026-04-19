@@ -9,7 +9,7 @@ const geoService = {
     try {
       const result = await prisma.$queryRaw`
         SELECT barangay_id 
-        FROM "Barangay"
+        FROM "BARANGAYS"
         WHERE ST_Within(
           ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326),
           ST_GeomFromGeoJSON(boundary_geojson::text)
@@ -39,7 +39,7 @@ const geoService = {
                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
                  ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography
                ) as distance
-        FROM "ResponseUnit"
+        FROM "RESPONSE_UNIT"
         WHERE availability_status = 'AVAILABLE' 
           AND latitude IS NOT NULL 
           AND longitude IS NOT NULL

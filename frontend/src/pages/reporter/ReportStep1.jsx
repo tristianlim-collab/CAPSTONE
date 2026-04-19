@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/common/Button';
 import { 
   ArrowLeft, MapPin, Navigation2, Flame, 
   Stethoscope, ShieldAlert, LifeBuoy, AlertTriangle, Crosshair, Car, FileText
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -17,6 +17,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Default center: Negros Island Region, Philippines
+const DEFAULT_CENTER = { lat: 10.0000, lng: 122.9000 };
+
 function LocationMarker({ location, setLocation }) {
   useMapEvents({
     click(e) {
@@ -27,11 +30,24 @@ function LocationMarker({ location, setLocation }) {
   return location ? <Marker position={[location.lat, location.lng]} /> : null;
 }
 
+// Component to recenter map when location changes
+function RecenterMap({ lat, lng }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lat && lng) {
+      map.setView([lat, lng], 16, { animate: true });
+    }
+  }, [lat, lng, map]);
+  return null;
+}
+
 export default function ReportStep1() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
   const [locError, setLocError] = useState('');
+  const [geoLoading, setGeoLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('');
 
   const emergencyTypes = [
@@ -43,15 +59,58 @@ export default function ReportStep1() {
   ];
 
   useEffect(() => {
-    if ('geolocation' in navigator) {
+    // Check if we're on a secure context (HTTPS or localhost) - GPS only works there
+    const isSecureContext = window.isSecureContext;
+    
+    if (isSecureContext && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => setLocError('Unable to get your exact location. Please ensure location services are enabled.')
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(coords);
+          setMapCenter(coords);
+          setGeoLoading(false);
+          setLocError('');
+        },
+        (err) => {
+          console.warn('Geolocation failed:', err.message);
+          setLocError('');
+          setGeoLoading(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
       );
     } else {
-      setLocError('Geolocation is not supported by your browser.');
+      // Not a secure context (HTTP on non-localhost) — GPS won't work, skip silently
+      setGeoLoading(false);
     }
   }, []);
+
+  const handleFindMe = () => {
+    if (!('geolocation' in navigator)) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setLocation(coords);
+        setMapCenter(coords);
+        setLocError('');
+        setGeoLoading(false);
+      },
+      (err) => {
+        console.warn('Geolocation failed:', err.message);
+        setLocError('Could not detect GPS. Tap the map to pin the incident location.');
+        setGeoLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
 
   const handleNext = () => {
     if (!selectedType) return;
@@ -122,14 +181,29 @@ export default function ReportStep1() {
         <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase mb-3 flex items-center gap-2">
           <MapPin size={16} className="text-blue-500" /> Where did it happen?
         </h3>
-        <p className="text-xs text-slate-500 mb-3">Pin the exact location on the map.</p>
+        <p className="text-xs text-slate-500 mb-3">
+          {location ? 'Tap the map to adjust the pin.' : 'Tap the map to pin the exact location.'}
+        </p>
+
+        {/* Location warning banner */}
+        {locError && (
+          <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2">
+            <AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-700 font-medium">{locError}</p>
+          </div>
+        )}
 
         <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group mb-4">
           <div className="h-[240px] w-full rounded-xl overflow-hidden bg-slate-100 z-0 relative">
-            {location ? (
+            {geoLoading && !location ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin mb-2"></div>
+                <p className="text-sm font-medium text-slate-600 tracking-wide">Acquiring GPS...</p>
+              </div>
+            ) : (
               <MapContainer 
-                center={[location.lat, location.lng]} 
-                zoom={14} 
+                center={[mapCenter.lat, mapCenter.lng]} 
+                zoom={location ? 16 : 13} 
                 style={{ height: '100%', width: '100%' }}
                 className="z-0"
               >
@@ -137,30 +211,18 @@ export default function ReportStep1() {
                   attribution='&copy; OpenStreetMap'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <LocationMarker location={location} setLocation={setLocation} />
+                <LocationMarker location={location} setLocation={(loc) => {
+                  setLocation(loc);
+                  setLocError('');
+                }} />
+                {location && <RecenterMap lat={location.lat} lng={location.lng} />}
               </MapContainer>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                {locError ? (
-                  <p className="text-rose-500 text-sm font-medium px-4 text-center">{locError}</p>
-                ) : (
-                  <>
-                    <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin mb-2"></div>
-                    <p className="text-sm font-medium text-slate-600 tracking-wide">Acquiring GPS...</p>
-                  </>
-                )}
-              </div>
             )}
             
             {/* Find Me Button overlaid on map */}
             <button 
-              onClick={() => {
-                if ('geolocation' in navigator) {
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-                  );
-                }
-              }}
+              onClick={handleFindMe}
+              title="Use my current location"
               className="absolute bottom-4 right-4 z-[400] w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
             >
               <Navigation2 size={18} />
