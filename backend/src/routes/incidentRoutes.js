@@ -9,5 +9,6 @@ router.get('/', controller.getIncidents);
 router.get('/heatmap', authorize('ADMIN'), controller.getHeatmap);
 router.get('/:id', controller.getIncidentById);
 router.patch('/:id/status', authorize('ADMIN', 'RESPONSE_UNIT'), controller.updateIncidentStatus);
+router.post('/:id/backup', authorize('ADMIN', 'RESPONSE_UNIT'), controller.requestBackup);
 
 export default router;

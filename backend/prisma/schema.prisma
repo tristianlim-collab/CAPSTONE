@@ -24,6 +24,7 @@ model User {
   assignments    IncidentAssignment[] @relation("AssignedByUser")
   status_logs    IncidentStatusLog[]  @relation("ChangedBy")
   notifications  Notification[]       @relation("AssignedTo")
+  post_reports   PostIncidentReport[] @relation("PostReportSubmitter")
   barangay       Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit           ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
 
@@ -94,8 +95,26 @@ model Incident {
   assignments      IncidentAssignment[]
   status_logs      IncidentStatusLog[]
   notifications    Notification[]
+  post_report      PostIncidentReport?
 
   @@map("INCIDENT")
+}
+
+model PostIncidentReport {
+  report_id        String   @id @default(uuid())
+  incident_id      String   @unique
+  submitted_by     String
+  response_time_minutes Int?
+  actions_taken    String
+  casualties       Int      @default(0)
+  damages_estimate String?
+  remarks          String?
+  photos           String[] @default([])
+  submitted_at     DateTime @default(now())
+  incident         Incident @relation(fields: [incident_id], references: [incident_id])
+  submitter        User     @relation("PostReportSubmitter", fields: [submitted_by], references: [user_id])
+
+  @@map("POST_INCIDENT_REPORTS")
 }
 
 model IncidentAssignment {
@@ -197,7 +216,9 @@ enum IncidentStatus {
   REPORTED
   VERIFIED
   RESPONDING
+  ON_SCENE
   RESOLVED
+  FALSE_ALARM
   CLOSED
 }
 
@@ -213,6 +234,7 @@ enum AssignmentStatus {
   ACCEPTED
   REJECTED
   RESPONDING
+  ON_SCENE
   RESOLVED
 }
 

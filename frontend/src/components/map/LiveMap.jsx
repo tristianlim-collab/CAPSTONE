@@ -7,9 +7,8 @@ import HeatmapLayer from './HeatmapLayer';
 import MapLegend from './MapLegend';
 import toast from 'react-hot-toast';
 
-// To be imported from context/api later when fully wired
-// import { useSocket } from '../../context/SocketContext';
-// import { incidentAPI, barangayAPI } from '../../api';
+import { useSocketContext } from '../../context/SocketContext';
+import { incidentAPI } from '../../api';
 
 // Fix for default Leaflet icon paths in React
 import L from 'leaflet';
@@ -29,39 +28,34 @@ export default function LiveMap({ center = [10.0000, 122.9000], zoom = 9 }) {
     [11.1000, 123.6500] // Northeast
   ];
 
-  // Placeholder for socket context connection
-  // const { socket } = useSocket();
+  const { on } = useSocketContext();
 
   useEffect(() => {
-    // 1. Fetch initial incidents
-    // incidentAPI.getAll({ status: 'REPORTED,VERIFIED,RESPONDING' }).then(res => setIncidents(res.data.data));
+    // Fetch initial active incidents
+    incidentAPI.getAll({ limit: 100 }).then(res => {
+      // Filter out resolved incidents for the map
+      const activeIncidents = res.data?.data?.filter(inc => inc.status !== 'RESOLVED' && inc.status !== 'CLOSED' && inc.status !== 'FALSE_ALARM') || [];
+      setIncidents(activeIncidents);
+    }).catch(err => console.error("Map fetch error:", err));
+
+    // Socket.io Subscriptions
+    const unsub1 = on('new_incident', (incident) => {
+      setIncidents(prev => [incident, ...prev]);
+    });
     
-    // 2. Fetch barangay boundaries
-    // barangayAPI.getAll().then(res => setBoundaries(res.data.data));
-
-    // Clear out fallback mock incidents to have an empty map initially
-    setIncidents([]);
-
-    // 3. Socket.io Subscriptions
-    /*
-    if (socket) {
-      socket.on('new_incident', (incident) => {
-        toast.error('NEW INCIDENT REPORTED');
-        setIncidents(prev => [incident, ...prev]);
+    const unsub2 = on('incident_status_updated', (updatedData) => {
+      setIncidents(prev => {
+        if (updatedData.status === 'RESOLVED' || updatedData.status === 'CLOSED' || updatedData.status === 'FALSE_ALARM') {
+          return prev.filter(inc => inc.incident_id !== updatedData.incident_id);
+        }
+        return prev.map(inc => inc.incident_id === updatedData.incident_id ? { ...inc, ...updatedData } : inc);
       });
-      
-      socket.on('incident_status_updated', (updatedData) => {
-        setIncidents(prev => prev.map(inc => inc.incident_id === updatedData.incident_id ? { ...inc, ...updatedData } : inc));
-      });
-    }
+    });
 
     return () => {
-      if (socket) {
-        socket.off('new_incident');
-        socket.off('incident_status_updated');
-      }
+      unsub1();
+      unsub2();
     };
-    */
   }, []);
 
   return (

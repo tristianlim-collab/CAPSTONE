@@ -202,3 +202,90 @@ export const getHeatmap = async (req, res) => {
     res.status(500).json({ message: 'Error fetching heatmap', error: error.message });
   }
 };
+
+/**
+ * Request backup for an incident
+ * POST /api/incidents/:id/backup
+ * Body: { unit_type: 'FIRE' | 'POLICE' | 'MEDICAL' | 'DRRMO' | 'BARANGAY' }
+ */
+export const requestBackup = async (req, res) => {
+  try {
+    const { unit_type } = req.body;
+    const incident_id = req.params.id;
+
+    const incident = await prisma.incident.findUnique({
+      where: { incident_id },
+      include: { incident_type: true, assignments: true }
+    });
+    if (!incident) return res.status(404).json({ message: 'Incident not found' });
+
+    // Find nearest available unit of requested type, excluding already-assigned units
+    const alreadyAssignedIds = incident.assignments.map(a => a.unit_id);
+    const nearestUnits = await geoService.findNearestUnits(
+      incident.latitude, incident.longitude, 3, unit_type
+    );
+
+    // Filter out already assigned units
+    const available = nearestUnits.filter(u => !alreadyAssignedIds.includes(u.unit_id));
+    if (!available || available.length === 0) {
+      return res.status(404).json({ message: `No available ${unit_type} units found nearby` });
+    }
+
+    const backupUnit = available[0];
+
+    // Create backup assignment
+    const assignment = await prisma.incidentAssignment.create({
+      data: {
+        incident_id,
+        unit_id: backupUnit.unit_id,
+        assigned_by: req.user.id,
+        status: 'PENDING'
+      },
+      include: { unit: true }
+    });
+
+    // Create notification for the backup unit
+    await prisma.notification.create({
+      data: {
+        incident_id,
+        unit_id: backupUnit.unit_id,
+        channel: 'DASHBOARD',
+        message_body: `BACKUP REQUEST: ${unit_type} backup needed for ${incident.incident_code}`,
+        delivery_status: 'SENT'
+      }
+    });
+
+    // Log the backup request
+    await prisma.incidentStatusLog.create({
+      data: {
+        incident_id,
+        changed_by: req.user.id,
+        status: incident.status,
+        remarks: `Backup requested: ${unit_type} unit (${backupUnit.unit_name}) dispatched`
+      }
+    });
+
+    // Emit socket event for backup
+    socketService.emitIncidentStatusUpdate({
+      incident_id,
+      incident_code: incident.incident_code,
+      status: incident.status,
+      reported_by: incident.reported_by,
+      backup_unit: backupUnit.unit_name,
+      incident
+    });
+
+    // Try to alert the backup unit
+    await alertService.notifyUnitDispatch(incident, backupUnit, assignment, null)
+      .catch(err => console.error('Backup alert error:', err));
+
+    res.status(201).json({
+      message: `${unit_type} backup dispatched: ${backupUnit.unit_name}`,
+      assignment,
+      unit: backupUnit
+    });
+  } catch (error) {
+    console.error('requestBackup error:', error);
+    res.status(500).json({ message: 'Error requesting backup', error: error.message });
+  }
+};

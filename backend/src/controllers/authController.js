@@ -46,7 +46,8 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email.trim().toLowerCase();
     
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -78,15 +79,66 @@ export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { user_id: req.user.user_id || req.user.id },
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, ResponseUnit: true }
     });
     
     if (!user) return res.status(404).json({ message: 'User not found' });
     
-    // Convert user_id back to id for the frontend if needed, or just send entire user object
-    res.json({ id: user.user_id, ...user });
+    // Map ResponseUnit to 'unit' to match usual frontend property if available
+    res.json({ id: user.user_id, ...user, unit: user.ResponseUnit });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error fetching profile' });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email, contact_number } = req.body;
+    const userId = req.user.id || req.user.user_id;
+
+    // Optional: add email uniqueness check excluding this user
+    if (email) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing && existing.user_id !== userId) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { user_id: userId },
+      data: { name, email, contact_number },
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, ResponseUnit: true }
+    });
+
+    res.json({ message: 'Profile updated successfully', user: { id: user.user_id, ...user, unit: user.ResponseUnit } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error updating profile', error: error.message });
+  }
+};
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id || req.user.user_id;
+
+    const user = await prisma.user.findUnique({ where: { user_id: userId } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isMatch) return res.status(401).json({ message: 'Incorrect current password' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { user_id: userId },
+      data: { password_hash: hashedPassword }
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error updating password', error: error.message });
   }
 };

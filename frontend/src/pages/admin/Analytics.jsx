@@ -1,7 +1,46 @@
-import React from 'react';
-import { BarChart3, TrendingUp, Download, Calendar, PieChart, Activity, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Download, Calendar, Activity, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { analyticsAPI } from '../../api';
 
 const Analytics = () => {
+  const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0 });
+  const [responseTime, setResponseTime] = useState(0);
+  const [byType, setByType] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const [sumRes, timeRes, typeRes] = await Promise.all([
+          analyticsAPI.getSummary(),
+          analyticsAPI.getResponseTime(),
+          analyticsAPI.getByType()
+        ]);
+        
+        if (sumRes.data?.data) setStats(sumRes.data.data);
+        if (timeRes.data?.data) setResponseTime(timeRes.data.data.average_minutes || 0);
+        if (typeRes.data?.data) {
+          // Format types for progress bars
+          const totalIncidents = typeRes.data.data.reduce((acc, curr) => acc + curr._count._all, 0);
+          const formattedTypes = typeRes.data.data.map(t => {
+            const pct = totalIncidents === 0 ? 0 : Math.round((t._count._all / totalIncidents) * 100);
+            return {
+               label: `Type ID: ${t.incident_type_id || 'Unknown'}`, 
+               value: pct,
+               count: t._count._all
+            };
+          });
+          setByType(formattedTypes.sort((a,b) => b.count - a.count).slice(0,4));
+        }
+      } catch (err) {
+        console.error("Error fetching analytics", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
       {/* Header */}
@@ -31,15 +70,11 @@ const Analytics = () => {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Incidents</p>
-              <h3 className="text-3xl font-black text-slate-800">0</h3>
+              <h3 className="text-3xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-6 h-6"/> : stats.total}</h3>
             </div>
             <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
               <Activity size={24} />
             </div>
-          </div>
-          <div className="flex items-center text-sm font-medium text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-            <TrendingUp size={16} className="mr-1" />
-            +0% from last month
           </div>
         </div>
 
@@ -47,15 +82,11 @@ const Analytics = () => {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Avg. Response Time</p>
-              <h3 className="text-3xl font-black text-slate-800">0m 0s</h3>
+              <h3 className="text-3xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-6 h-6"/> : `${responseTime}m`}</h3>
             </div>
             <div className="p-3 rounded-xl bg-orange-50 text-orange-600">
               <Clock size={24} />
             </div>
-          </div>
-          <div className="flex items-center text-sm font-medium text-rose-600 bg-rose-50 rounded-lg px-2 py-1 w-fit">
-            <TrendingUp size={16} className="mr-1" />
-            +0m from last month
           </div>
         </div>
 
@@ -63,15 +94,14 @@ const Analytics = () => {
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Resolution Rate</p>
-              <h3 className="text-3xl font-black text-slate-800">0%</h3>
+              <h3 className="text-3xl font-black text-slate-800">
+                {loading ? <Loader2 className="animate-spin w-6 h-6"/> : 
+                 stats.total ? `${Math.round((stats.resolved / stats.total) * 100)}%` : '0%'}
+              </h3>
             </div>
             <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
               <CheckCircle size={24} />
             </div>
-          </div>
-          <div className="flex items-center text-sm font-medium text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-            <TrendingUp size={16} className="mr-1" />
-            +0% from last month
           </div>
         </div>
       </div>
@@ -108,19 +138,18 @@ const Analytics = () => {
             <h3 className="font-bold text-slate-800">Incidents by Category</h3>
           </div>
           <div className="flex-1 flex flex-col justify-center space-y-5">
-            {[
-              { label: 'Medical Emergency', value: 0, color: 'bg-blue-500' },
-              { label: 'Fire', value: 0, color: 'bg-orange-500' },
-              { label: 'Crime / Security', value: 0, color: 'bg-rose-500' },
-              { label: 'Traffic Accident', value: 0, color: 'bg-yellow-500' }
-            ].map((item, i) => (
+            {loading ? (
+               <div className="flex justify-center"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
+            ) : byType.length === 0 ? (
+               <div className="text-center text-slate-400 font-medium text-sm">Not enough data to calculate categories.</div>
+            ) : byType.map((item, i) => (
               <div key={i}>
                 <div className="flex justify-between text-sm font-semibold mb-1.5">
-                  <span className="text-slate-600">{item.label}</span>
+                  <span className="text-slate-600">{item.label} <span className="font-normal text-slate-400 ml-1">({item.count} total)</span></span>
                   <span className="text-slate-800">{item.value}%</span>
                 </div>
                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div className={`h-full ${item.color} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${item.value}%` }} />
+                  <div className={`h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out`} style={{ width: `${item.value}%` }} />
                 </div>
               </div>
             ))}

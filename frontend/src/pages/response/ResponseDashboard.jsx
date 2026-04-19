@@ -5,10 +5,11 @@ import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { 
-  LayoutDashboard, Radio, User, Clock, CheckCircle2, 
-  ShieldAlert, MapPin, Navigation, Navigation2, Loader2, AlertTriangle 
+import {
+  LayoutDashboard, Radio, User, Clock, CheckCircle2,
+  ShieldAlert, MapPin, Navigation, Navigation2, Loader2, AlertTriangle, Send, X, PlusCircle
 } from 'lucide-react';
+import { postReportAPI } from '../../api';
 
 export default function ResponseDashboard() {
   const { user } = useAuth();
@@ -16,6 +17,17 @@ export default function ResponseDashboard() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState(null);
+
+  // Modals state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupUnitType, setBackupUnitType] = useState('FIRE');
+  const [reportData, setReportData] = useState({
+    actions_taken: '',
+    casualties: 0,
+    damages_estimate: '',
+    remarks: ''
+  });
   const { on } = useSocketContext();
 
   useEffect(() => {
@@ -68,7 +80,7 @@ export default function ResponseDashboard() {
     }
   };
 
-  const activeIncidents = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(i.status));
+  const activeIncidents = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)); // Added ON_SCENE
   const resolvedToday = incidents.filter(i => {
     if (i.status !== 'RESOLVED' && i.status !== 'CLOSED') return false;
     const today = new Date().toDateString();
@@ -98,7 +110,7 @@ export default function ResponseDashboard() {
           incident_id: incident.incident_id,
           status: 'ACCEPTED' // Will automatically set incident to VERIFIED
         });
-        
+
         // Add the new assignment locally
         setIncidents(prev => prev.map(inc =>
           inc.incident_id === incident.incident_id
@@ -109,7 +121,7 @@ export default function ResponseDashboard() {
       } else {
         const assignment = incident.assignments[0];
         await api.patch(`/assignments/${assignment.assignment_id}/status`, { status: 'ACCEPTED' });
-        
+
         // Update local state
         setIncidents(prev => prev.map(inc =>
           inc.incident_id === incident.incident_id
@@ -121,6 +133,56 @@ export default function ResponseDashboard() {
     } catch (err) {
       console.error('Accept dispatch error:', err);
       toast.error(err.response?.data?.message || 'Failed to accept dispatch');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleUpdateStatus = async (incidentId, status) => {
+    try {
+      setAcceptingId(incidentId); // reuse loading state
+      await incidentAPI.updateStatus(incidentId, { status });
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === incidentId ? { ...inc, status } : inc
+      ));
+      toast.success(`Status updated to ${status.replace('_', ' ')}`);
+    } catch (err) {
+      toast.error('Failed to update status');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleRequestBackup = async () => {
+    try {
+      await incidentAPI.requestBackup(priorityIncident.incident_id, backupUnitType);
+      toast.success(`${backupUnitType} Backup dispatched!`);
+      setShowBackupModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request backup');
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportData.actions_taken) {
+      return toast.error('Actions taken description is required');
+    }
+
+    try {
+      setAcceptingId('report');
+      await postReportAPI.submit({
+        incident_id: priorityIncident.incident_id,
+        ...reportData
+      });
+      // Filter out of active
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === priorityIncident.incident_id ? { ...inc, status: 'RESOLVED' } : inc
+      ));
+      toast.success('Incident resolved and report submitted');
+      setShowReportModal(false);
+      setReportData({ actions_taken: '', casualties: 0, damages_estimate: '', remarks: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit report');
     } finally {
       setAcceptingId(null);
     }
@@ -142,7 +204,7 @@ export default function ResponseDashboard() {
         </div>
         <div className="relative z-10 flex flex-col md:items-end gap-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Status</p>
-          <button 
+          <button
             onClick={async () => {
               const newStatus = !isAvailable;
               setIsAvailable(newStatus);
@@ -156,11 +218,10 @@ export default function ResponseDashboard() {
                 }
               }
             }}
-            className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all shadow-sm active:scale-95 ${
-              isAvailable 
+            className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all shadow-sm active:scale-95 ${isAvailable
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-emerald-500/20'
                 : 'bg-slate-100 text-slate-500 border border-slate-200'
-            }`}
+              }`}
           >
             <span className={`w-2.5 h-2.5 rounded-full ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
             {isAvailable ? 'AVAILABLE FOR DISPATCH' : 'OFF SHIFT / STANDBY'}
@@ -169,7 +230,7 @@ export default function ResponseDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* KPI Cards */}
         <div className="md:col-span-1 flex flex-col gap-6">
           <div className="bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-800 relative overflow-hidden group">
@@ -216,7 +277,7 @@ export default function ResponseDashboard() {
               {activeIncidents.length > 0 ? 'TIME SENSITIVE' : 'ALL CLEAR'}
             </span>
           </div>
-          
+
           <div className="p-6 flex-1 flex flex-col justify-center">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-8">
@@ -250,7 +311,7 @@ export default function ResponseDashboard() {
                   <div className="text-right">
                     <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Reported Time</p>
                     <p className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                      <Clock size={14} className="text-rose-500"/>
+                      <Clock size={14} className="text-rose-500" />
                       {getTimeAgo(priorityIncident.reported_at)}
                     </p>
                   </div>
@@ -302,10 +363,10 @@ export default function ResponseDashboard() {
                       {priorityIncident.evidence.map((ev, idx) => (
                         <div key={idx} className="relative group shrink-0 rounded-xl overflow-hidden border border-slate-200">
                           {ev.file_type?.includes('image') ? (
-                            <img 
-                              src={ev.file_path} 
-                              alt="Evidence" 
-                              className="w-24 h-24 object-cover hover:scale-105 transition-transform duration-300" 
+                            <img
+                              src={ev.file_path}
+                              alt="Evidence"
+                              className="w-24 h-24 object-cover hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
                             <div className="w-24 h-24 bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-bold">
@@ -317,23 +378,64 @@ export default function ResponseDashboard() {
                     </div>
                   </div>
                 )}
-                
-                <div className="mt-auto grid grid-cols-2 gap-4">
-                  <Link to="/response/map" className="flex items-center justify-center gap-2 bg-white border-2 border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 py-3 rounded-xl font-bold transition-colors">
-                    <Navigation2 size={18} /> View on Map
-                  </Link>
-                  <button 
-                    onClick={() => handleAcceptDispatch(priorityIncident)}
-                    disabled={acceptingId === priorityIncident.incident_id}
-                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95 disabled:opacity-60"
-                  >
-                    {acceptingId === priorityIncident.incident_id ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={18} />
+
+                <div className="mt-auto flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${priorityIncident.latitude},${priorityIncident.longitude}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95"
+                    >
+                      <Navigation2 size={18} /> Get Directions
+                    </a>
+
+                    {priorityIncident.status === 'REPORTED' && (
+                      <button
+                        onClick={() => handleAcceptDispatch(priorityIncident)}
+                        disabled={acceptingId === priorityIncident.incident_id}
+                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95 disabled:opacity-60"
+                      >
+                        {acceptingId === priorityIncident.incident_id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                        Accept Dispatch
+                      </button>
                     )}
-                    Accept Dispatch
-                  </button>
+
+                    {(priorityIncident.status === 'VERIFIED' || priorityIncident.status === 'RESPONDING') && (
+                      <>
+                        <button
+                          onClick={() => setShowBackupModal(true)}
+                          className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/30 py-3 rounded-xl font-bold transition-colors active:scale-95"
+                        >
+                          <PlusCircle size={18} /> Request Backup
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(priorityIncident.incident_id, 'ON_SCENE')}
+                          disabled={acceptingId === priorityIncident.incident_id}
+                          className="col-span-2 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95"
+                        >
+                          {acceptingId === priorityIncident.incident_id ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
+                          Arrive On Scene
+                        </button>
+                      </>
+                    )}
+
+                    {priorityIncident.status === 'ON_SCENE' && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(priorityIncident.incident_id, 'FALSE_ALARM')}
+                          className="flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-bold transition-colors active:scale-95"
+                        >
+                          False Alarm
+                        </button>
+                        <button
+                          onClick={() => setShowReportModal(true)}
+                          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95"
+                        >
+                          <CheckCircle2 size={18} /> Resolve & Report
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </>
             )}
@@ -363,6 +465,111 @@ export default function ResponseDashboard() {
           </div>
         </Link>
       </div>
+
+      {/* Modals */}
+      {showBackupModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Request Backup</h3>
+            <p className="text-sm text-slate-500 mb-4">Select the type of unit you need for backup.</p>
+            <div className="grid grid-cols-2 gap-2 mb-6">
+              {['FIRE', 'POLICE', 'MEDICAL', 'DRRMO'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setBackupUnitType(type)}
+                  className={`p-3 rounded-xl font-bold text-sm border-2 transition-all ${backupUnitType === type ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-600 bg-white'
+                    }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowBackupModal(false)} className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button
+                onClick={handleRequestBackup}
+                className="px-4 py-2 font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-sm shadow-amber-500/20"
+              >
+                Send Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto pt-20">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl my-auto">
+            <h3 className="text-xl font-bold text-slate-800 mb-1">Post-Incident Report</h3>
+            <p className="text-sm text-slate-500 mb-6">Complete this report to resolve the incident officially.</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Actions Taken <span className="text-red-500">*</span></label>
+                <textarea
+                  value={reportData.actions_taken}
+                  onChange={e => setReportData({ ...reportData, actions_taken: e.target.value })}
+                  placeholder="Describe treatments, fire suppression, crowd control, etc."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Casualties</label>
+                  <input
+                    type="number"
+                    value={reportData.casualties}
+                    onChange={e => setReportData({ ...reportData, casualties: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Response Time (mins)</label>
+                  <input
+                    type="number"
+                    value={reportData.response_time_minutes}
+                    onChange={e => setReportData({ ...reportData, response_time_minutes: e.target.value })}
+                    placeholder="e.g. 15"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Damages Estimate</label>
+                <input
+                  type="text"
+                  value={reportData.damages_estimate}
+                  onChange={e => setReportData({ ...reportData, damages_estimate: e.target.value })}
+                  placeholder="e.g. None, Minor vehicle damage, Extensi..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Final Remarks</label>
+                <textarea
+                  value={reportData.remarks}
+                  onChange={e => setReportData({ ...reportData, remarks: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button onClick={() => setShowReportModal(false)} className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={acceptingId === 'report' || !reportData.actions_taken}
+                className="flex items-center gap-2 px-5 py-2.5 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {acceptingId === 'report' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                Submit & Resolve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
