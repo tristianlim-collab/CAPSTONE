@@ -28,6 +28,7 @@ export const authenticate = async (req, res, next) => {
         email: true,
         role: true,
         contact_number: true,
+        unit_id: true,
       },
     });
 

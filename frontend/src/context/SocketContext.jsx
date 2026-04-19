@@ -27,20 +27,30 @@ export const SocketProvider = ({ children }) => {
 
 		socket.on("connect", () => {
 			setConnected(true);
+			console.log("[Socket] Connected:", socket.id);
 
 			if (user?.role === "ADMIN") {
 				socket.emit("join_admin");
 			}
-			if (user?.role === "RESPONSE_UNIT" && user?.unit_id) {
-				socket.emit("join_unit", user.unit_id);
+			if (user?.role === "RESPONSE_UNIT") {
+				// Join the general response room so we get all broadcasts
+				socket.emit("join_response");
+				// Also join unit-specific room if we have a unit_id
+				if (user?.unit_id) {
+					socket.emit("join_unit", user.unit_id);
+				}
 			}
-			if (user?.role === "REPORTER" && user?.user_id) {
-				socket.emit("join_reporter", user.user_id);
+			if (user?.role === "REPORTER") {
+				const userId = user?.user_id || user?.id;
+				if (userId) {
+					socket.emit("join_reporter", userId);
+				}
 			}
 		});
 
 		socket.on("disconnect", () => {
 			setConnected(false);
+			console.log("[Socket] Disconnected");
 		});
 
 		return () => {

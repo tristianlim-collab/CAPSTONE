@@ -37,6 +37,11 @@ export const createIncident = async (req, res) => {
         map_pin_address,
         severity: severity || 'MEDIUM',
         barangay_id: detectedBarangayId
+      },
+      include: {
+        incident_type: true,
+        barangay: true,
+        reporter: { select: { name: true, email: true, contact_number: true } }
       }
     });
 
@@ -67,11 +72,12 @@ export const createIncident = async (req, res) => {
       await alertService.notifyUnitDispatch(incident, assignedUnit, assignment, null).catch(err => console.error("Alert delivery error:", err));
     }
 
-    // Automatically emit socket event
+    // Broadcast to all response units + admin via socket (full payload for instant rendering)
     socketService.emitNewIncident(incident);
 
     res.status(201).json(incident);
   } catch (error) {
+    console.error('createIncident error:', error);
     res.status(500).json({ message: 'Error creating incident', error: error.message });
   }
 };
@@ -79,7 +85,7 @@ export const createIncident = async (req, res) => {
 export const getIncidents = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
     const { status, severity, barangay_id, type_id } = req.query;
@@ -93,14 +99,8 @@ export const getIncidents = async (req, res) => {
     if (req.user.role === 'REPORTER') {
       where.reported_by = req.user.id;
     } else if (req.user.role === 'RESPONSE_UNIT') {
-      // Map to limit Response Unit viewing solely to their own unit's dispatches.
-      where.assignments = {
-        some: {
-          unit: {
-            users: { some: { user_id: req.user.id } }
-          }
-        }
-      };
+      // Show all incidents to response units so they can see the full picture
+      // (they are filtered by assignment on the frontend if needed)
     }
 
     const incidents = await prisma.incident.findMany({
@@ -108,7 +108,11 @@ export const getIncidents = async (req, res) => {
       include: {
         incident_type: true,
         barangay: true,
-        reporter: { select: { name: true, email: true, contact_number: true } }
+        reporter: { select: { name: true, email: true, contact_number: true } },
+        assignments: {
+          include: { unit: true }
+        },
+        evidence: true
       },
       orderBy: { reported_at: 'desc' }
     });
@@ -155,7 +159,12 @@ export const updateIncidentStatus = async (req, res) => {
     const incident = await prisma.incident.update({
       where: { incident_id: req.params.id },
       data: { status },
-      include: { reporter: true }
+      include: {
+        reporter: true,
+        incident_type: true,
+        barangay: true,
+        assignments: { include: { unit: true } }
+      }
     });
 
     await prisma.incidentStatusLog.create({
@@ -169,6 +178,15 @@ export const updateIncidentStatus = async (req, res) => {
 
     // Delegate notification routing
     await alertService.notifyStatusChange(incident, status);
+
+    // Broadcast status update via socket to all interested parties
+    socketService.emitIncidentStatusUpdate({
+      incident_id: incident.incident_id,
+      incident_code: incident.incident_code,
+      status,
+      reported_by: incident.reported_by,
+      incident
+    });
 
     res.json(incident);
   } catch (error) {

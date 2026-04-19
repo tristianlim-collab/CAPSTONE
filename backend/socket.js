@@ -11,20 +11,35 @@ export const initSocket = (server) => {
 	});
 
 	io.on("connection", (socket) => {
+		console.log(`[Socket] Client connected: ${socket.id}`);
+
 		socket.on("join_admin", () => {
 			socket.join("admin");
+			console.log(`[Socket] ${socket.id} joined admin room`);
 		});
 
 		socket.on("join_unit", (unitId) => {
 			if (unitId) {
 				socket.join(`unit-${unitId}`);
+				console.log(`[Socket] ${socket.id} joined unit-${unitId}`);
 			}
 		});
 
 		socket.on("join_reporter", (userId) => {
 			if (userId) {
 				socket.join(`reporter-${userId}`);
+				console.log(`[Socket] ${socket.id} joined reporter-${userId}`);
 			}
+		});
+
+		// General response room — all response-unit users join this
+		socket.on("join_response", () => {
+			socket.join("response");
+			console.log(`[Socket] ${socket.id} joined response room`);
+		});
+
+		socket.on("disconnect", (reason) => {
+			console.log(`[Socket] Client disconnected: ${socket.id} (${reason})`);
 		});
 	});
 
@@ -43,6 +58,7 @@ export const socketEvents = {
 	incidentAssigned: (unitId, payload) => getIO().to(`unit-${unitId}`).emit("incident_assigned", payload),
 	incidentUpdated: (reporterId, payload) => {
 		getIO().to("admin").emit("incident_updated", payload);
+		getIO().to("response").emit("incident_updated", payload);
 		if (reporterId) {
 			getIO().to(`reporter-${reporterId}`).emit("incident_updated", payload);
 		}

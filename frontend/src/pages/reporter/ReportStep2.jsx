@@ -13,6 +13,7 @@ export default function ReportStep2() {
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState([]); // support multiple photos
+  const [severity, setSeverity] = useState('MEDIUM'); // default severity
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [locationAddress, setLocationAddress] = useState('');
   const [addressLoading, setAddressLoading] = useState(true);
@@ -97,7 +98,7 @@ export default function ReportStep2() {
         latitude: location?.lat || 0,
         longitude: location?.lng || 0,
         map_pin_address: locationAddress || undefined,
-        severity: 'HIGH'
+        severity: severity
       });
 
       // 3. If we have photos, upload them as evidence linked to the incident
@@ -113,6 +114,7 @@ export default function ReportStep2() {
             });
           } catch (evErr) {
             console.error('Evidence upload failed:', evErr);
+            toast.error('Warning: Failed to upload some photos. Check Supabase Storage settings.');
           }
         }
       }
@@ -225,6 +227,31 @@ export default function ReportStep2() {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Time</p>
               <p className="text-sm font-bold text-slate-800">{new Date().toLocaleString()}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Severity Selector */}
+        <div className="mb-6">
+          <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2 mb-3">
+            <AlertTriangle size={16} className="text-orange-500" /> Incident Severity
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((level) => (
+              <button
+                key={level}
+                onClick={() => setSeverity(level)}
+                className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
+                  severity === level
+                    ? level === 'CRITICAL' ? 'bg-red-500 text-white border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.3)]'
+                      : level === 'HIGH' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_12px_rgba(249,115,22,0.3)]'
+                      : level === 'MEDIUM' ? 'bg-amber-500 text-white border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.3)]'
+                      : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
           </div>
         </div>
 

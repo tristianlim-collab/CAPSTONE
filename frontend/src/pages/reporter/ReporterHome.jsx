@@ -1,20 +1,111 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSocketContext } from '../../context/SocketContext';
+import { incidentAPI } from '../../api';
 import { 
   Home, FileText, User, Bell, ChevronRight, 
   MapPin, Clock, AlertTriangle, ShieldCheck,
-  Flame, Activity, Stethoscope
+  Flame, Activity, Stethoscope, Car, Loader2
 } from 'lucide-react';
+
+const TYPE_ICONS = {
+  'FIRE': Flame,
+  'MEDICAL': Stethoscope,
+  'ACCIDENT': Car,
+  'CRIME': AlertTriangle,
+};
 
 export default function ReporterHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { on, connected } = useSocketContext();
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch reporter's own incidents
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        const res = await incidentAPI.getAll({ limit: 50 });
+        setIncidents(res.data?.data || []);
+      } catch (err) {
+        console.error('Failed to fetch incidents:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIncidents();
+  }, []);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    const unsub1 = on('incident_status_updated', (data) => {
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === data.incident_id
+          ? { ...inc, status: data.status, ...(data.incident || {}) }
+          : inc
+      ));
+    });
+
+    const unsub2 = on('incident_updated', (data) => {
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === data.incident_id
+          ? { ...inc, ...data }
+          : inc
+      ));
+    });
+
+    return () => { unsub1(); unsub2(); };
+  }, [on]);
 
   // Extract initials for the avatar
   const getInitials = (name) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  // Compute stats
+  const totalReports = incidents.length;
+  const activeCount = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(i.status)).length;
+  const recentIncidents = incidents.slice(0, 5);
+
+  // Get time ago text
+  const getTimeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins} min${mins > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  };
+
+  const getStatusBadge = (status) => {
+    const map = {
+      REPORTED: { label: 'Reported', cls: 'bg-amber-50 text-amber-600 border-amber-100' },
+      VERIFIED: { label: 'Verified', cls: 'bg-blue-50 text-blue-600 border-blue-100' },
+      RESPONDING: { label: 'Responding', cls: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+      RESOLVED: { label: 'Resolved', cls: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+      CLOSED: { label: 'Closed', cls: 'bg-slate-50 text-slate-600 border-slate-100' },
+    };
+    return map[status] || map.REPORTED;
+  };
+
+  const getTypeIcon = (incident) => {
+    const typeName = (incident.incident_type?.name || '').toUpperCase();
+    for (const [key, Icon] of Object.entries(TYPE_ICONS)) {
+      if (typeName.includes(key)) return Icon;
+    }
+    return FileText;
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
   };
 
   return (
@@ -30,7 +121,7 @@ export default function ReporterHome() {
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div>
-            <p className="text-blue-100 text-sm font-medium mb-1 opacity-90">Good morning,</p>
+            <p className="text-blue-100 text-sm font-medium mb-1 opacity-90">{getGreeting()},</p>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               {user?.name || 'Citizen'} <span className="text-xl">👋</span>
             </h1>
@@ -38,7 +129,9 @@ export default function ReporterHome() {
           <div className="flex items-center gap-3">
             <button className="relative w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 transition-transform active:scale-95">
               <Bell className="text-white" size={20} />
-              <span className="absolute top-2.5 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800"></span>
+              {activeCount > 0 && (
+                <span className="absolute top-2.5 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800"></span>
+              )}
             </button>
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30 text-sm border-2 border-white/10">
               {getInitials(user?.name)}
@@ -72,7 +165,9 @@ export default function ReporterHome() {
               <FileText size={80} />
             </div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 relative z-10">Total Reports</div>
-            <div className="text-3xl font-black text-slate-800 relative z-10">3</div>
+            <div className="text-3xl font-black text-slate-800 relative z-10">
+              {loading ? <Loader2 size={24} className="animate-spin text-slate-300" /> : totalReports}
+            </div>
           </div>
           
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
@@ -80,9 +175,11 @@ export default function ReporterHome() {
               <Activity size={80} />
             </div>
             <div className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-3 relative z-10 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span> Active
+              {activeCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>} Active
             </div>
-            <div className="text-3xl font-black text-slate-800 relative z-10">1</div>
+            <div className="text-3xl font-black text-slate-800 relative z-10">
+              {loading ? <Loader2 size={24} className="animate-spin text-slate-300" /> : activeCount}
+            </div>
           </div>
         </div>
 
@@ -97,43 +194,50 @@ export default function ReporterHome() {
         </div>
         
         <div className="flex flex-col gap-3">
-          {/* Active Report Item */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-            <div className="w-14 h-14 rounded-xl bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center shadow-inner shrink-0">
-              <Flame size={26} />
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={28} className="animate-spin text-slate-400" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-bold text-slate-800 text-[15px] truncate">Fire Breakout</h4>
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold tracking-widest rounded-md uppercase shrink-0">
-                  Responding
-                </span>
+          ) : recentIncidents.length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FileText size={24} className="text-slate-400" />
               </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1"><Clock size={12} /> 2 hrs ago</span>
-                <span className="flex items-center gap-1 truncate"><MapPin size={12} /> Iloilo City</span>
-              </div>
+              <p className="text-slate-500 text-sm">No reports yet. Tap the button above to submit one.</p>
             </div>
-          </div>
-
-          {/* Resolved Report Item */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer opacity-75">
-            <div className="w-14 h-14 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 flex items-center justify-center shrink-0">
-              <Stethoscope size={26} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-bold text-slate-800 text-[15px] truncate">Medical Emergency</h4>
-                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-bold tracking-widest rounded-md uppercase shrink-0 flex items-center gap-1">
-                  <ShieldCheck size={10} /> Resolved
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1"><Clock size={12} /> 5 hrs ago</span>
-                <span className="flex items-center gap-1 truncate"><MapPin size={12} /> Diversion Rd</span>
-              </div>
-            </div>
-          </div>
+          ) : (
+            recentIncidents.map((incident) => {
+              const IconComp = getTypeIcon(incident);
+              const badge = getStatusBadge(incident.status);
+              const isResolved = incident.status === 'RESOLVED' || incident.status === 'CLOSED';
+              return (
+                <div 
+                  key={incident.incident_id}
+                  className={`bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${isResolved ? 'opacity-75' : ''}`}
+                >
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-inner shrink-0 ${
+                    isResolved ? 'bg-slate-50 text-slate-400 border border-slate-100' : 'bg-orange-50 text-orange-500 border border-orange-100'
+                  }`}>
+                    <IconComp size={26} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-bold text-slate-800 text-[15px] truncate">
+                        {incident.incident_type?.name || 'Incident'}
+                      </h4>
+                      <span className={`px-2.5 py-0.5 ${badge.cls} border text-[10px] font-bold tracking-widest rounded-md uppercase shrink-0 flex items-center gap-1`}>
+                        {isResolved && <ShieldCheck size={10} />} {badge.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                      <span className="flex items-center gap-1"><Clock size={12} /> {getTimeAgo(incident.reported_at)}</span>
+                      <span className="flex items-center gap-1 truncate"><MapPin size={12} /> {incident.map_pin_address || incident.barangay?.name || 'Unknown'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
         
       </div>

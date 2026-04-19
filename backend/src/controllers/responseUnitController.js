@@ -35,3 +35,16 @@ export const updateLocation = async (req, res) => {
     res.status(500).json({ message: 'Error updating location', error: error.message });
   }
 };
+
+export const updateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const unit = await prisma.responseUnit.update({
+      where: { unit_id: req.params.id },
+      data: { availability_status: status, last_updated: new Date() }
+    });
+    res.json(unit);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating status', error: error.message });
+  }
+};

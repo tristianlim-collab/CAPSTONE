@@ -50,6 +50,17 @@ export const incidentAPI = {
   getAssignedIncidents: () => api.get('/incidents'),
 };
 
+// Assignment endpoints
+export const assignmentAPI = {
+  assignUnit: (data) => api.post('/assignments', data),
+  updateStatus: (id, data) => api.patch(`/assignments/${id}/status`, data)
+};
+
+// Response Unit endpoints
+export const responseUnitAPI = {
+  updateStatus: (id, status) => api.patch(`/response-units/${id}/status`, { status })
+};
+
 // Upload endpoints
 export const uploadAPI = {
   uploadPhoto: (file) => {

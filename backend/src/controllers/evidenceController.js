@@ -1,6 +1,7 @@
 import { prisma } from '../config/database.js';
 import multer from 'multer';
 import { uploadImage } from '../utils/supabaseClient.js';
+import socketService from '../services/socketService.js';
 
 // Multer storage config (memory)
 const storage = multer.memoryStorage();
@@ -26,6 +27,29 @@ export const uploadEvidence = async (req, res) => {
         file_type: req.file.mimetype
       }
     });
+
+    // Fetch the updated incident with evidence to broadcast
+    const updatedIncident = await prisma.incident.findUnique({
+      where: { incident_id },
+      include: {
+        incident_type: true,
+        barangay: true,
+        reporter: { select: { name: true, email: true, contact_number: true } },
+        assignments: { include: { unit: true } },
+        evidence: true
+      }
+    });
+
+    if (updatedIncident) {
+      socketService.emitIncidentStatusUpdate({
+        incident_id: updatedIncident.incident_id,
+        incident_code: updatedIncident.incident_code,
+        status: updatedIncident.status,
+        reported_by: updatedIncident.reported_by,
+        incident: updatedIncident
+      });
+    }
+
     res.status(201).json(evidence);
   } catch (error) {
     res.status(500).json({ message: 'Error uploading evidence', error: error.message });

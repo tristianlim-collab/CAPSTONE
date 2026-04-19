@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import { ProtectedRoute, PublicRoute } from './components/common/ProtectedRoute';
 
 import Login from './pages/auth/Login';
@@ -47,51 +48,53 @@ const App = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+        <SocketProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="roles" element={<RolesPermissions />} />
-            <Route path="categories" element={<IncidentManagement />} />
-            <Route path="monitoring" element={<SystemMonitoring />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="notifications" element={<NotificationSettings />} />
-            <Route path="settings" element={<SystemSettings />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="roles" element={<RolesPermissions />} />
+              <Route path="categories" element={<IncidentManagement />} />
+              <Route path="monitoring" element={<SystemMonitoring />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="notifications" element={<NotificationSettings />} />
+              <Route path="settings" element={<SystemSettings />} />
+            </Route>
 
-          {/* Response Unit Routes */}
-          <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
-          
-          <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/response/dashboard" replace />} />
-            <Route path="dashboard" element={<ResponseDashboard />} />
-            <Route path="incidents" element={<ResponseIncidents />} />
-            <Route path="map" element={<ResponseMap />} />
-            <Route path="notifications" element={<ResponseNotifications />} />
-            <Route path="profile" element={<ResponseProfile />} />
-          </Route>
+            {/* Response Unit Routes */}
+            <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
+            
+            <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/response/dashboard" replace />} />
+              <Route path="dashboard" element={<ResponseDashboard />} />
+              <Route path="incidents" element={<ResponseIncidents />} />
+              <Route path="map" element={<ResponseMap />} />
+              <Route path="notifications" element={<ResponseNotifications />} />
+              <Route path="profile" element={<ResponseProfile />} />
+            </Route>
 
-          {/* Reporter Routes */}
-          <Route path="/reporter/home" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
-          <Route path="/reporter/report/step1" element={<ProtectedRoute role="REPORTER"><ReportStep1 /></ProtectedRoute>} />
-          <Route path="/reporter/report/step2" element={<ProtectedRoute role="REPORTER"><ReportStep2 /></ProtectedRoute>} />
-          <Route path="/reporter/report/success" element={<ProtectedRoute role="REPORTER"><ReportSuccess /></ProtectedRoute>} />
-          <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
-          <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />
-          <Route path="/reporter/*" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
+            {/* Reporter Routes */}
+            <Route path="/reporter/home" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
+            <Route path="/reporter/report/step1" element={<ProtectedRoute role="REPORTER"><ReportStep1 /></ProtectedRoute>} />
+            <Route path="/reporter/report/step2" element={<ProtectedRoute role="REPORTER"><ReportStep2 /></ProtectedRoute>} />
+            <Route path="/reporter/report/success" element={<ProtectedRoute role="REPORTER"><ReportSuccess /></ProtectedRoute>} />
+            <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
+            <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />
+            <Route path="/reporter/*" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
 
-          {/* Default */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-        <Toaster position="top-right" />
+            {/* Default */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+          <Toaster position="top-right" />
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

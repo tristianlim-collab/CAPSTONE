@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { incidentAPI } from '../../api';
-import { toast } from 'react-toastify';
-import { Search, Filter, AlertCircle, Clock, MapPin, CheckCircle2, FileText } from 'lucide-react';
+import api from '../../api';
+import { useSocketContext } from '../../context/SocketContext';
+import toast from 'react-hot-toast';
+import { Search, Filter, AlertCircle, Clock, MapPin, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 
 const ResponseIncidents = () => {
   const [incidents, setIncidents] = useState([]);
@@ -9,10 +11,33 @@ const ResponseIncidents = () => {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
+  const { on } = useSocketContext();
 
   useEffect(() => {
     fetchIncidents();
   }, []);
+
+  // Listen for new incidents in real-time
+  useEffect(() => {
+    const unsub1 = on('new_incident', (incident) => {
+      setIncidents(prev => {
+        if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
+        return [incident, ...prev];
+      });
+      toast('🚨 New incident reported!', { icon: '📍', style: { fontWeight: 'bold' } });
+    });
+
+    const unsub2 = on('incident_status_updated', (data) => {
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === data.incident_id
+          ? { ...inc, status: data.status, ...(data.incident || {}) }
+          : inc
+      ));
+    });
+
+    return () => { unsub1(); unsub2(); };
+  }, [on]);
 
   useEffect(() => {
     filterIncidents();
@@ -20,8 +45,8 @@ const ResponseIncidents = () => {
 
   const fetchIncidents = async () => {
     try {
-      const response = await incidentAPI.getAll();
-      setIncidents(response.data.data || []);
+      const response = await incidentAPI.getAll({ limit: 100 });
+      setIncidents(response.data?.data || []);
     } catch (error) {
       toast.error('Failed to load incidents');
     } finally {
@@ -41,12 +66,28 @@ const ResponseIncidents = () => {
     if (searchQuery) {
       filtered = filtered.filter(
         (i) =>
-          i.incident_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          i.description.toLowerCase().includes(searchQuery.toLowerCase())
+          i.incident_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          i.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          i.incident_type?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     setFilteredIncidents(filtered);
+  };
+
+  const handleStatusUpdate = async (incidentId, newStatus) => {
+    setUpdatingId(incidentId);
+    try {
+      await incidentAPI.updateStatus(incidentId, { status: newStatus });
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === incidentId ? { ...inc, status: newStatus } : inc
+      ));
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -87,7 +128,7 @@ const ResponseIncidents = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by code or description..."
+                placeholder="Search by code, description, or type..."
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-700"
               />
             </div>
@@ -138,6 +179,7 @@ const ResponseIncidents = () => {
                   <th className="px-6 py-4">Location</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Time</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -164,7 +206,7 @@ const ResponseIncidents = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
                         <MapPin size={14} className="text-slate-400" />
-                        {incident.barangay?.name || 'Unknown'}
+                        {incident.map_pin_address || incident.barangay?.name || 'Unknown'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -179,13 +221,42 @@ const ResponseIncidents = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
                         <Clock size={14} className="text-slate-400" />
-                        {new Date(incident.created_at).toLocaleString('en-PH', {
+                        {new Date(incident.reported_at).toLocaleString('en-PH', {
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {incident.status === 'REPORTED' && (
+                        <button
+                          onClick={() => handleStatusUpdate(incident.incident_id, 'VERIFIED')}
+                          disabled={updatingId === incident.incident_id}
+                          className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : 'Verify'}
+                        </button>
+                      )}
+                      {incident.status === 'VERIFIED' && (
+                        <button
+                          onClick={() => handleStatusUpdate(incident.incident_id, 'RESPONDING')}
+                          disabled={updatingId === incident.incident_id}
+                          className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                        >
+                          {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : 'Respond'}
+                        </button>
+                      )}
+                      {incident.status === 'RESPONDING' && (
+                        <button
+                          onClick={() => handleStatusUpdate(incident.incident_id, 'RESOLVED')}
+                          disabled={updatingId === incident.incident_id}
+                          className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                        >
+                          {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : 'Resolve'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

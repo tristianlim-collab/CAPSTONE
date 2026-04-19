@@ -1,21 +1,54 @@
-import { Server } from 'socket.io';
-let io;
+// Unified socket service — delegates to the single Socket.io instance in /socket.js
+import { getIO, socketEvents } from '../../socket.js';
+
 export default {
-  init: (server) => {
-    io = new Server(server, { cors: { origin: process.env.FRONTEND_URL || '*', methods: ['GET', 'POST'] } });
-    io.on('connection', (socket) => {
-      socket.on('join_room', (room) => socket.join(room));
-      socket.on('join_admin', () => socket.join('ADMIN'));
-      socket.on('join_unit', (unitId) => socket.join(`UNIT_${unitId}`));
-      socket.on('join_reporter', (userId) => socket.join(`REPORTER_${userId}`));
-    });
-    return io;
+  getIO,
+
+  /**
+   * Broadcast a brand-new incident to every response-unit and admin dashboard.
+   * Payload should include nested incident_type, reporter, barangay so the
+   * frontend can render it without refetching.
+   */
+  emitNewIncident: (incident) => {
+    try {
+      const io = getIO();
+      // Send to admin room
+      io.to('admin').emit('new_incident', incident);
+      // Send to the general response room (all response-unit users)
+      io.to('response').emit('new_incident', incident);
+    } catch (err) {
+      console.error('Socket emitNewIncident failed (socket may not be ready):', err.message);
+    }
   },
-  getIO: () => {
-    if (!io) throw new Error('Socket.io not initialized');
-    return io;
+
+  /**
+   * Broadcast an incident status update to admin, reporter, and response rooms.
+   */
+  emitIncidentStatusUpdate: (data) => {
+    try {
+      const io = getIO();
+      io.to('admin').emit('incident_status_updated', data);
+      io.to('response').emit('incident_status_updated', data);
+      // Also notify the specific reporter
+      if (data.reported_by) {
+        io.to(`reporter-${data.reported_by}`).emit('incident_status_updated', data);
+      }
+    } catch (err) {
+      console.error('Socket emitIncidentStatusUpdate failed:', err.message);
+    }
   },
-  emitNewIncident: (incident) => { if(io) io.to('ADMIN').to('RESPONSE_UNIT').emit('new_incident', incident); },
-  emitIncidentStatusUpdate: (data) => { if(io) io.emit('incident_status_updated', data); },
-  emitAssignment: (unitId, data) => { if(io) io.to(`UNIT_${unitId}`).emit('new_assignment', data); }
+
+  /**
+   * Notify a specific unit about a new assignment.
+   */
+  emitAssignment: (unitId, data) => {
+    try {
+      const io = getIO();
+      io.to(`unit-${unitId}`).emit('new_assignment', data);
+      io.to('admin').emit('new_assignment', data);
+      io.to('response').emit('new_assignment', data);
+    } catch (err) {
+      console.error('Socket emitAssignment failed:', err.message);
+    }
+  },
 };
