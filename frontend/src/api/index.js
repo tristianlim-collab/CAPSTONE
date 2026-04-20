@@ -124,4 +124,10 @@ export const uploadAPI = {
   },
 };
 
+// Evidence endpoints
+export const evidenceAPI = {
+  uploadFromUrl: (data) => api.post('/evidence/from-url', data),
+  getByIncident: (incidentId) => api.get(`/evidence/${incidentId}`),
+};
+
 export default api;

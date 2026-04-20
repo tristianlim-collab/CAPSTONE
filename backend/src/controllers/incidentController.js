@@ -41,7 +41,8 @@ export const createIncident = async (req, res) => {
       include: {
         incident_type: true,
         barangay: true,
-        reporter: { select: { name: true, email: true, contact_number: true } }
+        reporter: { select: { name: true, email: true, contact_number: true } },
+        evidence: true
       }
     });
 

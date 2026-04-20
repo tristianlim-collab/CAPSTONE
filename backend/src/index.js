@@ -4,6 +4,7 @@ import { config } from './config/index.js';
 import authRoutes from './routes/authRoutes.js';
 import incidentRoutes from './routes/incidentRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import evidenceRoutes from './routes/evidenceRoutes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/evidence', evidenceRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

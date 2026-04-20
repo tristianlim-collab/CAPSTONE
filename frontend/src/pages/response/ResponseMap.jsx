@@ -5,7 +5,7 @@ import { incidentAPI } from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -117,6 +117,68 @@ const ResponseMap = () => {
     return null;
   };
 
+  // Image Gallery Component for Photos
+  const EvidenceGallery = ({ evidence }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    if (!evidence || evidence.length === 0) {
+      return null;
+    }
+
+    const goToPrevious = (e) => {
+      e.preventDefault();
+      setCurrentIndex((prevIndex) => (prevIndex === 0 ? evidence.length - 1 : prevIndex - 1));
+    };
+
+    const goToNext = (e) => {
+      e.preventDefault();
+      setCurrentIndex((prevIndex) => (prevIndex === evidence.length - 1 ? 0 : prevIndex + 1));
+    };
+
+    const currentEvidence = evidence[currentIndex];
+    const isImage = currentEvidence.file_type.startsWith('image/');
+
+    return (
+      <div className="mt-3 border-t border-slate-100 pt-3">
+        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium mb-2">
+          <Image className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+          <span>Evidence Photos ({evidence.length})</span>
+        </div>
+        {isImage && (
+          <div className="relative w-full rounded-lg overflow-hidden bg-slate-100">
+            <img
+              src={currentEvidence.file_path}
+              alt="Evidence"
+              className="w-full h-[200px] object-cover"
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/200?text=Photo+Unavailable';
+              }}
+            />
+            {evidence.length > 1 && (
+              <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+                <button
+                  onClick={goToPrevious}
+                  className="p-1.5 bg-white/80 hover:bg-white rounded-full transition"
+                >
+                  <ChevronLeft className="w-4 h-4 text-slate-800" />
+                </button>
+                <button
+                  onClick={goToNext}
+                  className="p-1.5 bg-white/80 hover:bg-white rounded-full transition"
+                >
+                  <ChevronRight className="w-4 h-4 text-slate-800" />
+                </button>
+              </div>
+            )}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+              {currentIndex + 1} / {evidence.length}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-slate-50">
       <div className="max-w-7xl mx-auto flex flex-col h-full gap-6">
@@ -181,7 +243,7 @@ const ResponseMap = () => {
                 icon={ICONS[incident.status] || ICONS.REPORTED}
               >
                 <Popup className="incident-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
-                  <div className="p-4 min-w-[240px] bg-white">
+                  <div className="p-4 min-w-[240px] max-w-[300px] bg-white max-h-[500px] overflow-y-auto">
                     <div className="flex items-start justify-between mb-3 border-b border-slate-100 pb-3">
                       <div>
                         <span className="font-bold text-slate-800 text-sm block">{incident.incident_code}</span>
@@ -212,6 +274,7 @@ const ResponseMap = () => {
                         </div>
                       )}
                     </div>
+                    <EvidenceGallery evidence={incident.evidence} />
                   </div>
                 </Popup>
               </Marker>
