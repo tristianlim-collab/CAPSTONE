@@ -10,8 +10,7 @@ import Register from './pages/auth/Register';
 import Unauthorized from './pages/auth/Unauthorized';
 
 import ReporterHome from './pages/reporter/ReporterHome';
-import ReportStep1 from './pages/reporter/ReportStep1';
-import ReportStep2 from './pages/reporter/ReportStep2';
+import IncidentReportForm from './pages/reporter/IncidentReportForm';
 import ReportSuccess from './pages/reporter/ReportSuccess';
 import ReporterProfile from './pages/reporter/ReporterProfile';
 import MyReports from './pages/reporter/MyReports';
@@ -82,8 +81,7 @@ const App = () => {
 
             {/* Reporter Routes */}
             <Route path="/reporter/home" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
-            <Route path="/reporter/report/step1" element={<ProtectedRoute role="REPORTER"><ReportStep1 /></ProtectedRoute>} />
-            <Route path="/reporter/report/step2" element={<ProtectedRoute role="REPORTER"><ReportStep2 /></ProtectedRoute>} />
+            <Route path="/reporter/report" element={<ProtectedRoute role="REPORTER"><IncidentReportForm /></ProtectedRoute>} />
             <Route path="/reporter/report/success" element={<ProtectedRoute role="REPORTER"><ReportSuccess /></ProtectedRoute>} />
             <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
             <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />

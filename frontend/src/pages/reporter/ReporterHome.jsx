@@ -140,8 +140,8 @@ export default function ReporterHome() {
         </div>
 
         {/* Big Report Button */}
-        <button 
-          onClick={() => navigate('/reporter/report/step1')}
+        <button
+          onClick={() => navigate('/reporter/report')}
           className="w-full relative overflow-hidden rounded-[28px] bg-gradient-to-br from-red-500 to-rose-600 p-8 flex flex-col items-center justify-center shadow-[0_20px_40px_-15px_rgba(225,29,72,0.5)] active:scale-[0.98] transition-transform mb-10 border border-white/20 group"
         >
           {/* Subtle shine effect on top edge */}
