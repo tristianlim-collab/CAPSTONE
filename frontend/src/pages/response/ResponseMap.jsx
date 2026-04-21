@@ -38,8 +38,12 @@ const ICONS = {
   RESPONDING: createColoredIcon('#3b82f6'), // blue
 };
 
+// Green icon for response units
+const UNIT_ICON = createColoredIcon('#22c55e'); // green
+
 const ResponseMap = () => {
   const [incidents, setIncidents] = useState([]);
+  const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const { on } = useSocketContext();
 
@@ -48,6 +52,7 @@ const ResponseMap = () => {
 
   useEffect(() => {
     fetchIncidents();
+    fetchActiveUnits();
   }, []);
 
   // Listen for new incidents in real-time
@@ -74,7 +79,17 @@ const ResponseMap = () => {
       });
     });
 
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = on('unit_location_updated', (data) => {
+      setUnits(prev => {
+        return prev.map(unit =>
+          unit.unit_id === data.unitId
+            ? { ...unit, latitude: data.lat, longitude: data.lng }
+            : unit
+        );
+      });
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [on]);
 
   const fetchIncidents = async () => {
@@ -93,6 +108,17 @@ const ResponseMap = () => {
       console.error('Failed to load incidents for map', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActiveUnits = async () => {
+    try {
+      const res = await incidentAPI.request.get('/response-units/positions/active');
+      if (res.data && Array.isArray(res.data)) {
+        setUnits(res.data.filter(unit => unit.latitude && unit.longitude));
+      }
+    } catch (error) {
+      console.error('Failed to load active units for map', error);
     }
   };
 
@@ -197,7 +223,7 @@ const ResponseMap = () => {
               </span>
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Real-time tracking • {incidents.length} active incident{incidents.length !== 1 ? 's' : ''}
+              Real-time tracking • {incidents.length} active incident{incidents.length !== 1 ? 's' : ''} • {units.length} unit{units.length !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -237,8 +263,8 @@ const ResponseMap = () => {
               />
             
             {incidents.map((incident) => (
-              <Marker 
-                key={incident.incident_id} 
+              <Marker
+                key={incident.incident_id}
                 position={[incident.latitude, incident.longitude]}
                 icon={ICONS[incident.status] || ICONS.REPORTED}
               >
@@ -275,6 +301,33 @@ const ResponseMap = () => {
                       )}
                     </div>
                     <EvidenceGallery evidence={incident.evidence} />
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {units.map((unit) => (
+              <Marker
+                key={unit.unit_id}
+                position={[unit.latitude, unit.longitude]}
+                icon={UNIT_ICON}
+              >
+                <Popup className="unit-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
+                  <div className="p-3 min-w-[200px] bg-white">
+                    <div className="flex items-start justify-between mb-2 border-b border-slate-100 pb-2">
+                      <div>
+                        <span className="font-bold text-slate-800 text-sm block">{unit.unit_name}</span>
+                        <span className="text-xs text-slate-400 block mt-0.5">{unit.unit_type}</span>
+                      </div>
+                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${
+                        unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
+                      } shadow-sm`}>
+                        {unit.availability_status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      <span className="block">📍 {unit.latitude.toFixed(4)}, {unit.longitude.toFixed(4)}</span>
+                    </div>
                   </div>
                 </Popup>
               </Marker>

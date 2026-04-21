@@ -51,4 +51,25 @@ export default {
       console.error('Socket emitAssignment failed:', err.message);
     }
   },
+
+  /**
+   * Broadcast a unit location update to admin and response-unit rooms.
+   * Called when a response unit updates its GPS position.
+   */
+  emitUnitLocationUpdate: (unitId, lat, lng, unitName) => {
+    try {
+      const io = getIO();
+      const payload = {
+        unitId,
+        lat,
+        lng,
+        unitName,
+        timestamp: new Date()
+      };
+      io.to('admin').emit('unit_location_updated', payload);
+      io.to('response').emit('unit_location_updated', payload);
+    } catch (err) {
+      console.error('Socket emitUnitLocationUpdate failed:', err.message);
+    }
+  },
 };

@@ -1,4 +1,5 @@
 import { prisma } from '../config/database.js';
+import socketService from '../services/socketService.js';
 export const getAll = async (req, res) => {
   try {
     const units = await prisma.responseUnit.findMany({
@@ -29,7 +30,8 @@ export const updateLocation = async (req, res) => {
       where: { unit_id: req.params.id },
       data: { latitude, longitude, last_updated: new Date() }
     });
-    // Socket.io emit could be here
+    // Broadcast location update to all connected clients
+    socketService.emitUnitLocationUpdate(unit.unit_id, unit.latitude, unit.longitude, unit.unit_name);
     res.json(unit);
   } catch (error) {
     res.status(500).json({ message: 'Error updating location', error: error.message });
@@ -68,5 +70,28 @@ export const deleteUnit = async (req, res) => {
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting unit', error: error.message });
+  }
+};
+
+export const getActiveUnitPositions = async (req, res) => {
+  try {
+    const units = await prisma.responseUnit.findMany({
+      where: {
+        availability_status: {
+          not: 'OFFLINE'
+        }
+      },
+      select: {
+        unit_id: true,
+        unit_name: true,
+        unit_type: true,
+        latitude: true,
+        longitude: true,
+        availability_status: true
+      }
+    });
+    res.json(units);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching active units', error: error.message });
   }
 };

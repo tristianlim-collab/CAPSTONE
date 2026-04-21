@@ -90,38 +90,14 @@ async function main() {
     incidentTypes.push(created);
   }
 
-  const fireUnit = await prisma.responseUnit.create({
+  const responseUnit = await prisma.responseUnit.create({
     data: {
-      unit_name: "Talisay Fire Unit Alpha",
-      unit_type: "FIRE",
+      unit_name: "Response Unit",
+      unit_type: "BARANGAY",
       contact_number: "+639171110001",
       latitude: 10.7421,
       longitude: 122.9688,
       barangay_id: barangays[0].barangay_id,
-      availability_status: "AVAILABLE",
-    },
-  });
-
-  const policeUnit = await prisma.responseUnit.create({
-    data: {
-      unit_name: "Talisay Police Unit Bravo",
-      unit_type: "POLICE",
-      contact_number: "+639171110002",
-      latitude: 10.7446,
-      longitude: 122.9712,
-      barangay_id: barangays[1].barangay_id,
-      availability_status: "AVAILABLE",
-    },
-  });
-
-  const medicalUnit = await prisma.responseUnit.create({
-    data: {
-      unit_name: "Talisay Medical Unit Charlie",
-      unit_type: "MEDICAL",
-      contact_number: "+639171110003",
-      latitude: 10.7413,
-      longitude: 122.9654,
-      barangay_id: barangays[2].barangay_id,
       availability_status: "AVAILABLE",
     },
   });
@@ -139,37 +115,13 @@ async function main() {
 
   await prisma.user.create({
     data: {
-      name: "Fire Unit Officer",
-      email: "fire@gaoirs.com",
+      name: "Response Unit",
+      email: "response@gaoirs.com",
       password_hash: passwordFire,
       role: "RESPONSE_UNIT",
       contact_number: "+639171110001",
-      unit_id: fireUnit.unit_id,
-      barangay_id: fireUnit.barangay_id,
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: "Police Unit Officer",
-      email: "police@gaoirs.com",
-      password_hash: passwordPolice,
-      role: "RESPONSE_UNIT",
-      contact_number: "+639171110002",
-      unit_id: policeUnit.unit_id,
-      barangay_id: policeUnit.barangay_id,
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: "Medical Unit Officer",
-      email: "medical@gaoirs.com",
-      password_hash: passwordMedical,
-      role: "RESPONSE_UNIT",
-      contact_number: "+639171110003",
-      unit_id: medicalUnit.unit_id,
-      barangay_id: medicalUnit.barangay_id,
+      unit_id: responseUnit.unit_id,
+      barangay_id: responseUnit.barangay_id,
     },
   });
 
@@ -185,7 +137,7 @@ async function main() {
   });
 
   // eslint-disable-next-line no-console
-  console.log("Seed complete: users, units, barangays, and incident types created. (No dummy incidents for Capstone)");
+  console.log("Seed complete: admin, response unit, reporter, barangays, and incident types created.");
 }
 
 main()
