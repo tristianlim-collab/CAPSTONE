@@ -79,9 +79,7 @@ export default function LiveMap({ center = [10.0000, 122.9000], zoom = 9 }) {
       <MapContainer 
         center={center} 
         zoom={zoom} 
-        maxBounds={NIR_BOUNDS}
-        maxBoundsViscosity={1.0}
-        minZoom={8}
+        minZoom={5}
         scrollWheelZoom={true} 
         className="w-full h-full z-0"
       >

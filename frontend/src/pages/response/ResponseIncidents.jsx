@@ -20,12 +20,13 @@ const ResponseIncidents = () => {
 
   // Listen for new incidents in real-time
   useEffect(() => {
-    const unsub1 = on('new_incident', (incident) => {
+    const unsub1 = on('incident_verified', (data) => {
       setIncidents(prev => {
-        if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
-        return [incident, ...prev];
+        if (prev.find(i => i.incident_id === data.incident_id)) return prev;
+        const incident = data.incident || data;
+        return [{ ...incident, status: 'VERIFIED' }, ...prev];
       });
-      toast('🚨 New incident reported!', { icon: '📍', style: { fontWeight: 'bold' } });
+      toast('🚨 New verified incident dispatched!', { icon: '📍', style: { fontWeight: 'bold' } });
     });
 
     const unsub2 = on('incident_status_updated', (data) => {
@@ -230,15 +231,7 @@ const ResponseIncidents = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {incident.status === 'REPORTED' && (
-                        <button
-                          onClick={() => handleStatusUpdate(incident.incident_id, 'VERIFIED')}
-                          disabled={updatingId === incident.incident_id}
-                          className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors disabled:opacity-50"
-                        >
-                          {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : 'Verify'}
-                        </button>
-                      )}
+                      {/* Only admin can verify — response units see incidents after admin approval */}
                       {incident.status === 'VERIFIED' && (
                         <button
                           onClick={() => handleStatusUpdate(incident.incident_id, 'RESPONDING')}

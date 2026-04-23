@@ -132,17 +132,7 @@ const ResponseMap = () => {
     return colors[status] || 'bg-gray-500';
   };
 
-  // Component to safely set bounds without crashing MapContainer initialization
-  const MapBounds = () => {
-    const map = useMap();
-    useEffect(() => {
-      // Create a proper Leaflet LatLngBounds object
-      const bounds = L.latLngBounds(L.latLng(8.8000, 122.1500), L.latLng(11.1000, 123.6500));
-      map.setMaxBounds(bounds);
-      map.options.minZoom = 8;
-    }, [map]);
-    return null;
-  };
+  // Map is freely draggable across the whole Philippines, centered on NIR
 
   // Image Gallery Component for Photos
   const EvidenceGallery = ({ evidence }) => {
@@ -260,9 +250,9 @@ const ResponseMap = () => {
             <MapContainer 
               center={defaultCenter} 
               zoom={9} 
+              minZoom={5}
               style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
             >
-              <MapBounds />
               <TileLayer
                 attribution='&copy; OpenStreetMap contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -299,13 +289,11 @@ const ResponseMap = () => {
                         <Clock className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                         <span>{new Date(incident.reported_at).toLocaleString()}</span>
                       </div>
-                      {(incident.barangay?.name || incident.map_pin_address) && (
+                      {incident.map_pin_address && (
                         <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                           <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                           <span className="truncate">
-                            {incident.barangay?.name && incident.barangay?.city
-                              ? `Barangay ${incident.barangay.name}, ${incident.barangay.city}`
-                              : incident.map_pin_address}
+                            {incident.map_pin_address}
                           </span>
                         </div>
                       )}

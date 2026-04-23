@@ -80,7 +80,7 @@ export default function ResponseDashboard() {
     }
   };
 
-  const activeIncidents = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)); // Added ON_SCENE
+  const activeIncidents = incidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)); // Only show admin-verified incidents
   const resolvedToday = incidents.filter(i => {
     if (i.status !== 'RESOLVED' && i.status !== 'CLOSED') return false;
     const today = new Date().toDateString();
@@ -389,16 +389,7 @@ export default function ResponseDashboard() {
                       <Navigation2 size={18} /> Get Directions
                     </a>
 
-                    {priorityIncident.status === 'REPORTED' && (
-                      <button
-                        onClick={() => handleAcceptDispatch(priorityIncident)}
-                        disabled={acceptingId === priorityIncident.incident_id}
-                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-3 rounded-xl font-bold transition-colors active:scale-95 disabled:opacity-60"
-                      >
-                        {acceptingId === priorityIncident.incident_id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                        Accept Dispatch
-                      </button>
-                    )}
+                    {/* REPORTED incidents are hidden — only admin-verified incidents reach response units */}
 
                     {(priorityIncident.status === 'VERIFIED' || priorityIncident.status === 'RESPONDING') && (
                       <>

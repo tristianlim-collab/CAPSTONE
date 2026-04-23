@@ -1,36 +1,41 @@
 class User {
-  final int id;
+  final String id;
+  final String name;
   final String email;
-  final String firstName;
-  final String lastName;
   final String role;
-  final String contactNumber;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String? contactNumber;
+  final String? unitId;
 
   User({
     required this.id,
+    required this.name,
     required this.email,
-    required this.firstName,
-    required this.lastName,
     required this.role,
-    required this.contactNumber,
-    required this.createdAt,
-    required this.updatedAt,
+    this.contactNumber,
+    this.unitId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? 0,
+      id: (json['id'] ?? json['user_id'] ?? '').toString(),
+      name: json['name'] ?? '',
       email: json['email'] ?? '',
-      firstName: json['firstName'] ?? '',
-      lastName: json['lastName'] ?? '',
       role: json['role'] ?? 'REPORTER',
-      contactNumber: json['contactNumber'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toString()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toString()),
+      contactNumber: json['contact_number']?.toString(),
+      unitId: json['unit_id']?.toString(),
     );
   }
 
-  String get fullName => '$firstName $lastName';
+  // Split name into first/last for display
+  String get firstName {
+    final parts = name.split(' ');
+    return parts.isNotEmpty ? parts.first : '';
+  }
+
+  String get lastName {
+    final parts = name.split(' ');
+    return parts.length > 1 ? parts.sublist(1).join(' ') : '';
+  }
+
+  String get fullName => name;
 }

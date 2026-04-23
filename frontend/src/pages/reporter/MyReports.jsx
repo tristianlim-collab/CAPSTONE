@@ -129,7 +129,7 @@ const MyReports = () => {
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 text-xs text-right justify-end truncate">
                   <MapPin className="w-3.5 h-3.5" />
-                  <span className="truncate">{report.barangay?.name && report.barangay?.city ? `Barangay ${report.barangay.name}, ${report.barangay.city}` : report.map_pin_address || 'Unknown'}</span>
+                  <span className="truncate">{report.map_pin_address || 'Unknown'}</span>
                 </div>
               </div>
             </div>

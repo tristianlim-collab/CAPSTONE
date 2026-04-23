@@ -50,8 +50,6 @@ export default function IncidentReportForm() {
   const [locError, setLocError] = useState('');
   const [geoLoading, setGeoLoading] = useState(true);
   const [locationAddress, setLocationAddress] = useState('');
-  const [barangay, setBarangay] = useState('');
-  const [city, setCity] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
 
   // Form state
@@ -110,25 +108,39 @@ export default function IncidentReportForm() {
     }
   }, []);
 
-  // Reverse geocode using backend database (PostGIS barangay lookup)
+  // Reverse geocode using OpenStreetMap Nominatim for a human-readable address
   const reverseGeocode = async (loc) => {
     if (!loc) return;
     setAddressLoading(true);
     try {
-      // Call backend endpoint for accurate barangay lookup using PostGIS
-      const response = await api.get(`/geo/location-details?latitude=${loc.lat}&longitude=${loc.lng}`);
-      const data = response.data;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
 
-      if (data && data.name && data.city) {
-        setBarangay(data.name);
-        setCity(data.city);
-        setLocationAddress(`Barangay ${data.name}, ${data.city}`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=16&addressdetails=1`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Accept-Language': 'en',
+          },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
+      const data = await response.json();
+
+      if (data && data.display_name) {
+        // Use a concise version of the address
+        const parts = data.display_name.split(',').slice(0, 4).map(s => s.trim());
+        setLocationAddress(parts.join(', '));
       } else {
-        setLocationAddress('Unknown location');
+        // Fallback to coordinate-based description
+        setLocationAddress(`Location at ${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
       }
     } catch (error) {
       console.error('Location lookup error:', error);
-      setLocationAddress('Could not resolve location');
+      // Fallback: use coordinates as the address
+      setLocationAddress(`Location at ${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
     } finally {
       setAddressLoading(false);
     }
@@ -372,14 +384,7 @@ export default function IncidentReportForm() {
                   <p className="text-sm text-slate-400">Resolving address...</p>
                 ) : (
                   <>
-                    {barangay && city ? (
-                      <>
-                        <p className="text-lg font-bold text-green-700 mb-1">📍 Barangay {barangay}</p>
-                        <p className="text-sm font-semibold text-slate-700 mb-2">{city}</p>
-                      </>
-                    ) : (
-                      <p className="text-sm font-semibold text-slate-800 mb-2">{locationAddress || 'Default location (using fallback)'}</p>
-                    )}
+                    <p className="text-sm font-semibold text-slate-800 mb-2">{locationAddress || 'Tap the map to select location'}</p>
                     {location && (
                       <p className="text-xs text-slate-500">📌 GPS: {location.lat.toFixed(6)}°, {location.lng.toFixed(6)}°</p>
                     )}

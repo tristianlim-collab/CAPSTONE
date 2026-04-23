@@ -1,17 +1,16 @@
 class Incident {
-  final int id;
+  final String id;
   final String incidentCode;
   final String incidentType;
   final String description;
   final String severity;
   final double latitude;
   final double longitude;
-  final String? barangay;
-  final String? city;
+  final String? mapPinAddress;
   final String status;
   final String? reporterName;
   final String? reporterPhone;
-  final int reporterId;
+  final String reporterId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String>? photoUrls;
@@ -24,8 +23,7 @@ class Incident {
     required this.severity,
     required this.latitude,
     required this.longitude,
-    this.barangay,
-    this.city,
+    this.mapPinAddress,
     required this.status,
     this.reporterName,
     this.reporterPhone,
@@ -36,45 +34,50 @@ class Incident {
   });
 
   factory Incident.fromJson(Map<String, dynamic> json) {
+    // Handle incident_type which can be a string or an object with 'name'
+    String typeName = 'OTHER';
+    if (json['incident_type'] is Map) {
+      typeName = json['incident_type']['name'] ?? 'OTHER';
+    } else if (json['incident_type'] is String) {
+      typeName = json['incident_type'];
+    } else if (json['incidentType'] is String) {
+      typeName = json['incidentType'];
+    }
+
     return Incident(
-      id: json['id'] ?? 0,
-      incidentCode: json['incidentCode'] ?? '',
-      incidentType: json['incidentType'] ?? 'OTHER',
+      id: (json['incident_id'] ?? json['id'] ?? '').toString(),
+      incidentCode: json['incident_code'] ?? json['incidentCode'] ?? '',
+      incidentType: typeName,
       description: json['description'] ?? '',
       severity: json['severity'] ?? 'MEDIUM',
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
-      barangay: json['barangay'],
-      city: json['city'],
+      latitude: _toDouble(json['latitude']),
+      longitude: _toDouble(json['longitude']),
+      mapPinAddress: json['map_pin_address'] ?? json['mapPinAddress'],
       status: json['status'] ?? 'REPORTED',
-      reporterName: json['reporterName'],
-      reporterPhone: json['reporterPhone'],
-      reporterId: json['reporterId'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toString()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toString()),
-      photoUrls: (json['evidence'] as List?)?.map((e) => e['fileUrl'] as String).toList(),
+      reporterName: json['reporter_name'] ?? json['reporterName'] ?? (json['reporter'] is Map ? json['reporter']['name'] : null),
+      reporterPhone: json['reporter_contact'] ?? json['reporterPhone'],
+      reporterId: (json['reporter_id'] ?? json['reporterId'] ?? '').toString(),
+      createdAt: DateTime.tryParse(json['reported_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? json['updatedAt'] ?? '') ?? DateTime.now(),
+      photoUrls: _extractPhotoUrls(json['evidence']),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'incidentCode': incidentCode,
-      'incidentType': incidentType,
-      'description': description,
-      'severity': severity,
-      'latitude': latitude,
-      'longitude': longitude,
-      'barangay': barangay,
-      'city': city,
-      'status': status,
-      'reporterName': reporterName,
-      'reporterPhone': reporterPhone,
-      'reporterId': reporterId,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
-  get location => '$barangay${city != null ? ', $city' : ''}';
+  static List<String>? _extractPhotoUrls(dynamic evidence) {
+    if (evidence == null || evidence is! List) return null;
+    return evidence
+        .where((e) => e is Map && (e['file_path'] != null || e['fileUrl'] != null))
+        .map<String>((e) => (e['file_path'] ?? e['fileUrl']).toString())
+        .toList();
+  }
+
+  String get location => mapPinAddress ?? '';
 }

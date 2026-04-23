@@ -314,9 +314,7 @@ const ReportIncident = () => {
               <MapContainer
                 center={position}
                 zoom={14}
-                maxBounds={[[8.8000, 122.1500], [11.1000, 123.6500]]}
-                maxBoundsViscosity={1.0}
-                minZoom={8}
+                minZoom={5}
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer

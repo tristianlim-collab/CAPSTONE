@@ -408,9 +408,7 @@ export default function IncidentVerificationQueue() {
                     <p className="mt-1 text-sm text-slate-700 flex items-center gap-1">
                       <MapPin size={14} />
                       <span>
-                        {selectedIncident.barangay?.name && selectedIncident.barangay?.city
-                          ? `Barangay ${selectedIncident.barangay.name}, ${selectedIncident.barangay.city}`
-                          : selectedIncident.map_pin_address || 'Unknown'}
+                        {selectedIncident.map_pin_address || 'Unknown'}
                       </span>
                     </p>
                     {selectedIncident.latitude && selectedIncident.longitude && (
