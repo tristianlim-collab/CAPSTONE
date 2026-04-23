@@ -34,15 +34,15 @@ export default function ResponseDashboard() {
     fetchIncidents();
   }, []);
 
-  // Listen for new incidents in real-time
+  // Listen for verified incidents (after admin approval) and status updates
   useEffect(() => {
-    const unsub1 = on('new_incident', (incident) => {
+    const unsub1 = on('incident_verified', (data) => {
+      // Add verified incident with assignments to dashboard
       setIncidents(prev => {
-        // Avoid duplicates
-        if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
-        return [incident, ...prev];
+        if (prev.find(i => i.incident_id === data.incident_id)) return prev;
+        return [data.incident, ...prev];
       });
-      toast('🚨 New incident reported!', {
+      toast('🚨 New verified incident assigned!', {
         icon: '📍',
         style: { fontWeight: 'bold' }
       });

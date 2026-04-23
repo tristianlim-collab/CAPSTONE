@@ -72,4 +72,88 @@ export default {
       console.error('Socket emitUnitLocationUpdate failed:', err.message);
     }
   },
+
+  /**
+   * Broadcast that an incident is awaiting admin verification.
+   * Emitted when a reporter submits a new incident.
+   */
+  emitIncidentAwaitingVerification: (incident) => {
+    try {
+      const io = getIO();
+      io.to('admin').emit('incident_awaiting_verification', {
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        type: incident.incident_type?.name,
+        severity: incident.severity,
+        location: incident.map_pin_address,
+        description: incident.description,
+        reported_at: incident.reported_at,
+        reporter_name: incident.reporter?.name,
+        status: incident.status,
+        incident
+      });
+    } catch (err) {
+      console.error('Socket emitIncidentAwaitingVerification failed:', err.message);
+    }
+  },
+
+  /**
+   * Broadcast that an incident has been verified and dispatched.
+   * Emitted when admin approves an incident.
+   */
+  emitIncidentVerified: (incident, assignments) => {
+    try {
+      const io = getIO();
+      io.to('admin').emit('incident_verified', {
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        status: incident.status,
+        assignments,
+        incident
+      });
+      io.to('response').emit('incident_verified', {
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        status: incident.status,
+        assignments,
+        incident
+      });
+    } catch (err) {
+      console.error('Socket emitIncidentVerified failed:', err.message);
+    }
+  },
+
+  /**
+   * Broadcast that an incident has been rejected as a false alarm.
+   * Emitted when admin rejects an incident.
+   */
+  emitIncidentRejected: (incident) => {
+    try {
+      const io = getIO();
+      io.to('admin').emit('incident_rejected', {
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        status: incident.status
+      });
+    } catch (err) {
+      console.error('Socket emitIncidentRejected failed:', err.message);
+    }
+  },
+
+  /**
+   * Notify reporter that admin is requesting more information.
+   * Emitted when admin requests more info about an incident.
+   */
+  emitMoreInfoRequested: (incident, message) => {
+    try {
+      const io = getIO();
+      io.to(`reporter-${incident.reported_by}`).emit('more_info_requested', {
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        message: message || 'Admin is requesting more information about your incident'
+      });
+    } catch (err) {
+      console.error('Socket emitMoreInfoRequested failed:', err.message);
+    }
+  },
 };

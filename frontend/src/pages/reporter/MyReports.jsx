@@ -38,12 +38,27 @@ const MyReports = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'REPORTED': return 'bg-amber-100 text-amber-700';
-      case 'VERIFIED': return 'bg-blue-100 text-blue-700';
-      case 'RESPONDING': return 'bg-indigo-100 text-indigo-700';
-      case 'RESOLVED': return 'bg-emerald-100 text-emerald-700';
-      case 'CLOSED': return 'bg-slate-100 text-slate-700';
+      case 'REPORTED': return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+      case 'VERIFIED': return 'bg-blue-100 text-blue-700 border border-blue-200';
+      case 'RESPONDING': return 'bg-indigo-100 text-indigo-700 border border-indigo-200';
+      case 'ON_SCENE': return 'bg-purple-100 text-purple-700 border border-purple-200';
+      case 'RESOLVED': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+      case 'FALSE_ALARM': return 'bg-red-100 text-red-700 border border-red-200';
+      case 'CLOSED': return 'bg-slate-100 text-slate-700 border border-slate-200';
       default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'REPORTED': return '⏳ Awaiting Admin Review';
+      case 'VERIFIED': return '✓ Verified & Dispatched';
+      case 'RESPONDING': return '🚗 Units Responding';
+      case 'ON_SCENE': return '📍 Units On Scene';
+      case 'RESOLVED': return '✓ Resolved';
+      case 'FALSE_ALARM': return '✗ False Alarm';
+      case 'CLOSED': return '📋 Closed';
+      default: return status;
     }
   };
 
@@ -99,7 +114,7 @@ const MyReports = () => {
                   </div>
                 </div>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getStatusColor(report.status)}`}>
-                  {report.status}
+                  {getStatusLabel(report.status)}
                 </span>
               </div>
 
@@ -114,7 +129,7 @@ const MyReports = () => {
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 text-xs text-right justify-end truncate">
                   <MapPin className="w-3.5 h-3.5" />
-                  <span className="truncate">{report.map_pin_address || report.barangay?.name || 'Unknown'}</span>
+                  <span className="truncate">{report.barangay?.name && report.barangay?.city ? `Barangay ${report.barangay.name}, ${report.barangay.city}` : report.map_pin_address || 'Unknown'}</span>
                 </div>
               </div>
             </div>

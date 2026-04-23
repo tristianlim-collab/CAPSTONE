@@ -20,6 +20,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
+    { name: 'Pending Verification', path: '/admin/verification', icon: <AlertTriangle size={20} /> },
     { name: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
     { name: 'Roles & Permissions', path: '/admin/roles', icon: <ShieldAlert size={20} /> },
     { name: 'Incident Categories', path: '/admin/categories', icon: <AlertTriangle size={20} /> },

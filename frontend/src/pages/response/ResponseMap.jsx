@@ -5,7 +5,7 @@ import { incidentAPI } from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -45,6 +45,7 @@ const ResponseMap = () => {
   const [incidents, setIncidents] = useState([]);
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
   const { on } = useSocketContext();
 
   // Default center: Negros Island Region, Philippines
@@ -153,11 +154,13 @@ const ResponseMap = () => {
 
     const goToPrevious = (e) => {
       e.preventDefault();
+      e.stopPropagation();
       setCurrentIndex((prevIndex) => (prevIndex === 0 ? evidence.length - 1 : prevIndex - 1));
     };
 
     const goToNext = (e) => {
       e.preventDefault();
+      e.stopPropagation();
       setCurrentIndex((prevIndex) => (prevIndex === evidence.length - 1 ? 0 : prevIndex + 1));
     };
 
@@ -171,7 +174,10 @@ const ResponseMap = () => {
           <span>Evidence Photos ({evidence.length})</span>
         </div>
         {isImage && (
-          <div className="relative w-full rounded-lg overflow-hidden bg-slate-100">
+          <div
+            className="relative w-full rounded-lg overflow-hidden bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => setFullscreenPhoto(currentEvidence.file_path)}
+          >
             <img
               src={currentEvidence.file_path}
               alt="Evidence"
@@ -293,10 +299,14 @@ const ResponseMap = () => {
                         <Clock className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                         <span>{new Date(incident.reported_at).toLocaleString()}</span>
                       </div>
-                      {incident.map_pin_address && (
+                      {(incident.barangay?.name || incident.map_pin_address) && (
                         <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                           <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          <span className="truncate">{incident.map_pin_address}</span>
+                          <span className="truncate">
+                            {incident.barangay?.name && incident.barangay?.city
+                              ? `Barangay ${incident.barangay.name}, ${incident.barangay.city}`
+                              : incident.map_pin_address}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -335,6 +345,29 @@ const ResponseMap = () => {
           </MapContainer>
           </div>
         </div>
+
+        {/* Fullscreen Photo Modal */}
+        {fullscreenPhoto && (
+          <div
+            onClick={() => setFullscreenPhoto(null)}
+            className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4"
+          >
+            <div className="relative max-w-4xl max-h-[90vh]">
+              <img
+                src={fullscreenPhoto}
+                alt="Fullscreen evidence"
+                className="w-full h-full object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={() => setFullscreenPhoto(null)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

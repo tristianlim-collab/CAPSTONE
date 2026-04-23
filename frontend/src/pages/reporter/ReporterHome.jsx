@@ -231,7 +231,7 @@ export default function ReporterHome() {
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
                       <span className="flex items-center gap-1"><Clock size={12} /> {getTimeAgo(incident.reported_at)}</span>
-                      <span className="flex items-center gap-1 truncate"><MapPin size={12} /> {incident.map_pin_address || incident.barangay?.name || 'Unknown'}</span>
+                      <span className="flex items-center gap-1 truncate"><MapPin size={12} /> {incident.barangay?.name && incident.barangay?.city ? `Barangay ${incident.barangay.name}, ${incident.barangay.city}` : incident.map_pin_address || 'Unknown'}</span>
                     </div>
                   </div>
                 </div>

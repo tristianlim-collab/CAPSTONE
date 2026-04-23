@@ -36,7 +36,8 @@ export const createIncident = async (req, res) => {
         longitude,
         map_pin_address,
         severity: severity || 'MEDIUM',
-        barangay_id: detectedBarangayId
+        barangay_id: detectedBarangayId,
+        status: 'REPORTED' // Explicitly set to REPORTED - requires admin verification before dispatch
       },
       include: {
         incident_type: true,
@@ -46,35 +47,12 @@ export const createIncident = async (req, res) => {
       }
     });
 
-    const nearestUnits = await geoService.findNearestUnits(latitude, longitude, 1, targetUnitType);
-    if (nearestUnits && nearestUnits.length > 0) {
-      const assignedUnit = nearestUnits[0];
-      
-      const assignment = await prisma.incidentAssignment.create({
-        data: {
-          incident_id: incident.incident_id,
-          unit_id: assignedUnit.unit_id,
-          assigned_by: req.user.id, // automated assignment usually attributed to system or reporter
-          status: 'PENDING'
-        }
-      });
+    // DISABLED AUTO-DISPATCH: Incidents now require admin verification before unit assignment
+    // This prevents false reports from wasting response unit resources
+    // Admins can approve, reject, or request more info via POST /api/incidents/:id/verify
 
-      await prisma.notification.create({
-        data: {
-          incident_id: incident.incident_id,
-          unit_id: assignedUnit.unit_id,
-          channel: 'DASHBOARD',
-          message_body: `New ${incidentType?.name || 'Emergency'} Dispatch: ${incident.incident_code}`,
-          delivery_status: 'SENT'
-        }
-      });
-
-      // trigger socket event and potential SMS/Email depending on unit configuration via alertService
-      await alertService.notifyUnitDispatch(incident, assignedUnit, assignment, null).catch(err => console.error("Alert delivery error:", err));
-    }
-
-    // Broadcast to all response units + admin via socket (full payload for instant rendering)
-    socketService.emitNewIncident(incident);
+    // Broadcast to admin room so they see pending incidents awaiting verification
+    socketService.emitIncidentAwaitingVerification(incident);
 
     res.status(201).json(incident);
   } catch (error) {
@@ -288,5 +266,261 @@ export const requestBackup = async (req, res) => {
   } catch (error) {
     console.error('requestBackup error:', error);
     res.status(500).json({ message: 'Error requesting backup', error: error.message });
+  }
+};
+
+/**
+ * Verify incident (admin action)
+ * POST /api/incidents/:id/verify
+ * Body: { action: 'APPROVE'|'REJECT'|'REQUEST_INFO', message?: string, edited_data?: {...} }
+ */
+export const verifyIncident = async (req, res) => {
+  try {
+    const { action, message, edited_data } = req.body;
+    const incident_id = req.params.id;
+
+    // Verify admin role
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can verify incidents' });
+    }
+
+    const incident = await prisma.incident.findUnique({
+      where: { incident_id },
+      include: { incident_type: true, reporter: true, assignments: true, evidence: true }
+    });
+
+    if (!incident) {
+      return res.status(404).json({ message: 'Incident not found' });
+    }
+
+    if (incident.status !== 'REPORTED') {
+      return res.status(400).json({ message: 'Incident must be in REPORTED status to verify' });
+    }
+
+    if (action === 'APPROVE') {
+      // Update incident with edited data if provided
+      if (edited_data) {
+        await prisma.incident.update({
+          where: { incident_id },
+          data: {
+            incident_type_id: edited_data.incident_type_id || incident.incident_type_id,
+            severity: edited_data.severity || incident.severity,
+            description: edited_data.description || incident.description,
+            latitude: edited_data.latitude || incident.latitude,
+            longitude: edited_data.longitude || incident.longitude,
+            map_pin_address: edited_data.map_pin_address || incident.map_pin_address
+          }
+        });
+      }
+
+      // Determine target unit type
+      let targetUnitType = 'BARANGAY';
+      const incidentType = await prisma.incidentType.findUnique({
+        where: { type_id: edited_data?.incident_type_id || incident.incident_type_id }
+      });
+
+      if (incidentType) {
+        const name = incidentType.name.toUpperCase();
+        if (name.includes('FIRE')) targetUnitType = 'FIRE';
+        else if (name.includes('POLICE') || name.includes('CRIME')) targetUnitType = 'POLICE';
+        else if (name.includes('MEDICAL') || name.includes('EMERGENCY') || name.includes('HEALTH')) targetUnitType = 'MEDICAL';
+        else if (name.includes('DRRMO') || name.includes('DISASTER')) targetUnitType = 'DRRMO';
+      }
+
+      // Find nearest units and assign
+      const nearestUnits = await geoService.findNearestUnits(
+        edited_data?.latitude || incident.latitude,
+        edited_data?.longitude || incident.longitude,
+        1,
+        targetUnitType
+      );
+
+      const assignments = [];
+      if (nearestUnits && nearestUnits.length > 0) {
+        for (const unit of nearestUnits) {
+          const assignment = await prisma.incidentAssignment.create({
+            data: {
+              incident_id,
+              unit_id: unit.unit_id,
+              assigned_by: req.user.id,
+              status: 'PENDING'
+            },
+            include: { unit: true }
+          });
+
+          // Create notification
+          await prisma.notification.create({
+            data: {
+              incident_id,
+              unit_id: unit.unit_id,
+              channel: 'DASHBOARD',
+              message_body: `New Dispatch (Verified): ${incident.incident_code}`,
+              delivery_status: 'SENT'
+            }
+          });
+
+          assignments.push(assignment);
+
+          // Alert unit
+          await alertService.notifyUnitDispatch(incident, unit, assignment, null)
+            .catch(err => console.error('Alert error:', err));
+        }
+      }
+
+      // Update incident status to VERIFIED
+      const updatedIncident = await prisma.incident.update({
+        where: { incident_id },
+        data: { status: 'VERIFIED' },
+        include: { incident_type: true, reporter: true, assignments: true }
+      });
+
+      // Log status change
+      await prisma.incidentStatusLog.create({
+        data: {
+          incident_id,
+          changed_by: req.user.id,
+          status: 'VERIFIED',
+          remarks: `Approved by admin and dispatched to units`
+        }
+      });
+
+      // Broadcast verification event
+      socketService.emitIncidentVerified(updatedIncident, assignments);
+
+      res.json({
+        message: 'Incident approved and dispatched',
+        incident: updatedIncident,
+        assignments
+      });
+
+    } else if (action === 'REJECT') {
+      // Reject incident
+      const updatedIncident = await prisma.incident.update({
+        where: { incident_id },
+        data: { status: 'FALSE_ALARM' },
+        include: { incident_type: true, reporter: true }
+      });
+
+      // Log status change
+      await prisma.incidentStatusLog.create({
+        data: {
+          incident_id,
+          changed_by: req.user.id,
+          status: 'FALSE_ALARM',
+          remarks: message || 'Marked as false alarm by admin'
+        }
+      });
+
+      // Notify reporter
+      await prisma.notification.create({
+        data: {
+          user_id: incident.reported_by,
+          incident_id,
+          channel: 'DASHBOARD',
+          message_body: `Your report (${incident.incident_code}) was marked as a false alarm`,
+          delivery_status: 'SENT'
+        }
+      });
+
+      // Broadcast rejection event
+      socketService.emitIncidentRejected(updatedIncident);
+
+      res.json({
+        message: 'Incident rejected',
+        incident: updatedIncident
+      });
+
+    } else if (action === 'REQUEST_INFO') {
+      // Request more info from reporter
+      await prisma.notification.create({
+        data: {
+          user_id: incident.reported_by,
+          incident_id,
+          channel: 'DASHBOARD',
+          message_body: message || 'Admin is requesting more information about your incident',
+          delivery_status: 'SENT'
+        }
+      });
+
+      // Broadcast event
+      socketService.emitMoreInfoRequested(incident, message);
+
+      res.json({
+        message: 'More info requested from reporter',
+        incident
+      });
+
+    } else {
+      res.status(400).json({ message: 'Invalid action. Must be APPROVE, REJECT, or REQUEST_INFO' });
+    }
+  } catch (error) {
+    console.error('verifyIncident error:', error);
+    res.status(500).json({ message: 'Error verifying incident', error: error.message });
+  }
+};
+
+/**
+ * Edit incident details (admin only, before verification)
+ * PATCH /api/incidents/:id/edit
+ * Body: { incident_type_id, severity, description, latitude, longitude, map_pin_address }
+ */
+export const editIncident = async (req, res) => {
+  try {
+    const { incident_type_id, severity, description, latitude, longitude, map_pin_address } = req.body;
+    const incident_id = req.params.id;
+
+    // Verify admin role
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can edit incidents' });
+    }
+
+    const incident = await prisma.incident.findUnique({
+      where: { incident_id }
+    });
+
+    if (!incident) {
+      return res.status(404).json({ message: 'Incident not found' });
+    }
+
+    if (incident.status !== 'REPORTED') {
+      return res.status(400).json({ message: 'Can only edit incidents in REPORTED status' });
+    }
+
+    // Update incident
+    const updatedIncident = await prisma.incident.update({
+      where: { incident_id },
+      data: {
+        incident_type_id: incident_type_id || incident.incident_type_id,
+        severity: severity || incident.severity,
+        description: description || incident.description,
+        latitude: latitude || incident.latitude,
+        longitude: longitude || incident.longitude,
+        map_pin_address: map_pin_address || incident.map_pin_address
+      },
+      include: {
+        incident_type: true,
+        reporter: true,
+        barangay: true,
+        evidence: true
+      }
+    });
+
+    // Log edit
+    await prisma.incidentStatusLog.create({
+      data: {
+        incident_id,
+        changed_by: req.user.id,
+        status: 'REPORTED',
+        remarks: 'Incident details edited by admin'
+      }
+    });
+
+    res.json({
+      message: 'Incident updated',
+      incident: updatedIncident
+    });
+  } catch (error) {
+    console.error('editIncident error:', error);
+    res.status(500).json({ message: 'Error editing incident', error: error.message });
   }
 };

@@ -29,6 +29,7 @@ import SystemMonitoring from './pages/admin/SystemMonitoring';
 import Analytics from './pages/admin/Analytics';
 import NotificationSettings from './pages/admin/NotificationSettings';
 import SystemSettings from './pages/admin/SystemSettings';
+import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
 
 // Administration Layouts
 import AdminLayout from './components/layout/AdminLayout';
@@ -58,6 +59,7 @@ const App = () => {
             <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="verification" element={<IncidentVerificationQueue />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RolesPermissions />} />
               <Route path="categories" element={<IncidentManagement />} />

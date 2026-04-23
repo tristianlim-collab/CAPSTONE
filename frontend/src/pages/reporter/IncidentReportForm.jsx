@@ -50,6 +50,8 @@ export default function IncidentReportForm() {
   const [locError, setLocError] = useState('');
   const [geoLoading, setGeoLoading] = useState(true);
   const [locationAddress, setLocationAddress] = useState('');
+  const [barangay, setBarangay] = useState('');
+  const [city, setCity] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
 
   // Form state
@@ -108,26 +110,28 @@ export default function IncidentReportForm() {
     }
   }, []);
 
-  // Reverse geocode
-  const reverseGeocode = (loc) => {
+  // Reverse geocode using backend database (PostGIS barangay lookup)
+  const reverseGeocode = async (loc) => {
     if (!loc) return;
     setAddressLoading(true);
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18&addressdetails=1`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.address) {
-          const addr = data.address;
-          const barangay = addr.hamlet || addr.neighbourhood || '';
-          const city = addr.municipality || addr.city || addr.town || '';
-          const displayText = barangay && city ? `Barangay ${barangay}, ${city}` : locationAddress || 'Unknown location';
-          setLocationAddress(displayText);
-        }
-        setAddressLoading(false);
-      })
-      .catch(() => {
-        setLocationAddress('Could not resolve address');
-        setAddressLoading(false);
-      });
+    try {
+      // Call backend endpoint for accurate barangay lookup using PostGIS
+      const response = await api.get(`/geo/location-details?latitude=${loc.lat}&longitude=${loc.lng}`);
+      const data = response.data;
+
+      if (data && data.name && data.city) {
+        setBarangay(data.name);
+        setCity(data.city);
+        setLocationAddress(`Barangay ${data.name}, ${data.city}`);
+      } else {
+        setLocationAddress('Unknown location');
+      }
+    } catch (error) {
+      console.error('Location lookup error:', error);
+      setLocationAddress('Could not resolve location');
+    } finally {
+      setAddressLoading(false);
+    }
   };
 
   const handleRefreshLocation = () => {
@@ -368,9 +372,16 @@ export default function IncidentReportForm() {
                   <p className="text-sm text-slate-400">Resolving address...</p>
                 ) : (
                   <>
-                    <p className="text-sm font-semibold text-slate-800">{locationAddress || 'Default location (using fallback)'}</p>
+                    {barangay && city ? (
+                      <>
+                        <p className="text-lg font-bold text-green-700 mb-1">📍 Barangay {barangay}</p>
+                        <p className="text-sm font-semibold text-slate-700 mb-2">{city}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-semibold text-slate-800 mb-2">{locationAddress || 'Default location (using fallback)'}</p>
+                    )}
                     {location && (
-                      <p className="text-xs text-slate-400 mt-1">{location.lat.toFixed(6)}°, {location.lng.toFixed(6)}°</p>
+                      <p className="text-xs text-slate-500">📌 GPS: {location.lat.toFixed(6)}°, {location.lng.toFixed(6)}°</p>
                     )}
                   </>
                 )}
