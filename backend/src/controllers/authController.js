@@ -8,6 +8,14 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, role, contact_number } = req.body;
     
+    // Validate phone number format if provided
+    if (contact_number) {
+      const phoneRegex = /^(\+639|09)\d{9}$/;
+      if (!phoneRegex.test(contact_number)) {
+        return res.status(400).json({ message: 'Invalid contact number format. Use +639 or 09 followed by 9 digits.' });
+      }
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already exists' });
@@ -79,13 +87,13 @@ export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { user_id: req.user.user_id || req.user.id },
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, ResponseUnit: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, unit: true }
     });
     
     if (!user) return res.status(404).json({ message: 'User not found' });
     
     // Map ResponseUnit to 'unit' to match usual frontend property if available
-    res.json({ id: user.user_id, ...user, unit: user.ResponseUnit });
+    res.json({ id: user.user_id, ...user, unit: user.unit });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error fetching profile' });
@@ -96,6 +104,14 @@ export const updateProfile = async (req, res) => {
   try {
     const { name, email, contact_number } = req.body;
     const userId = req.user.id || req.user.user_id;
+
+    // Validate phone number format if provided
+    if (contact_number) {
+      const phoneRegex = /^(\+639|09)\d{9}$/;
+      if (!phoneRegex.test(contact_number)) {
+        return res.status(400).json({ message: 'Invalid contact number format. Use +639 or 09 followed by 9 digits.' });
+      }
+    }
 
     // Optional: add email uniqueness check excluding this user
     if (email) {
@@ -108,10 +124,10 @@ export const updateProfile = async (req, res) => {
     const user = await prisma.user.update({
       where: { user_id: userId },
       data: { name, email, contact_number },
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, ResponseUnit: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, unit: true }
     });
 
-    res.json({ message: 'Profile updated successfully', user: { id: user.user_id, ...user, unit: user.ResponseUnit } });
+    res.json({ message: 'Profile updated successfully', user: { id: user.user_id, ...user, unit: user.unit } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error updating profile', error: error.message });

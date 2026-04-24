@@ -199,6 +199,14 @@ export default function IncidentReportForm() {
       return;
     }
 
+    if (contactNumber) {
+      const phoneRegex = /^(\+639|09)\d{9}$/;
+      if (!phoneRegex.test(contactNumber)) {
+        toast.error('Invalid contact number format. Use +639 or 09 followed by 9 digits.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       // Create incident
@@ -474,9 +482,17 @@ export default function IncidentReportForm() {
             />
             <input
               type="tel"
-              placeholder="Contact Number"
+              placeholder="Contact Number (Optional)"
               value={contactNumber}
-              onChange={(e) => setContactNumber(e.target.value)}
+              maxLength={13}
+              onChange={(e) => {
+                let value = e.target.value;
+                value = value.replace(/[^\d+]/g, '');
+                if (value.indexOf('+') > 0) {
+                  value = value.replace(/\+/g, '');
+                }
+                setContactNumber(value);
+              }}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
             />
           </div>

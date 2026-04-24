@@ -75,6 +75,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    final phoneRegex = RegExp(r'^(\+639|09)\d{9}$');
+    if (!phoneRegex.hasMatch(contactNumber)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Invalid contact number format. Use +639 or 09 followed by 9 digits (e.g., +639123456789).')),
+      );
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.register(
       email: email,
@@ -148,11 +157,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _contactNumberController,
                   decoration: InputDecoration(
                     labelText: 'Contact Number',
+                    hintText: '+639123456789 or 09123456789',
                     prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+                  maxLength: 13,
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),

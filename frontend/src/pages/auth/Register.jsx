@@ -22,7 +22,16 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    let value = e.target.value;
+    
+    if (e.target.name === 'contact_number') {
+      value = value.replace(/[^\d+]/g, '');
+      if (value.indexOf('+') > 0) {
+        value = value.replace(/\+/g, '');
+      }
+    }
+    
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -32,6 +41,14 @@ const Register = () => {
     if (formData.password !== formData.confirmPassword) {
       setErrorMsg('Passwords do not match');
       return;
+    }
+
+    if (formData.contact_number) {
+      const phoneRegex = /^(\+639|09)\d{9}$/;
+      if (!phoneRegex.test(formData.contact_number)) {
+        setErrorMsg('Invalid contact number format. Use +639 or 09 followed by 9 digits.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -78,7 +95,7 @@ const Register = () => {
           <Input label="Email" name="email" type="email" placeholder="john@example.com" value={formData.email} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
           <Input label="Password" name="password" type="password" placeholder="Min. 8 characters" value={formData.password} onChange={handleChange} required showPasswordToggle className="border-slate-200 focus:ring-blue-500" />
           <Input label="Confirm Password" name="confirmPassword" type="password" placeholder="Type password again" value={formData.confirmPassword} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
-          <Input label="Contact Number" name="contact_number" type="tel" placeholder="+1234567890" value={formData.contact_number} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
+          <Input label="Contact Number" name="contact_number" type="tel" maxLength={13} placeholder="+639123456789" value={formData.contact_number} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
           
           <div className="flex flex-col gap-1 w-full">
             <label className="text-sm font-medium text-slate-700">Role</label>
