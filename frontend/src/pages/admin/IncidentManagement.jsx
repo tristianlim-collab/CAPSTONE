@@ -4,6 +4,44 @@ import { incidentTypeAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const IncidentManagement = () => {
+  const defaultSeverityTemplate = {
+    LOW: '',
+    HIGH: '',
+    CRITICAL: ''
+  };
+
+  const parseSeverityConfig = (rawDescription) => {
+    if (!rawDescription) {
+      return { summary: '', severityDescriptions: { ...defaultSeverityTemplate } };
+    }
+
+    try {
+      const parsed = JSON.parse(rawDescription);
+      return {
+        summary: parsed.summary || '',
+        severityDescriptions: {
+          LOW: parsed.severityDescriptions?.LOW || '',
+          HIGH: parsed.severityDescriptions?.HIGH || '',
+          CRITICAL: parsed.severityDescriptions?.CRITICAL || ''
+        }
+      };
+    } catch {
+      // Backward compatibility with existing plain-text descriptions
+      return { summary: rawDescription, severityDescriptions: { ...defaultSeverityTemplate } };
+    }
+  };
+
+  const buildSeverityConfig = (data) => {
+    return JSON.stringify({
+      summary: data.summary?.trim() || '',
+      severityDescriptions: {
+        LOW: data.severity_low?.trim() || '',
+        HIGH: data.severity_high?.trim() || '',
+        CRITICAL: data.severity_critical?.trim() || ''
+      }
+    });
+  };
+
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,7 +49,15 @@ const IncidentManagement = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', color_code: 'blue', icon_label: 'Layers', description: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    color_code: 'blue',
+    icon_label: 'Layers',
+    summary: '',
+    severity_low: '',
+    severity_high: '',
+    severity_critical: ''
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,16 +81,28 @@ const IncidentManagement = () => {
 
   const openModal = (category = null) => {
     if (category) {
+      const parsedConfig = parseSeverityConfig(category.description);
       setEditingId(category.type_id);
       setFormData({ 
         name: category.name, 
         color_code: category.color_code || 'blue', 
         icon_label: category.icon_label || 'Layers', 
-        description: category.description || '' 
+        summary: parsedConfig.summary,
+        severity_low: parsedConfig.severityDescriptions.LOW,
+        severity_high: parsedConfig.severityDescriptions.HIGH,
+        severity_critical: parsedConfig.severityDescriptions.CRITICAL
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', color_code: 'blue', icon_label: 'Layers', description: '' });
+      setFormData({
+        name: '',
+        color_code: 'blue',
+        icon_label: 'Layers',
+        summary: '',
+        severity_low: '',
+        severity_high: '',
+        severity_critical: ''
+      });
     }
     setIsModalOpen(true);
   };
@@ -58,11 +116,17 @@ const IncidentManagement = () => {
     e.preventDefault();
     try {
       setSaving(true);
+      const payload = {
+        name: formData.name,
+        color_code: formData.color_code,
+        icon_label: formData.icon_label,
+        description: buildSeverityConfig(formData)
+      };
       if (editingId) {
-        await incidentTypeAPI.update(editingId, formData);
+        await incidentTypeAPI.update(editingId, payload);
         toast.success('Category updated successfully');
       } else {
-        await incidentTypeAPI.create(formData);
+        await incidentTypeAPI.create(payload);
         toast.success('Category created successfully');
       }
       closeModal();
@@ -146,7 +210,7 @@ const IncidentManagement = () => {
                      </span>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-600 max-w-xs truncate">
-                    {c.description || '-'}
+                    {parseSeverityConfig(c.description).summary || 'Severity templates configured'}
                   </td>
                   <td className="px-6 py-4 text-right">
                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -191,8 +255,20 @@ const IncidentManagement = () => {
                     </div>
                  </div>
                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Short Description</label>
-                    <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none h-20 resize-none" placeholder="Brief details about this classification..."></textarea>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Category Summary</label>
+                    <textarea value={formData.summary} onChange={e => setFormData({...formData, summary: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none h-20 resize-none" placeholder="Brief details about this classification..."></textarea>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Severity Description - LOW</label>
+                    <textarea required value={formData.severity_low} onChange={e => setFormData({...formData, severity_low: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none h-16 resize-none" placeholder="Guidance shown when LOW is selected"></textarea>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Severity Description - HIGH</label>
+                    <textarea required value={formData.severity_high} onChange={e => setFormData({...formData, severity_high: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none h-16 resize-none" placeholder="Guidance shown when HIGH is selected"></textarea>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Severity Description - CRITICAL</label>
+                    <textarea required value={formData.severity_critical} onChange={e => setFormData({...formData, severity_critical: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none h-16 resize-none" placeholder="Guidance shown when CRITICAL is selected"></textarea>
                  </div>
                  <div className="pt-2">
                     <button disabled={saving} type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm shadow-indigo-600/30 flex justify-center items-center gap-2 transition-all disabled:opacity-50">

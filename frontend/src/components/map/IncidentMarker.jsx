@@ -3,6 +3,7 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import moment from 'moment';
 import { Image, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const getColor = (status, severity) => {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'grey';
@@ -10,6 +11,34 @@ const getColor = (status, severity) => {
   if (severity === 'HIGH') return 'orange';
   if (severity === 'MEDIUM') return 'gold';
   return 'green';
+};
+
+const normalize = (value) => (value || '').toString().trim().toLowerCase();
+
+const getLguIndicator = (incident, user) => {
+  const userMunicipality = normalize(user?.barangay?.municipality);
+  const userCity = normalize(user?.barangay?.city);
+  const incidentMunicipality = normalize(incident?.barangay?.municipality);
+  const incidentCity = normalize(incident?.barangay?.city);
+
+  if (!incidentMunicipality && !incidentCity) {
+    return { color: 'orange', label: 'Unknown LGU' };
+  }
+
+  if (
+    userMunicipality &&
+    userCity &&
+    incidentMunicipality === userMunicipality &&
+    incidentCity === userCity
+  ) {
+    return { color: 'red', label: 'Own LGU' };
+  }
+
+  if (userCity && incidentCity && incidentCity === userCity) {
+    return { color: 'blue', label: 'Neighbor LGU' };
+  }
+
+  return { color: 'green', label: 'LFAR' };
 };
 
 const createColoredIcon = (color) => {
@@ -85,8 +114,13 @@ const EvidenceGallery = ({ evidence }) => {
   );
 };
 
-export default function IncidentMarker({ incident }) {
-  const color = getColor(incident.status, incident.severity);
+export default function IncidentMarker({ incident, colorMode = 'severity' }) {
+  const { user } = useAuth();
+  const lguIndicator = getLguIndicator(incident, user);
+  const color =
+    colorMode === 'lgu'
+      ? lguIndicator.color
+      : getColor(incident.status, incident.severity);
   const icon = createColoredIcon(color);
 
   return (
@@ -100,6 +134,9 @@ export default function IncidentMarker({ incident }) {
             </span>
           </div>
           <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
+          {colorMode === 'lgu' && (
+            <p className="text-sm mb-1"><strong>LGU Zone:</strong> {lguIndicator.label}</p>
+          )}
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
           <div className="text-xs text-gray-400 mt-2">

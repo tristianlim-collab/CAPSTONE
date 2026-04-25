@@ -55,10 +55,10 @@ export default function IncidentReportForm() {
   // Form state
   const [photos, setPhotos] = useState([]);
   const [selectedType, setSelectedType] = useState('');
-  const [description, setDescription] = useState('');
-  const [severity, setSeverity] = useState('MEDIUM');
+  const [severity, setSeverity] = useState('LOW');
   const [fullName, setFullName] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
+  const [contactNumber, setContactNumber] = useState('+63');
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
   // Data state
   const [incidentTypes, setIncidentTypes] = useState([]);
@@ -71,6 +71,30 @@ export default function IncidentReportForm() {
     { id: 'CRIME-RELATED', name: 'Crime-Related' },
     { id: 'OTHER', name: 'Other' }
   ];
+
+  const defaultSeverityDescriptions = {
+    LOW: 'Localized issue with limited impact.',
+    HIGH: 'Serious incident requiring urgent coordinated response.',
+    CRITICAL: 'Extreme emergency with immediate widespread risk.'
+  };
+
+  const getSeverityDescription = () => {
+    const selectedTypeData = incidentTypes.find((type) => type.name === selectedType);
+    if (selectedTypeData?.description) {
+      try {
+        const parsed = JSON.parse(selectedTypeData.description);
+        const configured = parsed?.severityDescriptions?.[severity];
+        if (configured) return configured;
+      } catch {
+        // Ignore parse errors and use fallback copy.
+      }
+    }
+    return defaultSeverityDescriptions[severity];
+  };
+
+  const generatedDescription = selectedType
+    ? `${selectedType} - ${severity}: ${getSeverityDescription()}`
+    : '';
 
   // Fetch incident types
   useEffect(() => {
@@ -178,6 +202,9 @@ export default function IncidentReportForm() {
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  const isValidPhone = /^\+639\d{9}$/.test(contactNumber);
+  const showPhoneError = phoneTouched && !isValidPhone;
+
   const handleSubmit = async () => {
     if (!location) {
       toast.error('Please detect your location');
@@ -187,11 +214,6 @@ export default function IncidentReportForm() {
       toast.error('Please select an emergency type');
       return;
     }
-    if (!description.trim()) {
-      toast.error('Please describe the incident');
-      return;
-    }
-
     // Find type ID from incident types
     const typeId = incidentTypes.find(t => t.name === selectedType)?.type_id;
     if (!typeId) {
@@ -199,12 +221,10 @@ export default function IncidentReportForm() {
       return;
     }
 
-    if (contactNumber) {
-      const phoneRegex = /^(\+639|09)\d{9}$/;
-      if (!phoneRegex.test(contactNumber)) {
-        toast.error('Invalid contact number format. Use +639 or 09 followed by 9 digits.');
-        return;
-      }
+    if (!isValidPhone) {
+      setPhoneTouched(true);
+      toast.error('Contact number is required. Use format +639XXXXXXXXX.');
+      return;
     }
 
     setLoading(true);
@@ -212,13 +232,13 @@ export default function IncidentReportForm() {
       // Create incident
       const incRes = await incidentAPI.create({
         incident_type_id: typeId,
-        description: description.trim(),
+        description: generatedDescription,
         latitude: location.lat,
         longitude: location.lng,
         map_pin_address: locationAddress,
         severity: severity,
         reporter_name: fullName || undefined,
-        reporter_contact: contactNumber || undefined
+        reporter_contact: contactNumber
       });
 
       const incidentId = incRes.data?.incident_id;
@@ -426,31 +446,13 @@ export default function IncidentReportForm() {
           </select>
         </div>
 
-        {/* DESCRIPTION SECTION */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <FileText size={16} className="text-blue-500" /> Description <span className="text-red-500">*</span>
-            </h3>
-            <span className="text-xs text-slate-400">{description.length}/500</span>
-          </div>
-          <textarea
-            rows="4"
-            value={description}
-            maxLength={500}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what happened, any injuries, hazards, or specific landmarks..."
-            className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm resize-none transition-all"
-          ></textarea>
-        </div>
-
         {/* INCIDENT SEVERITY */}
         <div className="mb-6">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
             <AlertTriangle size={16} className="text-orange-500" /> Incident Severity
           </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((level) => (
+          <div className="grid grid-cols-3 gap-2">
+            {['LOW', 'HIGH', 'CRITICAL'].map((level) => (
               <button
                 key={level}
                 onClick={() => setSeverity(level)}
@@ -458,7 +460,6 @@ export default function IncidentReportForm() {
                   severity === level
                     ? level === 'CRITICAL' ? 'bg-red-500 text-white border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.3)]'
                       : level === 'HIGH' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_12px_rgba(249,115,22,0.3)]'
-                      : level === 'MEDIUM' ? 'bg-amber-500 text-white border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.3)]'
                       : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                 }`}
@@ -467,6 +468,14 @@ export default function IncidentReportForm() {
               </button>
             ))}
           </div>
+          <p className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+            {getSeverityDescription()}
+          </p>
+          {generatedDescription && (
+            <p className="mt-2 text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <span className="font-semibold">Auto description:</span> {generatedDescription}
+            </p>
+          )}
         </div>
 
         {/* OPTIONAL PERSONAL INFO */}
@@ -482,19 +491,34 @@ export default function IncidentReportForm() {
             />
             <input
               type="tel"
-              placeholder="Contact Number (Optional)"
+              placeholder="+639XXXXXXXXX"
               value={contactNumber}
               maxLength={13}
+              required
               onChange={(e) => {
-                let value = e.target.value;
-                value = value.replace(/[^\d+]/g, '');
-                if (value.indexOf('+') > 0) {
-                  value = value.replace(/\+/g, '');
+                const raw = e.target.value || '';
+                const digitsOnly = raw.replace(/\D/g, '');
+                let normalized = digitsOnly;
+
+                if (normalized.startsWith('63')) {
+                  normalized = normalized.slice(2);
+                } else if (normalized.startsWith('0')) {
+                  normalized = normalized.slice(1);
                 }
-                setContactNumber(value);
+
+                normalized = normalized.slice(0, 10);
+                setContactNumber(`+63${normalized}`);
               }}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+              onBlur={() => setPhoneTouched(true)}
+              className={`w-full px-4 py-3 rounded-xl bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-blue-500 shadow-sm ${
+                showPhoneError
+                  ? 'border-red-300 focus:ring-red-500/20'
+                  : 'border-slate-200 focus:ring-blue-500/20'
+              }`}
             />
+            {showPhoneError && (
+              <p className="text-xs text-red-600 -mt-1">Contact number is required. Use +639XXXXXXXXX</p>
+            )}
           </div>
         </div>
 
@@ -505,9 +529,9 @@ export default function IncidentReportForm() {
         <div className="max-w-[430px] mx-auto space-y-3">
           <button
             onClick={handleSubmit}
-            disabled={loading || !location || !selectedType || !description.trim()}
+            disabled={loading || !location || !selectedType}
             className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
-              !loading && location && selectedType && description.trim()
+              !loading && location && selectedType
                 ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
             }`}

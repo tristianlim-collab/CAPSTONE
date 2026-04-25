@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import IncidentMarker from './IncidentMarker';
 import BoundaryLayer from './BoundaryLayer';
@@ -17,7 +17,44 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 let DefaultIcon = L.icon({ iconUrl: icon, shadowUrl: iconShadow });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-export default function LiveMap({ center = [10.0000, 122.9000], zoom = 9 }) {
+function AutoZoomToLatestIncident({ incidents, enabled }) {
+  const map = useMap();
+  const hasHydrated = useRef(false);
+  const previousLatestId = useRef(null);
+
+  useEffect(() => {
+    if (!enabled || incidents.length === 0) return;
+
+    const latestIncident = incidents[0];
+    const latestId = latestIncident?.incident_id;
+    const lat = Number(latestIncident?.latitude);
+    const lng = Number(latestIncident?.longitude);
+    const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+
+    if (!hasValidCoordinates) return;
+
+    if (!hasHydrated.current) {
+      hasHydrated.current = true;
+      previousLatestId.current = latestId;
+      return;
+    }
+
+    if (previousLatestId.current !== latestId) {
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 1.2 });
+      previousLatestId.current = latestId;
+      toast.success('New incident received. Map focused on latest report.');
+    }
+  }, [enabled, incidents, map]);
+
+  return null;
+}
+
+export default function LiveMap({
+  center = [10.0000, 122.9000],
+  zoom = 9,
+  autoZoomOnNewIncident = false,
+  markerColorMode = 'severity'
+}) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap'
@@ -89,15 +126,24 @@ export default function LiveMap({ center = [10.0000, 122.9000], zoom = 9 }) {
         />
         
         <BoundaryLayer boundaries={boundaries} />
+        <AutoZoomToLatestIncident incidents={incidents} enabled={autoZoomOnNewIncident} />
 
         {mode === 'markers' && incidents.map(incident => (
-          <IncidentMarker key={incident.incident_id} incident={incident} />
+          <IncidentMarker key={incident.incident_id} incident={incident} colorMode={markerColorMode} />
         ))}
 
         {mode === 'heatmap' && <HeatmapLayer points={incidents} />}
       </MapContainer>
 
       {mode === 'markers' && <MapLegend />}
+      {mode === 'markers' && markerColorMode === 'lgu' && (
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-md text-xs text-slate-700 space-y-1">
+          <div className="font-bold text-slate-800">LGU Indicator</div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Own LGU</div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Neighbor LGU</div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> LFAR</div>
+        </div>
+      )}
     </div>
   );
 }

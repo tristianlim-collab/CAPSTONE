@@ -12,11 +12,12 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    contact_number: '',
+    contact_number: '+63',
     role: 'REPORTER'
   });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -25,10 +26,17 @@ const Register = () => {
     let value = e.target.value;
     
     if (e.target.name === 'contact_number') {
-      value = value.replace(/[^\d+]/g, '');
-      if (value.indexOf('+') > 0) {
-        value = value.replace(/\+/g, '');
+      const digitsOnly = value.replace(/\D/g, '');
+      let normalized = digitsOnly;
+
+      if (normalized.startsWith('63')) {
+        normalized = normalized.slice(2);
+      } else if (normalized.startsWith('0')) {
+        normalized = normalized.slice(1);
       }
+
+      normalized = normalized.slice(0, 10);
+      value = `+63${normalized}`;
     }
     
     setFormData({ ...formData, [e.target.name]: value });
@@ -43,12 +51,11 @@ const Register = () => {
       return;
     }
 
-    if (formData.contact_number) {
-      const phoneRegex = /^(\+639|09)\d{9}$/;
-      if (!phoneRegex.test(formData.contact_number)) {
-        setErrorMsg('Invalid contact number format. Use +639 or 09 followed by 9 digits.');
-        return;
-      }
+    const phoneRegex = /^\+639\d{9}$/;
+    if (!phoneRegex.test(formData.contact_number)) {
+      setPhoneTouched(true);
+      setErrorMsg('Invalid contact number. Use format +639XXXXXXXXX.');
+      return;
     }
 
     setLoading(true);
@@ -63,6 +70,11 @@ const Register = () => {
       setLoading(false);
     }
   };
+
+  const phoneError =
+    phoneTouched && !/^\+639\d{9}$/.test(formData.contact_number)
+      ? 'Enter a valid PH mobile number: +639XXXXXXXXX'
+      : '';
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -95,7 +107,19 @@ const Register = () => {
           <Input label="Email" name="email" type="email" placeholder="john@example.com" value={formData.email} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
           <Input label="Password" name="password" type="password" placeholder="Min. 8 characters" value={formData.password} onChange={handleChange} required showPasswordToggle className="border-slate-200 focus:ring-blue-500" />
           <Input label="Confirm Password" name="confirmPassword" type="password" placeholder="Type password again" value={formData.confirmPassword} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
-          <Input label="Contact Number" name="contact_number" type="tel" maxLength={13} placeholder="+639123456789" value={formData.contact_number} onChange={handleChange} required className="border-slate-200 focus:ring-blue-500" />
+          <Input
+            label="Contact Number"
+            name="contact_number"
+            type="tel"
+            maxLength={13}
+            placeholder="+639XXXXXXXXX"
+            value={formData.contact_number}
+            onChange={handleChange}
+            onBlur={() => setPhoneTouched(true)}
+            error={phoneError}
+            required
+            className="border-slate-200 focus:ring-blue-500"
+          />
           
           <div className="flex flex-col gap-1 w-full">
             <label className="text-sm font-medium text-slate-700">Role</label>

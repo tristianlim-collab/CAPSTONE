@@ -11,9 +11,8 @@ import {
 export default function ReportStep2() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState([]); // support multiple photos
-  const [severity, setSeverity] = useState('MEDIUM'); // default severity
+  const [severity, setSeverity] = useState('LOW'); // default severity
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [locationAddress, setLocationAddress] = useState('');
   const [addressLoading, setAddressLoading] = useState(true);
@@ -78,11 +77,6 @@ export default function ReportStep2() {
   };
 
   const handleSubmit = async () => {
-    if (!description.trim()) {
-      toast.error('Please describe the incident');
-      return;
-    }
-
     const typeId = getIncidentTypeId();
     if (!typeId) {
       toast.error('Incident types not loaded yet. Please wait.');
@@ -94,7 +88,7 @@ export default function ReportStep2() {
       // 1. Create the incident
       const incRes = await incidentAPI.create({
         incident_type_id: typeId,
-        description: description.trim(),
+        description: generatedDescription,
         latitude: location?.lat || 0,
         longitude: location?.lng || 0,
         map_pin_address: locationAddress || undefined,
@@ -147,6 +141,29 @@ export default function ReportStep2() {
     'CRIME': 'Crime-Related',
     'OTHER': 'Other'
   };
+
+  const defaultSeverityDescriptions = {
+    LOW: 'Localized issue with limited impact.',
+    HIGH: 'Serious incident requiring urgent coordinated response.',
+    CRITICAL: 'Extreme emergency with immediate widespread risk.'
+  };
+
+  const getSeverityDescription = () => {
+    const selectedTypeName = typeNames[incidentTypeKey] || incidentTypeKey;
+    const selectedTypeData = incidentTypes.find((type) => type.name === selectedTypeName);
+    if (selectedTypeData?.description) {
+      try {
+        const parsed = JSON.parse(selectedTypeData.description);
+        const configured = parsed?.severityDescriptions?.[severity];
+        if (configured) return configured;
+      } catch {
+        // Ignore parse errors and use fallback copy.
+      }
+    }
+    return defaultSeverityDescriptions[severity];
+  };
+
+  const generatedDescription = `${typeNames[incidentTypeKey] || incidentTypeKey || 'Emergency'} - ${severity}: ${getSeverityDescription()}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col relative overflow-hidden">
@@ -235,8 +252,8 @@ export default function ReportStep2() {
           <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2 mb-3">
             <AlertTriangle size={16} className="text-orange-500" /> Incident Severity
           </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((level) => (
+          <div className="grid grid-cols-3 gap-2">
+            {['LOW', 'HIGH', 'CRITICAL'].map((level) => (
               <button
                 key={level}
                 onClick={() => setSeverity(level)}
@@ -244,7 +261,6 @@ export default function ReportStep2() {
                   severity === level
                     ? level === 'CRITICAL' ? 'bg-red-500 text-white border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.3)]'
                       : level === 'HIGH' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_12px_rgba(249,115,22,0.3)]'
-                      : level === 'MEDIUM' ? 'bg-amber-500 text-white border-amber-500 shadow-[0_4px_12px_rgba(245,158,11,0.3)]'
                       : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
                     : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
                 }`}
@@ -253,25 +269,12 @@ export default function ReportStep2() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Description Field (on top as requested) */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase flex items-center gap-2">
-              <FileText size={16} className="text-blue-500" /> Description
-            </h3>
-            <span className="text-xs text-slate-400">{description.length}/500</span>
-          </div>
-          
-          <textarea 
-            rows="4"
-            value={description}
-            maxLength={500}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe what happened, injuries, hazards, or specific landmarks..."
-            className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm resize-none transition-all"
-          ></textarea>
+          <p className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+            {getSeverityDescription()}
+          </p>
+          <p className="mt-2 text-xs text-slate-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            <span className="font-semibold">Auto description:</span> {generatedDescription}
+          </p>
         </div>
 
         {/* Photo Evidence */}
@@ -328,9 +331,9 @@ export default function ReportStep2() {
         <div className="max-w-[430px] mx-auto">
           <button 
             onClick={handleSubmit} 
-            disabled={loading || !description.trim()}
+            disabled={loading}
             className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
-              !loading && description.trim()
+              !loading
                 ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
             }`}

@@ -91,7 +91,7 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-500 font-medium">Tracking {Math.floor(Math.random() * 20) + 5} active units</p>
           </div>
           <div className="flex-1 rounded-[20px] overflow-hidden bg-slate-100 relative">
-            <LiveMap zoom={13} center={[14.6760, 121.0437]} />
+            <LiveMap zoom={13} center={[14.6760, 121.0437]} autoZoomOnNewIncident markerColorMode="lgu" />
           </div>
         </div>
 
