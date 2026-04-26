@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import moment from 'moment';
-import { Image, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const getColor = (status, severity) => {
@@ -114,7 +114,95 @@ const EvidenceGallery = ({ evidence }) => {
   );
 };
 
-export default function IncidentMarker({ incident, colorMode = 'severity' }) {
+// Quick Verify Buttons for REPORTED incidents (shown inside map popup)
+const QuickVerifyActions = ({ incident, onVerify }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  if (!onVerify || incident.status !== 'REPORTED') return null;
+
+  const handleApprove = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSubmitting(true);
+    try {
+      await onVerify(incident.incident_id, 'APPROVE');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!showRejectInput) {
+      setShowRejectInput(true);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onVerify(incident.incident_id, 'REJECT', rejectReason);
+    } finally {
+      setSubmitting(false);
+      setShowRejectInput(false);
+      setRejectReason('');
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-200">
+      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">⚠ Awaiting Verification</p>
+      <div className="flex gap-2">
+        <button
+          onClick={handleApprove}
+          disabled={submitting}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 text-white text-xs font-bold rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+        >
+          {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+          Approve & Dispatch
+        </button>
+        <button
+          onClick={handleReject}
+          disabled={submitting}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 text-white text-xs font-bold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+        >
+          {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+          Reject
+        </button>
+      </div>
+      {showRejectInput && (
+        <div className="mt-2">
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Reason for rejection (optional)..."
+            rows="2"
+            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRejectInput(false); }}
+              className="flex-1 px-2 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded-md hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={submitting}
+              className="flex-1 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700 disabled:opacity-50"
+            >
+              Confirm Reject
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function IncidentMarker({ incident, colorMode = 'severity', onVerify }) {
   const { user } = useAuth();
   const lguIndicator = getLguIndicator(incident, user);
   const color =
@@ -143,6 +231,7 @@ export default function IncidentMarker({ incident, colorMode = 'severity' }) {
             Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
           </div>
           <EvidenceGallery evidence={incident.evidence} />
+          <QuickVerifyActions incident={incident} onVerify={onVerify} />
         </div>
       </Popup>
     </Marker>

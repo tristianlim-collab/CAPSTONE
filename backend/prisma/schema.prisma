@@ -64,12 +64,13 @@ model ResponseUnit {
 }
 
 model IncidentType {
-  type_id     String     @id @default(uuid())
-  name        String
-  color_code  String
-  icon_label  String
-  description String?
-  incidents   Incident[]
+  type_id           String     @id @default(uuid())
+  name              String
+  color_code        String
+  icon_label        String
+  description       String?
+  default_unit_type UnitType   @default(BARANGAY)
+  incidents         Incident[]
 
   @@map("INCIDENT_TYPES")
 }

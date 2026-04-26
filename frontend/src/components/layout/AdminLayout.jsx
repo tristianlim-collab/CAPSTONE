@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, Users, ShieldAlert, AlertTriangle, 
   Activity, BarChart3, Bell, Settings, LogOut, Search,
-  Menu, X
+  Menu, X, FileText
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -20,11 +20,10 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Pending Verification', path: '/admin/verification', icon: <AlertTriangle size={20} /> },
+    { name: 'Incident Reports', path: '/admin/verification', icon: <FileText size={20} /> },
     { name: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
     { name: 'Roles & Permissions', path: '/admin/roles', icon: <ShieldAlert size={20} /> },
     { name: 'Incident Categories', path: '/admin/categories', icon: <AlertTriangle size={20} /> },
-    { name: 'System Monitoring', path: '/admin/monitoring', icon: <Activity size={20} /> },
     { name: 'Analytics & Reports', path: '/admin/analytics', icon: <BarChart3 size={20} /> },
     { name: 'Notification Settings', path: '/admin/notifications', icon: <Bell size={20} /> },
     { name: 'System Settings', path: '/admin/settings', icon: <Settings size={20} /> },

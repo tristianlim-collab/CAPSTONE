@@ -10,9 +10,9 @@ export const getAll = async (req, res) => {
 
 export const create = async (req, res) => {
   try {
-    const { name, color_code, icon_label, description } = req.body;
+    const { name, color_code, icon_label, description, default_unit_type } = req.body;
     const type = await prisma.incidentType.create({
-      data: { name, color_code, icon_label, description }
+      data: { name, color_code, icon_label, description, default_unit_type }
     });
     res.status(201).json(type);
   } catch (error) {
@@ -22,10 +22,10 @@ export const create = async (req, res) => {
 
 export const update = async (req, res) => {
   try {
-    const { name, color_code, icon_label, description } = req.body;
+    const { name, color_code, icon_label, description, default_unit_type } = req.body;
     const type = await prisma.incidentType.update({
       where: { type_id: req.params.id },
-      data: { name, color_code, icon_label, description }
+      data: { name, color_code, icon_label, description, default_unit_type }
     });
     res.json(type);
   } catch (error) {

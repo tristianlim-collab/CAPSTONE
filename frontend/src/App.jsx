@@ -23,7 +23,6 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import RolesPermissions from './pages/admin/RolesPermissions';
 import IncidentManagement from './pages/admin/IncidentManagement';
-import SystemMonitoring from './pages/admin/SystemMonitoring';
 import Analytics from './pages/admin/Analytics';
 import NotificationSettings from './pages/admin/NotificationSettings';
 import SystemSettings from './pages/admin/SystemSettings';
@@ -61,7 +60,6 @@ const App = () => {
               <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RolesPermissions />} />
               <Route path="categories" element={<IncidentManagement />} />
-              <Route path="monitoring" element={<SystemMonitoring />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="notifications" element={<NotificationSettings />} />
               <Route path="settings" element={<SystemSettings />} />

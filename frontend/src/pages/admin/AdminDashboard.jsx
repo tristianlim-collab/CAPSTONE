@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import LiveMap from '../../components/map/LiveMap';
 import { Activity, ShieldAlert, Users, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { analyticsAPI, incidentAPI } from '../../api';
+import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
+import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0, users: 0, units: 0 });
@@ -47,6 +49,21 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  // Quick verify handler for map marker popups
+  const handleVerifyFromMap = async (incidentId, action, message) => {
+    try {
+      const payload = { action };
+      if (message) payload.message = message;
+      await api.post(`/incidents/${incidentId}/verify`, payload);
+      toast.success(action === 'APPROVE' ? 'Incident approved & dispatched!' : 'Incident rejected');
+    } catch (err) {
+      console.error('Verify error:', err);
+      toast.error(err.response?.data?.message || 'Failed to verify incident');
+      throw err;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
       {/* Header */}
@@ -88,10 +105,10 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 p-2 flex flex-col relative overflow-hidden">
           <div className="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-slate-200 pointer-events-none">
             <h3 className="font-bold text-slate-800 text-sm">Live Dispatch Map</h3>
-            <p className="text-xs text-slate-500 font-medium">Tracking {Math.floor(Math.random() * 20) + 5} active units</p>
+            <p className="text-xs text-slate-500 font-medium">Click a marker to verify incidents directly</p>
           </div>
           <div className="flex-1 rounded-[20px] overflow-hidden bg-slate-100 relative">
-            <LiveMap zoom={13} center={[14.6760, 121.0437]} autoZoomOnNewIncident markerColorMode="lgu" />
+            <LiveMap zoom={13} center={[14.6760, 121.0437]} autoZoomOnNewIncident markerColorMode="lgu" onVerify={handleVerifyFromMap} />
           </div>
         </div>
 

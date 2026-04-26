@@ -53,6 +53,7 @@ const IncidentManagement = () => {
     name: '',
     color_code: 'blue',
     icon_label: 'Layers',
+    default_unit_type: 'BARANGAY',
     summary: '',
     severity_low: '',
     severity_high: '',
@@ -86,7 +87,8 @@ const IncidentManagement = () => {
       setFormData({ 
         name: category.name, 
         color_code: category.color_code || 'blue', 
-        icon_label: category.icon_label || 'Layers', 
+        icon_label: category.icon_label || 'Layers',
+        default_unit_type: category.default_unit_type || 'BARANGAY',
         summary: parsedConfig.summary,
         severity_low: parsedConfig.severityDescriptions.LOW,
         severity_high: parsedConfig.severityDescriptions.HIGH,
@@ -98,6 +100,7 @@ const IncidentManagement = () => {
         name: '',
         color_code: 'blue',
         icon_label: 'Layers',
+        default_unit_type: 'BARANGAY',
         summary: '',
         severity_low: '',
         severity_high: '',
@@ -120,6 +123,7 @@ const IncidentManagement = () => {
         name: formData.name,
         color_code: formData.color_code,
         icon_label: formData.icon_label,
+        default_unit_type: formData.default_unit_type,
         description: buildSeverityConfig(formData)
       };
       if (editingId) {
@@ -184,6 +188,7 @@ const IncidentManagement = () => {
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest">
                 <th className="px-6 py-4 font-bold">Category Name</th>
+                <th className="px-6 py-4 font-bold">Default Unit</th>
                 <th className="px-6 py-4 font-bold">Color Theme</th>
                 <th className="px-6 py-4 font-bold">Description</th>
                 <th className="px-6 py-4 font-bold text-right">Actions</th>
@@ -203,6 +208,11 @@ const IncidentManagement = () => {
                       </div>
                       <p className="font-bold text-slate-800 text-[15px]">{c.name}</p>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                     <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest border border-slate-200 uppercase bg-slate-100 text-slate-700">
+                        {c.default_unit_type || 'BARANGAY'}
+                     </span>
                   </td>
                   <td className="px-6 py-4">
                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest border border-slate-200 uppercase bg-${c.color_code}-50 text-${c.color_code}-600 border-${c.color_code}-200`}>
@@ -243,6 +253,16 @@ const IncidentManagement = () => {
                  <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Category Name</label>
                     <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="e.g. Fire Emergency" />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Default Response Unit Type</label>
+                    <select required value={formData.default_unit_type} onChange={e => setFormData({...formData, default_unit_type: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-white">
+                      <option value="BARANGAY">Barangay Responders</option>
+                      <option value="FIRE">Fire Department</option>
+                      <option value="POLICE">Police</option>
+                      <option value="MEDICAL">Medical Emergency</option>
+                      <option value="DRRMO">DRRMO</option>
+                    </select>
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Color Theme</label>

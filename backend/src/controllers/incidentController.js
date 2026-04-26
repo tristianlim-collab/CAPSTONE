@@ -15,16 +15,8 @@ export const createIncident = async (req, res) => {
 
     const incidentType = await prisma.incidentType.findUnique({ where: { type_id: incident_type_id } });
     
-    // Attempt Auto-Assignment
-    let targetUnitType = null;
-    if (incidentType) {
-      const name = incidentType.name.toUpperCase();
-      if (name.includes('FIRE')) targetUnitType = 'FIRE';
-      else if (name.includes('POLICE') || name.includes('CRIME')) targetUnitType = 'POLICE';
-      else if (name.includes('MEDICAL') || name.includes('EMERGENCY') || name.includes('HEALTH')) targetUnitType = 'MEDICAL';
-      else if (name.includes('DRRMO') || name.includes('DISASTER')) targetUnitType = 'DRRMO';
-      else targetUnitType = 'BARANGAY';
-    }
+    // Get the default response unit type from the incident type (configured in admin panel)
+    const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
 
     const incident = await prisma.incident.create({
       data: {
@@ -313,19 +305,11 @@ export const verifyIncident = async (req, res) => {
         });
       }
 
-      // Determine target unit type
-      let targetUnitType = 'BARANGAY';
+      // Determine target unit type from the incident type's configuration (not hardcoded)
       const incidentType = await prisma.incidentType.findUnique({
         where: { type_id: edited_data?.incident_type_id || incident.incident_type_id }
       });
-
-      if (incidentType) {
-        const name = incidentType.name.toUpperCase();
-        if (name.includes('FIRE')) targetUnitType = 'FIRE';
-        else if (name.includes('POLICE') || name.includes('CRIME')) targetUnitType = 'POLICE';
-        else if (name.includes('MEDICAL') || name.includes('EMERGENCY') || name.includes('HEALTH')) targetUnitType = 'MEDICAL';
-        else if (name.includes('DRRMO') || name.includes('DISASTER')) targetUnitType = 'DRRMO';
-      }
+      const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
 
       // Find nearest units and assign
       const nearestUnits = await geoService.findNearestUnits(

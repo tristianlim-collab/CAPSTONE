@@ -40,9 +40,13 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
 
     if (previousLatestId.current !== latestId) {
-      map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 1.2 });
+      map.flyTo([lat, lng], 16, { duration: 0.8 });
       previousLatestId.current = latestId;
-      toast.success('New incident received. Map focused on latest report.');
+      toast('🔴 New incident reported! Map zoomed to location.', {
+        icon: '🚨',
+        style: { fontWeight: 'bold', borderLeft: '4px solid #EF4444' },
+        duration: 5000
+      });
     }
   }, [enabled, incidents, map]);
 
@@ -53,7 +57,8 @@ export default function LiveMap({
   center = [10.0000, 122.9000],
   zoom = 9,
   autoZoomOnNewIncident = false,
-  markerColorMode = 'severity'
+  markerColorMode = 'severity',
+  onVerify
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
@@ -77,7 +82,21 @@ export default function LiveMap({
 
     // Socket.io Subscriptions
     const unsub1 = on('new_incident', (incident) => {
-      setIncidents(prev => [incident, ...prev]);
+      setIncidents(prev => {
+        if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
+        return [incident, ...prev];
+      });
+    });
+
+    // Listen for new reports awaiting verification (this is what the backend actually emits)
+    const unsub3 = on('incident_awaiting_verification', (data) => {
+      const incident = data.incident || data;
+      if (incident?.latitude && incident?.longitude) {
+        setIncidents(prev => {
+          if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
+          return [incident, ...prev];
+        });
+      }
     });
     
     const unsub2 = on('incident_status_updated', (updatedData) => {
@@ -92,6 +111,7 @@ export default function LiveMap({
     return () => {
       unsub1();
       unsub2();
+      unsub3();
     };
   }, []);
 
@@ -129,7 +149,7 @@ export default function LiveMap({
         <AutoZoomToLatestIncident incidents={incidents} enabled={autoZoomOnNewIncident} />
 
         {mode === 'markers' && incidents.map(incident => (
-          <IncidentMarker key={incident.incident_id} incident={incident} colorMode={markerColorMode} />
+          <IncidentMarker key={incident.incident_id} incident={incident} colorMode={markerColorMode} onVerify={onVerify} />
         ))}
 
         {mode === 'heatmap' && <HeatmapLayer points={incidents} />}
