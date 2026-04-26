@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, Map as MapIcon, Bell, 
-  User, ClipboardList, LogOut, Shield,
+  LogOut, Shield,
   Menu, X, Search
 } from 'lucide-react';
 
@@ -20,10 +20,8 @@ const ResponseLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/response/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Assigned Incidents', path: '/response/incidents', icon: <ClipboardList size={20} /> },
     { name: 'Live Map', path: '/response/map', icon: <MapIcon size={20} /> },
     { name: 'Notifications', path: '/response/notifications', icon: <Bell size={20} /> },
-    { name: 'Profile', path: '/response/profile', icon: <User size={20} /> },
   ];
 
   const currentPage = navItems.find(item => location.pathname.startsWith(item.path))?.name || 'Overview';

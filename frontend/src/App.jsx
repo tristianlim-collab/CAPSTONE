@@ -17,9 +17,7 @@ import MyReports from './pages/reporter/MyReports';
 
 import ShiftStart from './pages/response/ShiftStart';
 import ResponseDashboard from './pages/response/ResponseDashboard';
-import ResponseIncidents from './pages/response/ResponseIncidents';
 import ResponseMap from './pages/response/ResponseMap';
-import ResponseProfile from './pages/response/ResponseProfile';
 import ResponseNotifications from './pages/response/ResponseNotifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
@@ -75,10 +73,8 @@ const App = () => {
             <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/response/dashboard" replace />} />
               <Route path="dashboard" element={<ResponseDashboard />} />
-              <Route path="incidents" element={<ResponseIncidents />} />
               <Route path="map" element={<ResponseMap />} />
               <Route path="notifications" element={<ResponseNotifications />} />
-              <Route path="profile" element={<ResponseProfile />} />
             </Route>
 
             {/* Reporter Routes */}
