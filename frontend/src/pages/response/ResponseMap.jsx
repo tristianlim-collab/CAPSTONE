@@ -46,7 +46,7 @@ const ResponseMap = () => {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
-  const { on } = useSocketContext();
+  const { on, connected } = useSocketContext();
 
   // Default center: Negros Island Region, Philippines
   const defaultCenter = [10.0000, 122.9000];
@@ -72,7 +72,7 @@ const ResponseMap = () => {
       setIncidents(prev => {
         return prev
           .map(inc => inc.incident_id === data.incident_id
-            ? { ...inc, status: data.status }
+            ? { ...inc, status: data.status, ...(data.incident || {}) }
             : inc
           )
           // Remove resolved/closed from the active map view
@@ -90,7 +90,11 @@ const ResponseMap = () => {
       });
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    const unsub4 = on('incident_deleted', (data) => {
+      setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [on]);
 
   const fetchIncidents = async () => {

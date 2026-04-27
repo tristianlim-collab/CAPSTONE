@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import IncidentSearch from '../../components/incidents/IncidentSearch';
 
 const INCIDENT_TYPE_ICONS = {
   FIRE: Flame, MEDICAL_EMERGENCY: Stethoscope, ACCIDENT: Car,
@@ -35,60 +36,76 @@ const STATUS_COLORS = {
 };
 
 export default function IncidentVerificationQueue() {
-  const { on } = useSocketContext();
+  const { on, connected } = useSocketContext();
   const [activeTab, setActiveTab] = useState('ALL');
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [actionModal, setActionModal] = useState({ open: false, action: null, message: '' });
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
+  const [searchFilters, setSearchFilters] = useState({});
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [incRes, typesRes] = await Promise.all([
-          api.get('/incidents?limit=200'),
-          api.get('/incident-types')
-        ]);
-        setIncidents(incRes.data.data || []);
-        setIncidentTypes(typesRes.data || []);
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-        toast.error('Failed to load incidents');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  const fetchIncidents = useCallback(async (filters = {}) => {
+    try {
+      setLoading(true);
+      const params = { limit: 200, ...filters };
+      const [incRes, typesRes] = await Promise.all([
+        api.get('/incidents', { params }),
+        api.get('/incident-types')
+      ]);
+      setIncidents(incRes.data.data || []);
+      setIncidentTypes(typesRes.data || []);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      toast.error('Failed to load incidents');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    fetchIncidents();
+  }, [fetchIncidents]);
+
+  const handleFiltersChange = useCallback((filters) => {
+    setSearchFilters(filters);
+    fetchIncidents(filters);
+  }, [fetchIncidents]);
+
+  useEffect(() => {
     const unsub1 = on('incident_awaiting_verification', (data) => {
-      setIncidents(prev => [data.incident, ...prev]);
+      setIncidents(prev => {
+        // Deduplication: don't add if already exists
+        if (prev.find(i => i.incident_id === data.incident.incident_id)) return prev;
+        return [data.incident || data, ...prev];
+      });
     });
     const unsub2 = on('incident_verified', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: 'VERIFIED' } : i));
-      if (selectedIncident?.incident_id === data.incident_id) setSelectedIncident(null);
+      // Clear selection if the verified incident was selected
+      setSelectedIncident(prev => prev?.incident_id === data.incident_id ? null : prev);
     });
     const unsub3 = on('incident_rejected', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: 'FALSE_ALARM' } : i));
-      if (selectedIncident?.incident_id === data.incident_id) setSelectedIncident(null);
+      // Clear selection if the rejected incident was selected
+      setSelectedIncident(prev => prev?.incident_id === data.incident_id ? null : prev);
     });
     const unsub4 = on('incident_status_updated', (data) => {
-      setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: data.status } : i));
+      setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: data.status, ...(data.incident || {}) } : i));
     });
     return () => { unsub1?.(); unsub2?.(); unsub3?.(); unsub4?.(); };
-  }, [on, selectedIncident]);
+  }, [on]);
 
   const filteredIncidents = activeTab === 'ALL' ? incidents : incidents.filter(i => i.status === activeTab);
 
-  const handleSelectIncident = (incident) => {
+  const handleSelectIncident = async (incident) => {
     setSelectedIncident(incident);
+    setLoadingDetails(true);
     setEditData({
       incident_type_id: incident.incident_type_id,
       severity: incident.severity,
@@ -96,6 +113,24 @@ export default function IncidentVerificationQueue() {
       map_pin_address: incident.map_pin_address
     });
     setEditMode(false);
+
+    // Fetch complete incident details including evidence and reporter
+    try {
+      const res = await api.get(`/incidents/${incident.incident_id}`);
+      if (res.data?.data) {
+        setSelectedIncident(prev => ({
+          ...prev,
+          ...res.data.data,
+          evidence: res.data.data.evidence || [],
+          reporter: res.data.data.reporter || incident.reporter
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch incident details:', err);
+      // Keep the incident even if full details failed
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -154,7 +189,7 @@ export default function IncidentVerificationQueue() {
   };
 
   const getSeverityColor = (severity) => {
-    const map = { LOW: 'bg-green-100 text-green-700 border-green-200', MEDIUM: 'bg-yellow-100 text-yellow-700 border-yellow-200', HIGH: 'bg-orange-100 text-orange-700 border-orange-200', CRITICAL: 'bg-red-100 text-red-700 border-red-200' };
+    const map = { LOW: 'bg-green-100 text-green-700 border-green-200', HIGH: 'bg-orange-100 text-orange-700 border-orange-200', CRITICAL: 'bg-red-100 text-red-700 border-red-200' };
     return map[severity] || 'bg-gray-100 text-gray-700';
   };
 
@@ -179,6 +214,16 @@ export default function IncidentVerificationQueue() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Incident Reports</h1>
           <p className="text-slate-600">View all incident reports and manage verification</p>
+        </div>
+
+        {/* Search & Filter Bar */}
+        <div className="mb-4">
+          <IncidentSearch
+            onFiltersChange={handleFiltersChange}
+            incidentTypes={incidentTypes}
+            showStatusFilter={false}
+            compact
+          />
         </div>
 
         {/* Status Filter Tabs */}
@@ -266,6 +311,13 @@ export default function IncidentVerificationQueue() {
                 </div>
 
                 <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                  {loadingDetails && (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="animate-spin text-blue-600" size={32} />
+                    </div>
+                  )}
+                  {!loadingDetails && (
+                    <>
                   {/* Type */}
                   <div>
                     <label className="text-xs font-semibold text-slate-600 uppercase">Type</label>
@@ -283,9 +335,9 @@ export default function IncidentVerificationQueue() {
                     <label className="text-xs font-semibold text-slate-600 uppercase">Severity</label>
                     {editMode ? (
                       <div className="flex gap-2 mt-1">
-                        {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((level) => (
+                        {['LOW', 'HIGH', 'CRITICAL'].map((level) => (
                           <button key={level} onClick={() => setEditData({ ...editData, severity: level })}
-                            className={`px-3 py-1 rounded text-xs font-bold transition-all ${editData.severity === level ? (level === 'LOW' ? 'bg-green-500 text-white' : level === 'MEDIUM' ? 'bg-yellow-500 text-white' : level === 'HIGH' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white') : 'bg-slate-200 text-slate-700'}`}
+                            className={`px-3 py-1 rounded text-xs font-bold transition-all ${editData.severity === level ? (level === 'LOW' ? 'bg-green-500 text-white' : level === 'HIGH' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white') : 'bg-slate-200 text-slate-700'}`}
                           >{level}</button>
                         ))}
                       </div>
@@ -338,6 +390,8 @@ export default function IncidentVerificationQueue() {
                     <p className="mt-1 text-sm text-slate-700">{selectedIncident.reporter?.name}</p>
                     {selectedIncident.reporter?.contact_number && (<p className="text-xs text-slate-500">{selectedIncident.reporter.contact_number}</p>)}
                   </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Action Buttons — only for REPORTED status */}

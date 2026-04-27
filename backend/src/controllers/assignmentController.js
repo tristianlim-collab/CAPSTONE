@@ -149,6 +149,8 @@ export const updateAssignmentStatus = async (req, res) => {
         where: { unit_id: assignment.unit_id },
         data: { availability_status: 'AVAILABLE' }
       });
+      // Notify admin/response dashboards of unit availability change
+      socketService.emitUnitAvailabilityChanged(assignment.unit_id, 'AVAILABLE');
     }
 
     res.json(assignment);

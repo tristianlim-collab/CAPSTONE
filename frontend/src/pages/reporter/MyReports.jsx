@@ -24,16 +24,32 @@ const MyReports = () => {
     fetchReports();
   }, []);
 
-  // Listen for real-time status updates
+  // Listen for real-time status updates and new reports
   useEffect(() => {
-    const unsub = on('incident_status_updated', (data) => {
+    const unsub1 = on('incident_status_updated', (data) => {
       setReports(prev => prev.map(r =>
         r.incident_id === data.incident_id
-          ? { ...r, status: data.status }
+          ? { ...r, status: data.status, ...(data.incident || {}) }
           : r
       ));
     });
-    return () => unsub();
+
+    const unsub2 = on('incident_verified', (data) => {
+      // Update report status when admin verifies
+      const incident = data.incident || data;
+      setReports(prev => prev.map(r =>
+        r.incident_id === incident.incident_id
+          ? { ...r, status: 'VERIFIED' }
+          : r
+      ));
+    });
+
+    const unsub3 = on('incident_deleted', (data) => {
+      // Remove report if admin rejects
+      setReports(prev => prev.filter(r => r.incident_id !== data.incident_id));
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [on]);
 
   const getStatusColor = (status) => {

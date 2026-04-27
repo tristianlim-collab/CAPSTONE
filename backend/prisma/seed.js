@@ -65,6 +65,7 @@ async function main() {
   await prisma.notification.deleteMany();
   await prisma.evidence.deleteMany();
   await prisma.incidentStatusLog.deleteMany();
+  await prisma.postIncidentReport.deleteMany();
   await prisma.incident.deleteMany();
   await prisma.generatedReport.deleteMany();
   await prisma.user.deleteMany();

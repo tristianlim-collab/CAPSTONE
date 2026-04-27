@@ -10,6 +10,7 @@ const ResponseIncidents = () => {
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterSeverity, setFilterSeverity] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
   const { on } = useSocketContext();
@@ -22,6 +23,7 @@ const ResponseIncidents = () => {
   useEffect(() => {
     const unsub1 = on('incident_verified', (data) => {
       setIncidents(prev => {
+        // Deduplication: don't add if already exists
         if (prev.find(i => i.incident_id === data.incident_id)) return prev;
         const incident = data.incident || data;
         return [{ ...incident, status: 'VERIFIED' }, ...prev];
@@ -37,12 +39,17 @@ const ResponseIncidents = () => {
       ));
     });
 
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = on('incident_deleted', (data) => {
+      setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+      toast('ℹ️ Incident deleted', { duration: 3000 });
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, [on]);
 
   useEffect(() => {
     filterIncidents();
-  }, [filterStatus, searchQuery, incidents]);
+  }, [filterStatus, filterSeverity, searchQuery, incidents]);
 
   const fetchIncidents = async () => {
     try {
@@ -61,6 +68,11 @@ const ResponseIncidents = () => {
     // Filter by status
     if (filterStatus !== 'ALL') {
       filtered = filtered.filter((i) => i.status === filterStatus);
+    }
+
+    // Filter by severity
+    if (filterSeverity !== 'ALL') {
+      filtered = filtered.filter((i) => i.severity === filterSeverity);
     }
 
     // Filter by search query
@@ -151,6 +163,18 @@ const ResponseIncidents = () => {
               <option value="RESPONDING">Responding</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+            </select>
+
+            {/* Severity Filter */}
+            <select
+              value={filterSeverity}
+              onChange={(e) => setFilterSeverity(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700"
+            >
+              <option value="ALL">All Severity</option>
+              <option value="LOW">Low</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
             </select>
           </div>
         </div>

@@ -7,10 +7,13 @@ router.use(authenticate);
 router.post('/', controller.createIncident);
 router.get('/', controller.getIncidents);
 router.get('/heatmap', authorize('ADMIN'), controller.getHeatmap);
+router.get('/analytics/hotspots', authorize('ADMIN'), controller.getIncidentHotspots);
 router.get('/:id', controller.getIncidentById);
 router.patch('/:id/status', authorize('ADMIN', 'RESPONSE_UNIT'), controller.updateIncidentStatus);
 router.post('/:id/backup', authorize('ADMIN', 'RESPONSE_UNIT'), controller.requestBackup);
 router.post('/:id/verify', authorize('ADMIN'), controller.verifyIncident);
 router.patch('/:id/edit', authorize('ADMIN'), controller.editIncident);
+router.patch('/:id/priority', authorize('ADMIN'), controller.updateIncidentPriority);
+router.post('/:id/escalate', authorize('ADMIN', 'RESPONSE_UNIT'), controller.escalateIncident);
 
 export default router;

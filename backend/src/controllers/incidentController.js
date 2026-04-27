@@ -5,8 +5,35 @@ import socketService from '../services/socketService.js';
 
 export const createIncident = async (req, res) => {
   try {
-    const { incident_type_id, description, latitude, longitude, map_pin_address, severity } = req.body;
+    const { incident_type_id, description, latitude, longitude, map_pin_address, severity, force_create } = req.body;
     
+    // --- Duplicate Detection ---
+    // Check for similar incidents (same type + nearby location within 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const recentSimilar = await prisma.incident.findFirst({
+      where: {
+        incident_type_id,
+        status: { not: 'FALSE_ALARM' },
+        reported_at: { gte: fiveMinutesAgo },
+        latitude: { gte: latitude - 0.001, lte: latitude + 0.001 },  // ~100m radius
+        longitude: { gte: longitude - 0.001, lte: longitude + 0.001 }
+      }
+    });
+
+    if (recentSimilar && !force_create) {
+      return res.status(400).json({
+        success: false,
+        message: 'Similar incident already reported nearby within last 5 minutes',
+        warning: true,
+        existing_incident: {
+          incident_id: recentSimilar.incident_id,
+          incident_code: recentSimilar.incident_code,
+          reported_at: recentSimilar.reported_at
+        },
+        shouldAllow: true
+      });
+    }
+
     // Auto-detect barangay via PostGIS
     const detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
     
@@ -27,7 +54,7 @@ export const createIncident = async (req, res) => {
         latitude,
         longitude,
         map_pin_address,
-        severity: severity || 'MEDIUM',
+        severity: severity || 'HIGH',
         barangay_id: detectedBarangayId,
         status: 'REPORTED' // Explicitly set to REPORTED - requires admin verification before dispatch
       },
@@ -59,32 +86,71 @@ export const getIncidents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const { status, severity, barangay_id, type_id } = req.query;
-    
+    const { status, severity, barangay_id, type_id, search, from_date, to_date } = req.query;
+
     const where = {};
     if (status) where.status = status;
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
 
+    // Date range filter
+    if (from_date || to_date) {
+      where.reported_at = {};
+      if (from_date) where.reported_at.gte = new Date(from_date);
+      if (to_date) where.reported_at.lte = new Date(to_date);
+    }
+
+    // Text search (incident code, description, reporter name, address)
+    if (search) {
+      where.OR = [
+        { incident_code: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { map_pin_address: { contains: search, mode: 'insensitive' } },
+        { reporter: { name: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
     if (req.user.role === 'REPORTER') {
+      // Reporters only see their own incidents
       where.reported_by = req.user.id;
     } else if (req.user.role === 'RESPONSE_UNIT') {
-      // Show all incidents to response units so they can see the full picture
-      // (they are filtered by assignment on the frontend if needed)
+      // Response units ONLY see incidents that are VERIFIED or RESPONDING or RESOLVED
+      // They should NOT see REPORTED (unverified) incidents
+      if (!status) {
+        where.status = {
+          in: ['VERIFIED', 'RESPONDING', 'RESOLVED', 'CLOSED']
+        };
+      }
+    }
+    // ADMIN can see all incidents
+
+    // Build include object based on ?include query param
+    const includeParam = req.query.include?.split(',').map(s => s.trim()) || [];
+    const includeObj = {
+      incident_type: true,
+      barangay: true,
+      reporter: { select: { name: true, email: true, contact_number: true } },
+      assignments: { include: { unit: true } },
+      evidence: true
+    };
+
+    // Allow selective includes for performance
+    if (includeParam.length > 0) {
+      const selectiveInclude = {};
+      if (includeParam.includes('evidence')) selectiveInclude.evidence = true;
+      if (includeParam.includes('reporter')) selectiveInclude.reporter = { select: { user_id: true, name: true, email: true, contact_number: true } };
+      if (includeParam.includes('assignments')) selectiveInclude.assignments = { include: { unit: true } };
+      if (includeParam.includes('type')) selectiveInclude.incident_type = true;
+      if (includeParam.includes('barangay')) selectiveInclude.barangay = true;
+      if (includeParam.includes('status_logs')) selectiveInclude.status_logs = { orderBy: { changed_at: 'desc' } };
+      // Use selective include only if specific fields requested
+      Object.assign(includeObj, selectiveInclude);
     }
 
     const incidents = await prisma.incident.findMany({
       where, skip, take: limit,
-      include: {
-        incident_type: true,
-        barangay: true,
-        reporter: { select: { name: true, email: true, contact_number: true } },
-        assignments: {
-          include: { unit: true }
-        },
-        evidence: true
-      },
+      include: includeObj,
       orderBy: { reported_at: 'desc' }
     });
 
@@ -101,20 +167,30 @@ export const getIncidents = async (req, res) => {
 
 export const getIncidentById = async (req, res) => {
   try {
+    // Build include object based on ?include query param
+    const includeParam = req.query.include?.split(',').map(s => s.trim()) || [];
+    let includeObj = {
+      incident_type: true,
+      barangay: true,
+      reporter: { select: { name: true, contact_number: true } },
+      assignments: { include: { unit: true } },
+      status_logs: { orderBy: { changed_at: 'desc' } },
+      evidence: true
+    };
+
+    if (includeParam.length > 0) {
+      includeObj = {};
+      if (includeParam.includes('evidence')) includeObj.evidence = true;
+      if (includeParam.includes('reporter')) includeObj.reporter = { select: { user_id: true, name: true, email: true, contact_number: true } };
+      if (includeParam.includes('assignments')) includeObj.assignments = { include: { unit: true } };
+      if (includeParam.includes('type')) includeObj.incident_type = true;
+      if (includeParam.includes('barangay')) includeObj.barangay = true;
+      if (includeParam.includes('status_logs')) includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
+    }
+
     const incident = await prisma.incident.findUnique({
       where: { incident_id: req.params.id },
-      include: {
-        incident_type: true,
-        barangay: true,
-        reporter: { select: { name: true, contact_number: true } },
-        assignments: {
-          include: { unit: true }
-        },
-        status_logs: {
-          orderBy: { changed_at: 'desc' }
-        },
-        evidence: true
-      }
+      include: includeObj
     });
     if (!incident) return res.status(404).json({ message: 'Incident not found' });
     res.json(incident);
@@ -506,5 +582,205 @@ export const editIncident = async (req, res) => {
   } catch (error) {
     console.error('editIncident error:', error);
     res.status(500).json({ message: 'Error editing incident', error: error.message });
+  }
+};
+
+/**
+ * Update incident priority (admin only)
+ * PATCH /api/incidents/:id/priority
+ * Body: { priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' }
+ */
+export const updateIncidentPriority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    if (!['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(priority)) {
+      return res.status(400).json({ message: 'Invalid priority level' });
+    }
+
+    // Validate admin role
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can update priority' });
+    }
+
+    // Validate incident exists
+    const incident = await prisma.incident.findUnique({
+      where: { incident_id: id },
+      include: { incident_type: true, assignments: { include: { unit: true } } }
+    });
+    if (!incident) return res.status(404).json({ message: 'Incident not found' });
+
+    // Update priority
+    const updated = await prisma.incident.update({
+      where: { incident_id: id },
+      data: { priority },
+      include: { incident_type: true, assignments: { include: { unit: true } } }
+    });
+
+    // Log change
+    await prisma.incidentStatusLog.create({
+      data: {
+        incident_id: id,
+        changed_by: req.user.id,
+        status: incident.status,
+        remarks: `Priority updated to ${priority}`
+      }
+    });
+
+    // Emit socket event
+    socketService.emitIncidentPriorityChanged(id, priority);
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('updateIncidentPriority error:', error);
+    res.status(500).json({ message: 'Failed to update priority', error: error.message });
+  }
+};
+
+/**
+ * Escalate incident with automatic backup dispatch
+ * POST /api/incidents/:id/escalate
+ * Body: { unit_type?: 'FIRE'|'POLICE'|'MEDICAL'|'BARANGAY'|'DRRMO', additional_units_count?: 1-3 }
+ */
+export const escalateIncident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { unit_type, additional_units_count = 2 } = req.body;
+
+    // Validate admin or response unit role
+    if (!['ADMIN', 'RESPONSE_UNIT'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Validate incident exists
+    const incident = await prisma.incident.findUnique({
+      where: { incident_id: id },
+      include: { incident_type: true, assignments: true }
+    });
+    if (!incident) return res.status(404).json({ message: 'Incident not found' });
+
+    // Find available units (exclude already assigned units)
+    const assignedUnitIds = incident.assignments.map(a => a.unit_id);
+    const nearestUnits = await geoService.findNearestUnits(
+      incident.latitude,
+      incident.longitude,
+      additional_units_count || 2,
+      unit_type || incident.incident_type.default_unit_type
+    );
+
+    // Filter out already assigned units
+    const newUnits = nearestUnits
+      .filter(u => !assignedUnitIds.includes(u.unit_id))
+      .slice(0, additional_units_count);
+
+    if (newUnits.length === 0) {
+      return res.status(400).json({ message: 'No additional units available for escalation' });
+    }
+
+    // Auto-assign new units
+    const newAssignments = [];
+
+    for (const unit of newUnits) {
+      const assignment = await prisma.incidentAssignment.create({
+        data: {
+          incident_id: id,
+          unit_id: unit.unit_id,
+          assigned_by: req.user.id,
+          status: 'PENDING'
+        },
+        include: { unit: true, incident: { include: { incident_type: true } } }
+      });
+
+      // Set unit to BUSY
+      await prisma.responseUnit.update({
+        where: { unit_id: unit.unit_id },
+        data: { availability_status: 'BUSY' }
+      });
+
+      // Emit socket event for new assignment
+      socketService.emitNewAssignment(unit.unit_id, {
+        incident: assignment.incident,
+        assignment,
+        unit: assignment.unit
+      });
+
+      newAssignments.push(assignment);
+
+      // Alert unit
+      await alertService.notifyUnitDispatch(incident, unit, assignment, null)
+        .catch(err => console.error('Escalation alert error:', err));
+    }
+
+    // Log escalation
+    await prisma.incidentStatusLog.create({
+      data: {
+        incident_id: id,
+        changed_by: req.user.id,
+        status: incident.status,
+        remarks: `Incident escalated - ${newUnits.length} additional units dispatched`
+      }
+    });
+
+    // Emit escalation event
+    socketService.emitIncidentEscalated(id, newAssignments);
+
+    res.json({
+      success: true,
+      message: `${newUnits.length} backup units dispatched`,
+      data: { incident, newAssignments }
+    });
+  } catch (error) {
+    console.error('escalateIncident error:', error);
+    res.status(500).json({ message: 'Failed to escalate incident', error: error.message });
+  }
+};
+
+/**
+ * Get incident hotspots (density clusters)
+ * GET /api/incidents/analytics/hotspots?days=30&limit=50
+ */
+export const getIncidentHotspots = async (req, res) => {
+  try {
+    const { days = 30, limit = 50 } = req.query;
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // PostGIS ST_ClusterKMeans for spatial clustering
+    const hotspots = await prisma.$queryRaw`
+      SELECT
+        ST_ClusterKMeans(
+          ST_SetSRID(ST_MakePoint(latitude, longitude), 4326),
+          LEAST(CAST(${limit} AS INTEGER), GREATEST(1, (
+            SELECT COUNT(*) / 100 + 1
+            FROM "INCIDENT"
+            WHERE status != 'FALSE_ALARM'
+              AND reported_at >= ${startDate}
+          )))
+        ) OVER () as cluster_id,
+        AVG(latitude)::FLOAT as center_lat,
+        AVG(longitude)::FLOAT as center_lng,
+        COUNT(*)::INTEGER as incident_count,
+        ARRAY_AGG(incident_id) as incident_ids
+      FROM "INCIDENT"
+      WHERE status != 'FALSE_ALARM'
+        AND reported_at >= ${startDate}
+      GROUP BY cluster_id
+      ORDER BY incident_count DESC
+      LIMIT ${limit}
+    `;
+
+    res.json({
+      success: true,
+      days: parseInt(days),
+      data: hotspots.map(h => ({
+        center: { lat: Number(h.center_lat), lng: Number(h.center_lng) },
+        count: h.incident_count,
+        incident_ids: h.incident_ids,
+        intensity: h.incident_count > 10 ? 'HIGH' : h.incident_count > 5 ? 'MEDIUM' : 'LOW'
+      }))
+    });
+  } catch (error) {
+    console.error('Hotspot calculation error:', error);
+    res.status(500).json({ message: 'Failed to calculate hotspots', error: error.message });
   }
 };

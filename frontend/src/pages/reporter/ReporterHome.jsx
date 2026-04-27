@@ -56,7 +56,20 @@ export default function ReporterHome() {
       ));
     });
 
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = on('new_incident', (incident) => {
+      // Add newly submitted incident to the top
+      setIncidents(prev => {
+        if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
+        return [incident, ...prev];
+      });
+    });
+
+    const unsub4 = on('incident_deleted', (data) => {
+      // Remove if admin rejects
+      setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [on]);
 
   // Extract initials for the avatar

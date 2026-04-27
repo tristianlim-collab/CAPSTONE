@@ -1,4 +1,5 @@
 import { prisma } from '../config/database.js';
+import socketService from '../services/socketService.js';
 export const getAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -57,7 +58,12 @@ export const update = async (req, res) => {
 
 export const deleteItem = async (req, res) => {
   try {
-    await prisma.barangay.delete({ where: { barangay_id: req.params.id } });
+    const barangayId = req.params.id;
+    await prisma.barangay.delete({ where: { barangay_id: barangayId } });
+
+    // Emit socket event for deletion
+    socketService.emitBarangayDeleted(barangayId);
+
     res.json({ message: 'Barangay deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting barangay', error: error.message });

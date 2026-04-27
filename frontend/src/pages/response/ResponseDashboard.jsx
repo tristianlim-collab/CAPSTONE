@@ -13,6 +13,7 @@ import { postReportAPI } from '../../api';
 
 export default function ResponseDashboard() {
   const { user } = useAuth();
+  const { on, connected } = useSocketContext();
   const [isAvailable, setIsAvailable] = useState(true);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,6 @@ export default function ResponseDashboard() {
     damages_estimate: '',
     remarks: ''
   });
-  const { on } = useSocketContext();
 
   useEffect(() => {
     fetchIncidents();
@@ -37,10 +37,10 @@ export default function ResponseDashboard() {
   // Listen for verified incidents (after admin approval) and status updates
   useEffect(() => {
     const unsub1 = on('incident_verified', (data) => {
-      // Add verified incident with assignments to dashboard
+      // Add verified incident with assignments to dashboard (with deduplication)
       setIncidents(prev => {
         if (prev.find(i => i.incident_id === data.incident_id)) return prev;
-        return [data.incident, ...prev];
+        return [data.incident || data, ...prev];
       });
       toast('🚨 New verified incident assigned!', {
         icon: '📍',
@@ -57,12 +57,26 @@ export default function ResponseDashboard() {
     });
 
     const unsub3 = on('new_assignment', (data) => {
-      if (data.incident) {
-        setIncidents(prev => prev.map(inc =>
-          inc.incident_id === data.incident.incident_id
-            ? { ...inc, assignments: [...(inc.assignments || []), data] }
-            : inc
-        ));
+      // Only append the assignment object, not the entire event data
+      if (data.incident_id) {
+        setIncidents(prev => prev.map(inc => {
+          if (inc.incident_id === data.incident_id) {
+            // Check if assignment already exists (deduplication)
+            const assignmentExists = inc.assignments?.some(a => a.assignment_id === data.assignment_id);
+            if (assignmentExists) return inc;
+
+            return {
+              ...inc,
+              assignments: [...(inc.assignments || []), {
+                assignment_id: data.assignment_id,
+                unit_id: data.unit_id,
+                unit: data.unit,
+                status: data.status
+              }]
+            };
+          }
+          return inc;
+        }));
       }
     });
 

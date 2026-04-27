@@ -213,7 +213,7 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
 
   return (
     <Marker position={[incident.latitude, incident.longitude]} icon={icon}>
-      <Popup className="min-w-[250px] max-w-[320px]">
+      <Popup className="min-w-[280px] max-w-[350px]">
         <div className="font-sans">
           <div className="flex items-center justify-between border-b pb-2 mb-2">
             <strong className="text-lg">{`INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
@@ -227,10 +227,22 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
           )}
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
+
+          {/* Reporter Personal Info */}
+          {incident.reporter && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
+              <p className="text-xs text-gray-600"><strong>Name:</strong> {incident.reporter.name || 'Not provided'}</p>
+              <p className="text-xs text-gray-600"><strong>Phone:</strong> {incident.reporter.contact_number || 'Not provided'}</p>
+            </div>
+          )}
+
+          {/* Evidence Gallery */}
+          <EvidenceGallery evidence={incident.evidence} />
+
           <div className="text-xs text-gray-400 mt-2">
             Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
           </div>
-          <EvidenceGallery evidence={incident.evidence} />
           <QuickVerifyActions incident={incident} onVerify={onVerify} />
         </div>
       </Popup>

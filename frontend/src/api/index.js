@@ -69,10 +69,15 @@ export const incidentTypeAPI = {
 export const incidentAPI = {
   create: (data) => api.post('/incidents', data),
   getAll: (params) => api.get('/incidents', { params }),
-  getById: (id) => api.get(`/incidents/${id}`),
+  getById: (id, params) => api.get(`/incidents/${id}`, { params }),
   updateStatus: (id, data) => api.patch(`/incidents/${id}/status`, data),
   getAssignedIncidents: () => api.get('/incidents'),
   requestBackup: (id, unit_type) => api.post(`/incidents/${id}/backup`, { unit_type }),
+  updatePriority: (id, priority) => api.patch(`/incidents/${id}/priority`, { priority }),
+  escalate: (id, data) => api.post(`/incidents/${id}/escalate`, data),
+  getHotspots: (params) => api.get('/incidents/analytics/hotspots', { params }),
+  verify: (id, data) => api.post(`/incidents/${id}/verify`, data),
+  edit: (id, data) => api.patch(`/incidents/${id}/edit`, data),
 };
 
 // Assignment endpoints
@@ -89,6 +94,7 @@ export const responseUnitAPI = {
   updateLocation: (id, data) => api.patch(`/response-units/${id}/location`, data),
   updateStatus: (id, status) => api.patch(`/response-units/${id}/status`, { status }),
   delete: (id) => api.delete(`/response-units/${id}`),
+  getHistory: (id, params) => api.get(`/response-units/${id}/history`, { params }),
 };
 
 // Post-Incident Report endpoints

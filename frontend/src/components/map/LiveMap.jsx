@@ -56,7 +56,7 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 export default function LiveMap({
   center = [10.0000, 122.9000],
   zoom = 9,
-  autoZoomOnNewIncident = false,
+  autoZoomOnNewIncident = true,
   markerColorMode = 'severity',
   onVerify
 }) {
@@ -98,7 +98,7 @@ export default function LiveMap({
         });
       }
     });
-    
+
     const unsub2 = on('incident_status_updated', (updatedData) => {
       setIncidents(prev => {
         if (updatedData.status === 'RESOLVED' || updatedData.status === 'CLOSED' || updatedData.status === 'FALSE_ALARM') {
@@ -108,12 +108,17 @@ export default function LiveMap({
       });
     });
 
+    const unsub4 = on('incident_deleted', (data) => {
+      setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+    });
+
     return () => {
       unsub1();
       unsub2();
       unsub3();
+      unsub4();
     };
-  }, []);
+  }, [on]);
 
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-sm border border-slate-200">

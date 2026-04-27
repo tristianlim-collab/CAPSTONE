@@ -86,7 +86,8 @@ model Incident {
   longitude        Float
   map_pin_address  String?
   status           IncidentStatus       @default(REPORTED)
-  severity         Severity             @default(MEDIUM)
+  severity         Severity             @default(HIGH)
+  priority         Priority             @default(MEDIUM)
   reported_at      DateTime             @default(now())
   updated_at       DateTime             @updatedAt
   evidence         Evidence[]
@@ -224,6 +225,12 @@ enum IncidentStatus {
 }
 
 enum Severity {
+  LOW
+  HIGH
+  CRITICAL
+}
+
+enum Priority {
   LOW
   MEDIUM
   HIGH

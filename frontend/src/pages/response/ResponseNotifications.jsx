@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 export default function ResponseNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { on } = useSocketContext();
+  const { on, connected } = useSocketContext();
 
   useEffect(() => {
     fetchNotifications();
@@ -51,7 +51,19 @@ export default function ResponseNotifications() {
       setNotifications(prev => [newNotif, ...prev]);
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    const unsub4 = on('backup_requested', (data) => {
+      const newNotif = {
+        id: `rt-backup-${Date.now()}`,
+        text: `🆘 Backup requested for incident ${data.incident_code || 'Unknown'}`,
+        time: 'Just now',
+        type: 'alert',
+        isNew: true,
+        timestamp: new Date(),
+      };
+      setNotifications(prev => [newNotif, ...prev]);
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [on]);
 
   const fetchNotifications = async () => {

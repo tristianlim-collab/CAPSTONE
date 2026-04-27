@@ -1,4 +1,5 @@
 import { prisma } from '../config/database.js';
+import socketService from '../services/socketService.js';
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -56,7 +57,12 @@ export const updateUser = async (req, res) => {
 
 export const deleteUser = async (req, res) => {
   try {
-    await prisma.user.delete({ where: { user_id: req.params.id } });
+    const userId = req.params.id;
+    await prisma.user.delete({ where: { user_id: userId } });
+
+    // Emit socket event for deletion
+    socketService.emitUserDeleted(userId);
+
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting user' });

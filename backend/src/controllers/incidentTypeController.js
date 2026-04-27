@@ -1,4 +1,6 @@
 import { prisma } from '../config/database.js';
+import socketService from '../services/socketService.js';
+
 export const getAll = async (req, res) => {
   try {
     const types = await prisma.incidentType.findMany();
@@ -35,7 +37,12 @@ export const update = async (req, res) => {
 
 export const deleteItem = async (req, res) => {
   try {
-    await prisma.incidentType.delete({ where: { type_id: req.params.id } });
+    const typeId = req.params.id;
+    await prisma.incidentType.delete({ where: { type_id: typeId } });
+
+    // Emit socket event for deletion
+    socketService.emitIncidentTypeDeleted(typeId);
+
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting', error: error.message });
