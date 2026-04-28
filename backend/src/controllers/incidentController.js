@@ -5,8 +5,8 @@ import socketService from '../services/socketService.js';
 
 export const createIncident = async (req, res) => {
   try {
-    const { incident_type_id, description, latitude, longitude, map_pin_address, severity, force_create } = req.body;
-    
+    const { incident_type_id, description, latitude, longitude, map_pin_address, severity, force_create, reporter_name, reporter_phone } = req.body;
+
     // --- Duplicate Detection ---
     // Check for similar incidents (same type + nearby location within 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -36,12 +36,12 @@ export const createIncident = async (req, res) => {
 
     // Auto-detect barangay via PostGIS
     const detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
-    
+
     // Generate unique code (e.g. INC-Date-Rand)
     const incident_code = `INC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
 
     const incidentType = await prisma.incidentType.findUnique({ where: { type_id: incident_type_id } });
-    
+
     // Get the default response unit type from the incident type (configured in admin panel)
     const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
 
@@ -56,7 +56,9 @@ export const createIncident = async (req, res) => {
         map_pin_address,
         severity: severity || 'HIGH',
         barangay_id: detectedBarangayId,
-        status: 'REPORTED' // Explicitly set to REPORTED - requires admin verification before dispatch
+        status: 'REPORTED', // Explicitly set to REPORTED - requires admin verification before dispatch
+        reporter_name: reporter_name || null,  // Optional override from mobile form
+        reporter_phone: reporter_phone || null  // Optional override from mobile form
       },
       include: {
         incident_type: true,

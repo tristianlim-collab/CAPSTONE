@@ -232,7 +232,7 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
 
           {/* Location/Barangay Display */}
           {incident.barangay && (
-            <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.barangay_name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
+            <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
           )}
 
           {colorMode === 'lgu' && (
@@ -244,15 +244,15 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
 
-          {/* Reporter Personal Info - FIX: Check both reporter object and fallback to user from incident */}
-          {(incident.reporter || incident.reported_by) && (
+          {/* Reporter Personal Info - Priority: reporter_name/phone > reporter user object > fallback */}
+          {(incident.reporter_name || incident.reporter_phone || incident.reporter || incident.reported_by) && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
               <p className="text-xs text-gray-600">
-                <strong>Name:</strong> {incident.reporter?.name || 'Not provided'}
+                <strong>Name:</strong> {incident.reporter_name || incident.reporter?.name || 'Not provided'}
               </p>
               <p className="text-xs text-gray-600">
-                <strong>Phone:</strong> {incident.reporter?.contact_number || 'Not provided'}
+                <strong>Phone:</strong> {incident.reporter_phone || incident.reporter?.contact_number || 'Not provided'}
               </p>
               <p className="text-xs text-gray-600">
                 <strong>Email:</strong> {incident.reporter?.email || 'Not provided'}

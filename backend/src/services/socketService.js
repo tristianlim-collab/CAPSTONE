@@ -24,6 +24,8 @@ export default {
         severity: incident.severity,
         map_pin_address: incident.map_pin_address,
         reported_at: incident.reported_at,
+        reporter_name: incident.reporter_name,  // Include optional form override
+        reporter_phone: incident.reporter_phone,  // Include optional form override
         incident_type: incident.incident_type,
         reporter: incident.reporter,
         barangay: incident.barangay,
@@ -106,7 +108,8 @@ export default {
         location: incident.map_pin_address,
         description: incident.description,
         reported_at: incident.reported_at,
-        reporter_name: incident.reporter?.name,
+        reporter_name: incident.reporter_name || incident.reporter?.name,  // Priority: form override > auth user
+        reporter_phone: incident.reporter_phone || incident.reporter?.contact_number,  // Priority: form override > auth user
         status: incident.status,
         latitude: incident.latitude,
         longitude: incident.longitude,

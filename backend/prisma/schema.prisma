@@ -85,6 +85,8 @@ model Incident {
   latitude         Float
   longitude        Float
   map_pin_address  String?
+  reporter_name    String?              // Name submitted by reporter (optional override)
+  reporter_phone   String?              // Phone submitted by reporter (optional override)
   status           IncidentStatus       @default(REPORTED)
   severity         Severity             @default(HIGH)
   priority         Priority             @default(MEDIUM)
