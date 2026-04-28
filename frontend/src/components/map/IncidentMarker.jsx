@@ -4,6 +4,7 @@ import L from 'leaflet';
 import moment from 'moment';
 import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getProvinceForNirLguName } from '../../config/nirLgus';
 
 const getColor = (status, severity) => {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'grey';
@@ -15,30 +16,35 @@ const getColor = (status, severity) => {
 
 const normalize = (value) => (value || '').toString().trim().toLowerCase();
 
+const getLguName = (objWithBarangay) => {
+  const city = objWithBarangay?.barangay?.city;
+  const municipality = objWithBarangay?.barangay?.municipality;
+  return (city || municipality || '').toString().trim();
+};
+
 const getLguIndicator = (incident, user) => {
-  const userMunicipality = normalize(user?.barangay?.municipality);
-  const userCity = normalize(user?.barangay?.city);
-  const incidentMunicipality = normalize(incident?.barangay?.municipality);
-  const incidentCity = normalize(incident?.barangay?.city);
+  const userLguName = getLguName(user);
+  const incidentLguName = getLguName(incident);
 
-  if (!incidentMunicipality && !incidentCity) {
-    return { color: 'orange', label: 'Unknown LGU' };
+  const userLgu = normalize(userLguName);
+  const incidentLgu = normalize(incidentLguName);
+
+  if (!incidentLgu) {
+    return { color: 'orange', label: 'Unknown LGU', lguName: '' };
   }
 
-  if (
-    userMunicipality &&
-    userCity &&
-    incidentMunicipality === userMunicipality &&
-    incidentCity === userCity
-  ) {
-    return { color: 'red', label: 'Own LGU' };
+  if (userLgu && incidentLgu && userLgu === incidentLgu) {
+    return { color: 'red', label: 'Own LGU', lguName: incidentLguName };
   }
 
-  if (userCity && incidentCity && incidentCity === userCity) {
-    return { color: 'blue', label: 'Neighbor LGU' };
+  const userProvince = getProvinceForNirLguName(userLguName);
+  const incidentProvince = getProvinceForNirLguName(incidentLguName);
+
+  if (userProvince && incidentProvince && userProvince === incidentProvince) {
+    return { color: 'blue', label: 'Neighbor LGU', lguName: incidentLguName };
   }
 
-  return { color: 'green', label: 'LFAR' };
+  return { color: 'green', label: 'Far LGU', lguName: incidentLguName };
 };
 
 const createColoredIcon = (color) => {
@@ -223,7 +229,10 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
           </div>
           <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
           {colorMode === 'lgu' && (
-            <p className="text-sm mb-1"><strong>LGU Zone:</strong> {lguIndicator.label}</p>
+            <p className="text-sm mb-1"><strong>LGU Indicator:</strong> {lguIndicator.label}</p>
+          )}
+          {colorMode === 'lgu' && lguIndicator.lguName && (
+            <p className="text-sm mb-1"><strong>LGU:</strong> {lguIndicator.lguName}</p>
           )}
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>

@@ -4,9 +4,11 @@ import 'package:reporter_app/models/incident.dart';
 import 'package:reporter_app/models/incident_type.dart';
 import 'package:reporter_app/models/user.dart';
 import 'dart:convert';
+import 'dart:io';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
+  static const Duration _timeout = Duration(seconds: 12);
   late String baseUrl;
   String? _token;
 
@@ -57,7 +59,7 @@ class ApiService {
           'contact_number': contactNumber,  // Changed from contactNumber
           'role': 'REPORTER',
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -81,7 +83,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -98,12 +100,61 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/auth/me'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         return User.fromJson(jsonDecode(response.body));
       } else {
         throw Exception('Failed to get user');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<User> updateProfile({
+    required String name,
+    required String email,
+    String? contactNumber,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/auth/me'),
+        headers: _headers,
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'contact_number': contactNumber,
+        }),
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return User.fromJson(data['user'] ?? data);
+      } else {
+        throw Exception(jsonDecode(response.body)['message'] ?? 'Failed to update profile');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/auth/me/password'),
+        headers: _headers,
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      ).timeout(_timeout);
+
+      if (response.statusCode != 200) {
+        throw Exception(jsonDecode(response.body)['message'] ?? 'Failed to update password');
       }
     } catch (e) {
       rethrow;
@@ -128,7 +179,7 @@ class ApiService {
       final typesResponse = await http.get(
         Uri.parse('$baseUrl/api/incident-types'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (typesResponse.statusCode != 200) {
         throw Exception('Failed to fetch incident types');
@@ -158,7 +209,7 @@ class ApiService {
           'longitude': longitude,
           'map_pin_address': mapPinAddress,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return Incident.fromJson(jsonDecode(response.body));
@@ -175,7 +226,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/incidents?reporter=me'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -194,7 +245,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/incidents/$id'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         return Incident.fromJson(jsonDecode(response.body));
@@ -212,7 +263,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/incident-types'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -241,7 +292,7 @@ class ApiService {
           'imageUrl': imageUrl,
           'uploadedBy': uploadedBy,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -258,13 +309,44 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/evidence/$incidentId'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return List<Map<String, dynamic>>.from(data['data'] ?? data ?? []);
       } else {
         throw Exception('Failed to fetch evidence');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> uploadEvidenceFile({
+    required String incidentId,
+    required File file,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/evidence'),
+      );
+      request.headers['Accept'] = 'application/json';
+      if (_token != null) {
+        request.headers['Authorization'] = 'Bearer $_token';
+      }
+
+      request.fields['incident_id'] = incidentId;
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final streamedResponse = await request.send().timeout(_timeout);
+      final response = await http.Response.fromStream(streamedResponse);
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return Map<String, dynamic>.from(decoded);
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to upload evidence');
       }
     } catch (e) {
       rethrow;

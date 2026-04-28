@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:reporter_app/services/api_service.dart';
 import 'package:reporter_app/models/incident.dart';
 import 'package:intl/intl.dart';
-import 'package:reporter_app/theme/app_theme.dart';
 
 class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
@@ -28,9 +27,12 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('My Reports'),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
       body: FutureBuilder<List<Incident>>(
         future: _incidentsFuture,
@@ -114,6 +116,21 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           );
         },
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.of(context).pushReplacementNamed('/home');
+          } else if (index == 2) {
+            Navigator.of(context).pushReplacementNamed('/profile');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.description_outlined), label: 'Reports'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
     );
   }
 }
@@ -126,30 +143,19 @@ class _IncidentCard extends StatelessWidget {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'REPORTED':
-        return Colors.orange;
-      case 'ACKNOWLEDGED':
+        return const Color(0xFFF59E0B);
+      case 'VERIFIED':
         return Colors.blue;
       case 'RESPONDING':
-        return Colors.purple;
+        return const Color(0xFF4F46E5);
+      case 'ON_SCENE':
+        return const Color(0xFF7C3AED);
       case 'RESOLVED':
-        return Colors.green;
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Color _getSeverityColor(String severity) {
-    switch (severity) {
-      case 'LOW':
-        return Colors.blue;
-      case 'MEDIUM':
-        return Colors.orange;
-      case 'HIGH':
-        return Colors.red;
-      case 'CRITICAL':
-        return Colors.purple;
+        return const Color(0xFF10B981);
+      case 'FALSE_ALARM':
+        return const Color(0xFFDC2626);
+      case 'CLOSED':
+        return const Color(0xFF64748B);
       default:
         return Colors.grey;
     }
@@ -157,137 +163,102 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+    final dateFormat = DateFormat('MMM d, hh:mm a');
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with incident code and status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        incident.incidentCode,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        dateFormat.format(incident.createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                Chip(
-                  label: Text(incident.status,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      )),
-                  backgroundColor: _getStatusColor(incident.status),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Incident type and severity
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: emergencyTypeColors[incident.incidentType] ??
-                        Colors.grey,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    incident.incidentType.replaceAll('_', ' '),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getSeverityColor(incident.severity),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${incident.severity} Severity',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Description
-            Text(
-              incident.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-
-            // Location
-            if (incident.location.isNotEmpty)
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      incident.location,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                ],
+                child: const Icon(Icons.description_outlined, color: Color(0xFF2563EB)),
               ),
-            const SizedBox(height: 12),
-
-            // View Details Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  _showIncidentDetails(context, incident);
-                },
-                child: const Text('View Details'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      incident.incidentType.replaceAll('_', ' '),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      incident.incidentCode,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(incident.status).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  incident.status,
+                  style: TextStyle(
+                    color: _getStatusColor(incident.status),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            incident.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.access_time, size: 14, color: Color(0xFF94A3B8)),
+              const SizedBox(width: 4),
+              Text(
+                dateFormat.format(incident.createdAt),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              const Spacer(),
+              const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF94A3B8)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  incident.location.isEmpty ? 'Unknown' : incident.location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _showIncidentDetails(context, incident),
+              child: const Text('View Details'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

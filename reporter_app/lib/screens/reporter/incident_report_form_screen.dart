@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlng;
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:reporter_app/providers/auth_provider.dart';
@@ -8,7 +11,7 @@ import 'package:reporter_app/models/incident_type.dart';
 import 'dart:io';
 
 class IncidentReportFormScreen extends StatefulWidget {
-  const IncidentReportFormScreen({Key? key}) : super(key: key);
+  const IncidentReportFormScreen({super.key});
 
   @override
   State<IncidentReportFormScreen> createState() =>
@@ -16,7 +19,6 @@ class IncidentReportFormScreen extends StatefulWidget {
 }
 
 class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
-  late TextEditingController _descriptionController;
   late TextEditingController _reporterNameController;
   late TextEditingController _reporterPhoneController;
 
@@ -26,36 +28,36 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
 
   List<IncidentType> _incidentTypes = [];
   IncidentType? _selectedType;
-  String _selectedSeverity = 'MEDIUM';
+  String _selectedSeverity = 'LOW';
   double? _latitude;
   double? _longitude;
-  String? _barangay;
-  String? _city;
+  String? _address;
   List<File> _selectedPhotos = [];
   bool _isLoading = false;
-  bool _gettingLocation = false;
+  bool _gettingLocation = true;
+  bool _addressLoading = false;
   String? _locationError;
+  final MapController _mapController = MapController();
+  latlng.LatLng _mapCenter = const latlng.LatLng(10.0, 122.9);
 
-  final List<String> _severityLevels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+  final List<String> _severityLevels = ['LOW', 'HIGH', 'CRITICAL'];
   final Map<String, Color> _severityColors = {
-    'LOW': Colors.blue,
-    'MEDIUM': Colors.orange,
-    'HIGH': Colors.red,
-    'CRITICAL': Colors.purple,
+    'LOW': const Color(0xFF10B981),
+    'HIGH': const Color(0xFFF97316),
+    'CRITICAL': const Color(0xFFEF4444),
   };
 
   @override
   void initState() {
     super.initState();
-    _descriptionController = TextEditingController();
     _reporterNameController = TextEditingController();
-    _reporterPhoneController = TextEditingController();
+    _reporterPhoneController = TextEditingController(text: '+63');
     _loadIncidentTypes();
+    _detectLocation();
   }
 
   @override
   void dispose() {
-    _descriptionController.dispose();
     _reporterNameController.dispose();
     _reporterPhoneController.dispose();
     super.dispose();
@@ -67,10 +69,14 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
       setState(() {
         _incidentTypes = types;
         if (types.isNotEmpty) {
-          _selectedType = types.first;
+          _selectedType = types.firstWhere(
+            (t) => t.name.toUpperCase() != 'OTHER',
+            orElse: () => types.first,
+          );
         }
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load incident types: $e')),
       );
@@ -78,62 +84,95 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
   }
 
   Future<void> _detectLocation() async {
+    if (!mounted) return;
     setState(() => _gettingLocation = true);
     try {
       final position = await _locationService.getCurrentLocation();
       if (position != null) {
+        if (!mounted) return;
         setState(() {
           _latitude = position.latitude;
           _longitude = position.longitude;
-        });
-
-        final geoInfo = await _locationService.getReverseGeocodingInfo(
-          position.latitude,
-          position.longitude,
-        );
-
-        setState(() {
-          _barangay = geoInfo['barangay'];
-          _city = geoInfo['city'];
+          _mapCenter = latlng.LatLng(position.latitude, position.longitude);
           _locationError = null;
         });
+        await _resolveAddress(position.latitude, position.longitude);
+        _mapController.move(_mapCenter, 16);
       } else {
+        if (!mounted) return;
         setState(() {
           _locationError = 'Unable to get location. Please enable location services.';
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _locationError = 'Error: ${e.toString()}';
       });
     }
+    if (!mounted) return;
     setState(() => _gettingLocation = false);
   }
 
-  Future<void> _selectPhotos() async {
+  Future<void> _resolveAddress(double lat, double lng) async {
+    if (!mounted) return;
+    setState(() => _addressLoading = true);
     try {
-      final List<XFile> pickedFiles = await _imagePicker.pickMultiImage(
+      final geoInfo = await _locationService.getReverseGeocodingInfo(lat, lng);
+      if (!mounted) return;
+      setState(() {
+        _address = geoInfo['address'] ?? 'Location at ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _address = 'Location at ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _addressLoading = false);
+      }
+    }
+  }
+
+  Future<void> _onMapTap(latlng.LatLng latLng) async {
+    setState(() {
+      _latitude = latLng.latitude;
+      _longitude = latLng.longitude;
+      _mapCenter = latLng;
+      _locationError = null;
+    });
+    await _resolveAddress(latLng.latitude, latLng.longitude);
+  }
+
+  Future<void> _capturePhoto() async {
+    try {
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
         maxWidth: 1024,
         maxHeight: 1024,
       );
 
-      if (pickedFiles.isNotEmpty) {
+      if (photo != null) {
         setState(() {
-          _selectedPhotos = pickedFiles
-              .map((file) => File(file.path))
-              .where((file) => _selectedPhotos.length < 5)
-              .toList();
+          final current = List<File>.from(_selectedPhotos);
+          if (current.length < 5) {
+            current.add(File(photo.path));
+          }
+          _selectedPhotos = current;
         });
 
-        if (_selectedPhotos.length < pickedFiles.length) {
+        if (_selectedPhotos.length >= 5) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Maximum 5 photos allowed. Some were not added.'),
+              content: Text('Maximum 5 photos reached. Remove one to capture again.'),
             ),
           );
         }
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error picking photos: $e')),
       );
@@ -160,10 +199,11 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
       );
       return;
     }
-
-    if (_descriptionController.text.trim().isEmpty) {
+    final phone = _reporterPhoneController.text.trim();
+    final validPhone = RegExp(r'^\+639\d{9}$').hasMatch(phone);
+    if (!validPhone) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter incident description')),
+        const SnackBar(content: Text('Contact number is required. Use +639XXXXXXXXX')),
       );
       return;
     }
@@ -172,26 +212,31 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
 
     try {
       final authProvider = context.read<AuthProvider>();
+      final description = '${_selectedType!.name} - $_selectedSeverity: ${_severityDescription()}';
       final incident = await _apiService.createIncident(
         incidentType: _selectedType!.name,
-        description: _descriptionController.text.trim(),
+        description: description,
         severity: _selectedSeverity,
         latitude: _latitude!,
         longitude: _longitude!,
-        barangay: _barangay,
-        city: _city,
+        barangay: _address,
+        city: null,
         reporterName: _reporterNameController.text.trim().isEmpty
             ? authProvider.user?.fullName
             : _reporterNameController.text.trim(),
-        reporterPhone: _reporterPhoneController.text.trim(),
+        reporterPhone: phone,
       );
 
-      // Upload photos if any
-      if (_selectedPhotos.isNotEmpty && incident.id > 0) {
+      if (_selectedPhotos.isNotEmpty && incident.id.isNotEmpty) {
         for (final photo in _selectedPhotos) {
-          // Note: In a real app, you'd upload to Cloudinary first
-          // For now, we're using the from-url endpoint
-          // This is a simplified version - in production you'd upload to a storage service
+          try {
+            await _apiService.uploadEvidenceFile(
+              incidentId: incident.id,
+              file: photo,
+            );
+          } catch (_) {
+            // Continue submitting even if some evidence uploads fail.
+          }
         }
       }
 
@@ -201,347 +246,408 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
             content: Text('Incident reported successfully! Code: ${incident.incidentCode}'),
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pushReplacementNamed('/report-success');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting report: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting report: $e')),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  String _severityDescription() {
+    switch (_selectedSeverity) {
+      case 'LOW':
+        return 'Localized issue with limited impact.';
+      case 'HIGH':
+        return 'Serious incident requiring urgent coordinated response.';
+      default:
+        return 'Extreme emergency with immediate widespread risk.';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report Incident'),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Section 1: Photos
-              Text(
-                'Add Photos (Optional)',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+    final markers = (_latitude != null && _longitude != null)
+        ? [
+            Marker(
+              point: latlng.LatLng(_latitude!, _longitude!),
+              width: 44,
+              height: 44,
+              child: const Icon(
+                Icons.location_pin,
+                color: Color(0xFFDC2626),
+                size: 38,
               ),
-              const SizedBox(height: 12),
-              if (_selectedPhotos.isNotEmpty)
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                  ),
-                  itemCount: _selectedPhotos.length,
-                  itemBuilder: (context, index) {
-                    return Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            image: DecorationImage(
-                              image: FileImage(_selectedPhotos[index]),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: () => _removePhoto(index),
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey, width: 1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: const Center(
-                    child: Text('No photos selected'),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              if (_selectedPhotos.length < 5)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _selectPhotos,
-                    icon: const Icon(Icons.camera_alt),
-                    label:
-                        Text(_selectedPhotos.isEmpty ? 'Add Photos' : 'Add More'),
-                  ),
-                ),
-              const SizedBox(height: 32),
+            ),
+          ]
+        : <Marker>[];
 
-              // Section 2: Location
-              Text(
-                'Location Detection',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              if (_latitude != null && _longitude != null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text('Emergency Report'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_locationError != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           children: [
-                            const Icon(Icons.location_on,
-                                color: Colors.green, size: 20),
+                            const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626)),
                             const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_barangay != null)
-                                    Text(
-                                      '📍 Barangay $_barangay${_city != null ? ', $_city' : ''}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '$_latitude, $_longitude',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            Expanded(child: Text(_locationError!)),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (_locationError != null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
+                      ),
+                    _sectionTitle('PHOTO EVIDENCE', Icons.camera_alt_outlined),
+                    _photoPickerCard(),
+                    if (_selectedPhotos.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _photoGrid(),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_selectedPhotos.length}/5 photos attached',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.error, color: Colors.red, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _locationError!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.red,
-                            ),
+                        _sectionTitle('YOUR LOCATION', Icons.location_on_outlined),
+                        TextButton.icon(
+                          onPressed: _gettingLocation ? null : _detectLocation,
+                          icon: Icon(
+                            Icons.refresh,
+                            size: 14,
+                            color: _gettingLocation ? Colors.grey : const Color(0xFF16A34A),
                           ),
+                          label: const Text('Refresh'),
                         ),
                       ],
                     ),
-                  ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey, width: 1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: const Center(
-                    child: Text('Location not detected'),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _gettingLocation ? null : _detectLocation,
-                  icon: _gettingLocation
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location),
-                  label: Text(_gettingLocation
-                      ? 'Detecting...'
-                      : 'Detect My Location'),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Section 3: Incident Type
-              Text(
-                'Emergency Type',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<IncidentType>(
-                initialValue: _selectedType,
-                items: _incidentTypes
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type.name),
+                    Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
-                    )
-                    .toList(),
-                onChanged: (type) {
-                  setState(() => _selectedType = type);
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Section 4: Description
-              Text(
-                'Description',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      clipBehavior: Clip.antiAlias,
+                      child: _gettingLocation && _latitude == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : FlutterMap(
+                              mapController: _mapController,
+                              options: MapOptions(
+                                initialCenter: _mapCenter,
+                                initialZoom: _latitude != null ? 16 : 13,
+                                onTap: (_, point) => _onMapTap(point),
+                              ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  userAgentPackageName: 'com.gaoirs.reporter_app',
+                                ),
+                                MarkerLayer(markers: markers),
+                              ],
+                            ),
                     ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Describe the incident in detail',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Section 5: Severity
-              Text(
-                'Severity Level',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _addressLoading
+                          ? const Text('Resolving address...')
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'YOUR LOCATION - DETECTED',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF15803D),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _address ?? 'Tap the map to select location',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                if (_latitude != null && _longitude != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      'GPS: ${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
+                                  ),
+                              ],
+                            ),
                     ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: _severityLevels
-                    .map(
-                      (severity) => ChoiceChip(
-                        label: Text(severity),
-                        selected: _selectedSeverity == severity,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedSeverity = severity;
-                          });
-                        },
-                        backgroundColor: _severityColors[severity]
-                            ?.withValues(alpha: 0.2),
-                        selectedColor: _severityColors[severity],
-                        labelStyle: TextStyle(
-                          color: _selectedSeverity == severity
-                              ? Colors.white
-                              : Colors.black,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(height: 16),
+                    _sectionTitle('EMERGENCY TYPE *', Icons.warning_amber_rounded),
+                    DropdownButtonFormField<IncidentType>(
+                      initialValue: _selectedType,
+                      items: _incidentTypes
+                          .map((type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.name),
+                              ))
+                          .toList(),
+                      onChanged: (type) => setState(() => _selectedType = type),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 32),
-
-              // Section 6: Personal Info
-              Text(
-                'Personal Information (Optional)',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
                     ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reporterNameController,
-                decoration: InputDecoration(
-                  labelText: 'Full Name',
-                  hintText: 'Your full name',
-                  prefixIcon: const Icon(Icons.person_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reporterPhoneController,
-                decoration: InputDecoration(
-                  labelText: 'Contact Number',
-                  hintText: '09XX-XXX-XXXX',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 32),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitReport,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                    const SizedBox(height: 16),
+                    _sectionTitle('INCIDENT SEVERITY', Icons.warning_amber_rounded),
+                    Row(
+                      children: _severityLevels.map((level) {
+                        final selected = _selectedSeverity == level;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InkWell(
+                              onTap: () => setState(() => _selectedSeverity = level),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Ink(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: selected ? _severityColors[level] : Colors.white,
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    level,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: selected ? Colors.white : const Color(0xFF334155),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        )
-                      : const Text('Submit Report'),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _severityDescription(),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _sectionTitle('OPTIONAL PERSONAL INFO', Icons.person_outline),
+                    TextField(
+                      controller: _reporterNameController,
+                      decoration: _inputDecoration('Full Name'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _reporterPhoneController,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 13,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                      ],
+                      decoration: _inputDecoration('+639XXXXXXXXX').copyWith(counterText: ''),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _submitReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFE2E8F0),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.send),
+                      label: Text(_isLoading ? 'Sending Report...' : 'Submit Emergency Report'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'False reporting is punishable by law',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF64748B)),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoPickerCard() {
+    return InkWell(
+      onTap: _selectedPhotos.length >= 5 ? null : _capturePhoto,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
         ),
+        child: const Column(
+          children: [
+            Icon(Icons.camera_alt_outlined, size: 30, color: Color(0xFF3B82F6)),
+            SizedBox(height: 6),
+            Text(
+              'Tap to capture photo',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
+            ),
+            Text(
+              '(Camera capture, optional)',
+              style: TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _photoGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+      ),
+      itemCount: _selectedPhotos.length,
+      itemBuilder: (context, index) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.file(_selectedPhotos[index], fit: BoxFit.cover),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _removePhoto(index),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: Color(0x99000000),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 14),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF3B82F6)),
       ),
     );
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 class SocketProvider extends ChangeNotifier {
-  late IO.Socket _socket;
+  late socket_io.Socket _socket;
   bool _isConnected = false;
   String? _error;
   late String socketUrl;
@@ -19,9 +19,9 @@ class SocketProvider extends ChangeNotifier {
     if (_isConnected) return;
 
     try {
-      _socket = IO.io(
+      _socket = socket_io.io(
         socketUrl,
-        IO.OptionBuilder()
+        socket_io.OptionBuilder()
             .setTransports(['websocket'])
             .enableAutoConnect()
             .setExtraHeaders({'Authorization': 'Bearer $token'})

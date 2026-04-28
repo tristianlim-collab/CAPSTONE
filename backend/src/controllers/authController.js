@@ -1,6 +1,7 @@
 import { prisma } from '../config/database.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
 
 
 
@@ -38,8 +39,8 @@ export const register = async (req, res) => {
 
     const token = jwt.sign(
       { id: user.user_id, role: user.role },
-      process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '7d' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.status(201).json({
@@ -69,8 +70,8 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user.user_id, role: user.role },
-      process.env.JWT_SECRET || 'fallback_secret',
-      { expiresIn: '7d' }
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
     );
 
     res.json({

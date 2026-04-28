@@ -163,10 +163,10 @@ export default function LiveMap({
       {mode === 'markers' && <MapLegend />}
       {mode === 'markers' && markerColorMode === 'lgu' && (
         <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-md text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-800">LGU Indicator</div>
-          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Own LGU</div>
+          <div className="font-bold text-slate-800">LGU INDICATORS</div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Own LGU (incident happened here)</div>
           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Neighbor LGU</div>
-          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> LFAR</div>
+          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Far LGU</div>
         </div>
       )}
     </div>

@@ -8,6 +8,8 @@ import 'package:reporter_app/screens/auth/register_screen.dart';
 import 'package:reporter_app/screens/reporter/reporter_home_screen.dart';
 import 'package:reporter_app/screens/reporter/incident_report_form_screen.dart';
 import 'package:reporter_app/screens/reporter/my_reports_screen.dart';
+import 'package:reporter_app/screens/reporter/reporter_profile_screen.dart';
+import 'package:reporter_app/screens/reporter/report_success_screen.dart';
 import 'package:reporter_app/theme/app_theme.dart';
 
 void main() async {
@@ -21,7 +23,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'GAOIRS Reporter',
+        debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
@@ -41,7 +44,9 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const ReporterHomeScreen(),
           '/report': (context) => const IncidentReportFormScreen(),
+          '/report-success': (context) => const ReportSuccessScreen(),
           '/my-reports': (context) => const MyReportsScreen(),
+          '/profile': (context) => const ReporterProfileScreen(),
         },
       ),
     );
@@ -49,7 +54,7 @@ class MyApp extends StatelessWidget {
 }
 
 class _HomeRouter extends StatelessWidget {
-  const _HomeRouter({Key? key}) : super(key: key);
+  const _HomeRouter();
 
   @override
   Widget build(BuildContext context) {
