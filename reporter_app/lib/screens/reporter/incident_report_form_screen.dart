@@ -290,7 +290,16 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Emergency Report'),
+        title: const Column(
+          children: [
+            Text('Emergency Report'),
+            SizedBox(height: 2),
+            Text(
+              'COMPLETE FORM',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -322,6 +331,13 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
                         ),
                       ),
                     _sectionTitle('PHOTO EVIDENCE', Icons.camera_alt_outlined),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: const Text(
+                        'Optional but recommended',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      ),
+                    ),
                     _photoPickerCard(),
                     if (_selectedPhotos.isNotEmpty) ...[
                       const SizedBox(height: 10),
@@ -413,22 +429,67 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
                     ),
                     const SizedBox(height: 16),
                     _sectionTitle('EMERGENCY TYPE *', Icons.warning_amber_rounded),
-                    DropdownButtonFormField<IncidentType>(
-                      initialValue: _selectedType,
-                      items: _incidentTypes
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type.name),
-                              ))
-                          .toList(),
-                      onChanged: (type) => setState(() => _selectedType = type),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      child: DropdownButtonFormField<IncidentType>(
+                        initialValue: _selectedType,
+                        items: _incidentTypes.isEmpty
+                            ? [
+                                DropdownMenuItem(
+                                  child: const Text('-- Select Emergency Type --'),
+                                ),
+                              ]
+                            : _incidentTypes
+                                .map((type) => DropdownMenuItem(
+                                      value: type,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Row(
+                                          children: [
+                                            // Color indicator
+                                            Container(
+                                              width: 12,
+                                              height: 12,
+                                              decoration: BoxDecoration(
+                                                color: Color(int.parse('0xFF${type.colorCode?.substring(1) ?? 'CCCCCC'}')),
+                                                borderRadius: BorderRadius.circular(2),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                type.name,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                        onChanged: (type) {
+                          if (type != null) setState(() => _selectedType = type);
+                        },
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          errorText: null,
                         ),
+                        isExpanded: true,
+                        hint: const Text('-- Select Emergency Type --'),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -578,11 +639,11 @@ class _IncidentReportFormScreenState extends State<IncidentReportFormScreen> {
             Icon(Icons.camera_alt_outlined, size: 30, color: Color(0xFF3B82F6)),
             SizedBox(height: 6),
             Text(
-              'Tap to capture photo',
+              'Click to take or upload photo',
               style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
             ),
             Text(
-              '(Camera capture, optional)',
+              '(Optional but recommended)',
               style: TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
             ),
           ],
