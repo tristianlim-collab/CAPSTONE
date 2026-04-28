@@ -198,17 +198,27 @@ class ApiService {
       final incidentTypeId = selectedType['type_id'];
       final mapPinAddress = '$barangay, $city'.replaceAll('null, ', '').replaceAll(', null', '');
 
+      final requestBody = {
+        'incident_type_id': incidentTypeId,
+        'description': description,
+        'severity': severity,
+        'latitude': latitude,
+        'longitude': longitude,
+        'map_pin_address': mapPinAddress,
+      };
+
+      // Add optional reporter fields if provided
+      if (reporterName != null && reporterName.isNotEmpty) {
+        requestBody['reporter_name'] = reporterName;
+      }
+      if (reporterPhone != null && reporterPhone.isNotEmpty) {
+        requestBody['reporter_phone'] = reporterPhone;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/incidents'),
         headers: _headers,
-        body: jsonEncode({
-          'incident_type_id': incidentTypeId,
-          'description': description,
-          'severity': severity,
-          'latitude': latitude,
-          'longitude': longitude,
-          'map_pin_address': mapPinAddress,
-        }),
+        body: jsonEncode(requestBody),
       ).timeout(_timeout);
 
       if (response.statusCode == 201 || response.statusCode == 200) {

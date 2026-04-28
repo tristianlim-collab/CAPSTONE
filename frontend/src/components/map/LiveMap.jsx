@@ -73,8 +73,11 @@ export default function LiveMap({
   const { on } = useSocketContext();
 
   useEffect(() => {
-    // Fetch initial active incidents
-    incidentAPI.getAll({ limit: 100 }).then(res => {
+    // Fetch initial active incidents with full data
+    incidentAPI.getAll({
+      limit: 100,
+      include: 'evidence,reporter,type,barangay'
+    }).then(res => {
       // Filter out resolved incidents for the map
       const activeIncidents = res.data?.data?.filter(inc => inc.status !== 'RESOLVED' && inc.status !== 'CLOSED' && inc.status !== 'FALSE_ALARM') || [];
       setIncidents(activeIncidents);
@@ -112,11 +115,25 @@ export default function LiveMap({
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
 
+    // Listen for verified incidents
+    const unsub5 = on('incident_verified', (data) => {
+      if (data.incident?.latitude && data.incident?.longitude) {
+        setIncidents(prev => {
+          const existing = prev.find(i => i.incident_id === data.incident.incident_id);
+          if (existing) {
+            return prev.map(inc => inc.incident_id === data.incident.incident_id ? data.incident : inc);
+          }
+          return [data.incident, ...prev];
+        });
+      }
+    });
+
     return () => {
       unsub1();
       unsub2();
       unsub3();
       unsub4();
+      unsub5();
     };
   }, [on]);
 

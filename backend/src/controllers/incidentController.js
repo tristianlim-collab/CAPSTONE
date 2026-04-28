@@ -135,17 +135,11 @@ export const getIncidents = async (req, res) => {
       evidence: true
     };
 
-    // Allow selective includes for performance
+    // Allow selective includes for performance - always keep core data
     if (includeParam.length > 0) {
-      const selectiveInclude = {};
-      if (includeParam.includes('evidence')) selectiveInclude.evidence = true;
-      if (includeParam.includes('reporter')) selectiveInclude.reporter = { select: { user_id: true, name: true, email: true, contact_number: true } };
-      if (includeParam.includes('assignments')) selectiveInclude.assignments = { include: { unit: true } };
-      if (includeParam.includes('type')) selectiveInclude.incident_type = true;
-      if (includeParam.includes('barangay')) selectiveInclude.barangay = true;
-      if (includeParam.includes('status_logs')) selectiveInclude.status_logs = { orderBy: { changed_at: 'desc' } };
-      // Use selective include only if specific fields requested
-      Object.assign(includeObj, selectiveInclude);
+      if (includeParam.includes('status_logs')) {
+        includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
+      }
     }
 
     const incidents = await prisma.incident.findMany({
@@ -172,20 +166,24 @@ export const getIncidentById = async (req, res) => {
     let includeObj = {
       incident_type: true,
       barangay: true,
-      reporter: { select: { name: true, contact_number: true } },
+      reporter: { select: { name: true, email: true, contact_number: true } },
       assignments: { include: { unit: true } },
       status_logs: { orderBy: { changed_at: 'desc' } },
       evidence: true
     };
 
     if (includeParam.length > 0) {
-      includeObj = {};
-      if (includeParam.includes('evidence')) includeObj.evidence = true;
-      if (includeParam.includes('reporter')) includeObj.reporter = { select: { user_id: true, name: true, email: true, contact_number: true } };
-      if (includeParam.includes('assignments')) includeObj.assignments = { include: { unit: true } };
-      if (includeParam.includes('type')) includeObj.incident_type = true;
-      if (includeParam.includes('barangay')) includeObj.barangay = true;
-      if (includeParam.includes('status_logs')) includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
+      includeObj = {
+        incident_type: true,
+        barangay: true,
+        reporter: { select: { name: true, email: true, contact_number: true } },
+        evidence: true,
+        assignments: { include: { unit: true } }
+      };
+      // Only conditionally add status_logs if explicitly requested
+      if (includeParam.includes('status_logs')) {
+        includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
+      }
     }
 
     const incident = await prisma.incident.findUnique({

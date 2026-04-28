@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { incidentAPI } from '../../api';
@@ -41,6 +41,43 @@ const ICONS = {
 // Green icon for response units
 const UNIT_ICON = createColoredIcon('#22c55e'); // green
 
+// Auto-zoom to latest incident when one arrives
+function AutoZoomToLatestIncident({ incidents, enabled }) {
+  const map = useMap();
+  const hasHydrated = useRef(false);
+  const previousLatestId = useRef(null);
+
+  useEffect(() => {
+    if (!enabled || incidents.length === 0) return;
+
+    const latestIncident = incidents[0];
+    const latestId = latestIncident?.incident_id;
+    const lat = Number(latestIncident?.latitude);
+    const lng = Number(latestIncident?.longitude);
+    const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+
+    if (!hasValidCoordinates) return;
+
+    if (!hasHydrated.current) {
+      hasHydrated.current = true;
+      previousLatestId.current = latestId;
+      return;
+    }
+
+    if (previousLatestId.current !== latestId) {
+      map.flyTo([lat, lng], 16, { duration: 0.8 });
+      previousLatestId.current = latestId;
+      toast('🚨 New incident! Auto-zooming to location...', {
+        icon: '📍',
+        style: { fontWeight: 'bold', borderLeft: '4px solid #f97316' },
+        duration: 4000
+      });
+    }
+  }, [enabled, incidents, map]);
+
+  return null;
+}
+
 const ResponseMap = () => {
   const [incidents, setIncidents] = useState([]);
   const [units, setUnits] = useState([]);
@@ -60,23 +97,63 @@ const ResponseMap = () => {
   useEffect(() => {
     const unsub1 = on('new_incident', (incident) => {
       if (incident.latitude && incident.longitude) {
+        // Fetch full incident data with reporter and evidence
+        const fetchFullIncident = async () => {
+          try {
+            const res = await incidentAPI.getById(incident.incident_id, {
+              include: 'evidence,reporter,type,barangay'
+            });
+            if (res.data) {
+              setIncidents(prev => {
+                if (prev.find(i => i.incident_id === res.data.incident_id)) return prev;
+                return [res.data, ...prev];
+              });
+            }
+          } catch (error) {
+            console.error('Failed to fetch full incident data', error);
+            // Fallback to socket data if it has complete information
+            if (incident.reporter && incident.evidence !== undefined) {
+              setIncidents(prev => {
+                if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
+                return [incident, ...prev];
+              });
+            }
+          }
+        };
+        fetchFullIncident();
+      }
+    });
+
+    // Also listen for incidents awaiting verification (new reports)
+    const unsub1b = on('incident_awaiting_verification', (data) => {
+      if (data.incident?.latitude && data.incident?.longitude) {
         setIncidents(prev => {
-          if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
-          return [...prev, incident];
+          if (prev.find(i => i.incident_id === data.incident.incident_id)) return prev;
+          return [data.incident, ...prev];
         });
-        toast('📍 New incident on map!', { style: { fontWeight: 'bold' } });
       }
     });
 
     const unsub2 = on('incident_status_updated', (data) => {
-      setIncidents(prev => {
-        return prev
-          .map(inc => inc.incident_id === data.incident_id
-            ? { ...inc, status: data.status, ...(data.incident || {}) }
-            : inc
-          )
-          // Remove resolved/closed from the active map view
-          .filter(inc => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status));
+      // Re-fetch the incident to ensure we have all data
+      incidentAPI.getById(data.incident_id, {
+        include: 'evidence,reporter,type,barangay'
+      }).then(res => {
+        setIncidents(prev => {
+          return prev
+            .map(inc => inc.incident_id === data.incident_id ? res.data : inc)
+            .filter(inc => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status));
+        });
+      }).catch(err => {
+        // Fallback to local update
+        setIncidents(prev => {
+          return prev
+            .map(inc => inc.incident_id === data.incident_id
+              ? { ...inc, status: data.status, ...(data.incident || {}) }
+              : inc
+            )
+            .filter(inc => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status));
+        });
       });
     });
 
@@ -94,13 +171,30 @@ const ResponseMap = () => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    // Listen for verified incidents (admin approved)
+    const unsub5 = on('incident_verified', (data) => {
+      if (data.incident?.latitude && data.incident?.longitude) {
+        setIncidents(prev => {
+          const existing = prev.find(i => i.incident_id === data.incident.incident_id);
+          if (existing) {
+            return prev.map(inc => inc.incident_id === data.incident.incident_id ? data.incident : inc);
+          }
+          return [data.incident, ...prev];
+        });
+      }
+    });
+
+    return () => { unsub1(); unsub1b(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, [on]);
 
   const fetchIncidents = async () => {
     try {
       setLoading(true);
-      const res = await incidentAPI.getAll({ limit: 100 });
+      // Fetch with evidence and reporter data included
+      const res = await incidentAPI.getAll({
+        limit: 100,
+        include: 'evidence,reporter,type,barangay'
+      });
       if (res.data?.data) {
         setIncidents(
           res.data.data.filter(inc =>
@@ -251,9 +345,9 @@ const ResponseMap = () => {
             </div>
           )}
           <div className="flex-1 w-full h-full relative z-0">
-            <MapContainer 
-              center={defaultCenter} 
-              zoom={9} 
+            <MapContainer
+              center={defaultCenter}
+              zoom={9}
               minZoom={5}
               style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
             >
@@ -261,6 +355,7 @@ const ResponseMap = () => {
                 attribution='&copy; OpenStreetMap contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
+              <AutoZoomToLatestIncident incidents={incidents} enabled={true} />
             
             {incidents.map((incident) => (
               <Marker
@@ -280,15 +375,30 @@ const ResponseMap = () => {
                       </span>
                     </div>
                     <p className="text-sm text-slate-600 mb-3 line-clamp-2 leading-relaxed">{incident.description}</p>
-                    <div className="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+
+                    {/* Evidence Gallery - Top Priority */}
+                    <EvidenceGallery evidence={incident.evidence} />
+
+                    <div className="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 mt-3">
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                         <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
                         <span>{incident.severity || 'Normal'} Severity</span>
                       </div>
+                      {incident.barangay && (
+                        <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                          <span>{incident.barangay.barangay_name || 'Unknown Barangay'}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                         <User className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                        <span>{incident.reporter?.name || 'Anonymous'}</span>
+                        <span>{incident.reporter?.name || 'Anonymous Reporter'}</span>
                       </div>
+                      {incident.reporter?.contact_number && (
+                        <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                          <span>📞 {incident.reporter.contact_number}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                         <Clock className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                         <span>{new Date(incident.reported_at).toLocaleString()}</span>
@@ -302,7 +412,6 @@ const ResponseMap = () => {
                         </div>
                       )}
                     </div>
-                    <EvidenceGallery evidence={incident.evidence} />
                   </div>
                 </Popup>
               </Marker>

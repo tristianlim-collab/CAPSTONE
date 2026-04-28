@@ -44,6 +44,17 @@ class Incident {
       typeName = json['incidentType'];
     }
 
+    // Extract reporter info from nested object
+    String? reporterName;
+    String? reporterPhone;
+    if (json['reporter'] is Map) {
+      reporterName = json['reporter']['name'];
+      reporterPhone = json['reporter']['contact_number'];
+    } else {
+      reporterName = json['reporter_name'] ?? json['reporterName'];
+      reporterPhone = json['reporter_phone'] ?? json['reporter_contact'] ?? json['reporterPhone'];
+    }
+
     return Incident(
       id: (json['incident_id'] ?? json['id'] ?? '').toString(),
       incidentCode: json['incident_code'] ?? json['incidentCode'] ?? '',
@@ -54,8 +65,8 @@ class Incident {
       longitude: _toDouble(json['longitude']),
       mapPinAddress: json['map_pin_address'] ?? json['mapPinAddress'],
       status: json['status'] ?? 'REPORTED',
-      reporterName: json['reporter_name'] ?? json['reporterName'] ?? (json['reporter'] is Map ? json['reporter']['name'] : null),
-      reporterPhone: json['reporter_contact'] ?? json['reporterPhone'],
+      reporterName: reporterName,
+      reporterPhone: reporterPhone,
       reporterId: (json['reporter_id'] ?? json['reporterId'] ?? '').toString(),
       createdAt: DateTime.tryParse(json['reported_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? json['updatedAt'] ?? '') ?? DateTime.now(),

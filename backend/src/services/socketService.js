@@ -12,10 +12,27 @@ export default {
   emitNewIncident: (incident) => {
     try {
       const io = getIO();
+      // Ensure complete data for map rendering
+      const completeIncident = {
+        ...incident,
+        incident_id: incident.incident_id,
+        incident_code: incident.incident_code,
+        status: incident.status,
+        latitude: incident.latitude,
+        longitude: incident.longitude,
+        description: incident.description,
+        severity: incident.severity,
+        map_pin_address: incident.map_pin_address,
+        reported_at: incident.reported_at,
+        incident_type: incident.incident_type,
+        reporter: incident.reporter,
+        barangay: incident.barangay,
+        evidence: incident.evidence
+      };
       // Send to admin room
-      io.to('admin').emit('new_incident', incident);
+      io.to('admin').emit('new_incident', completeIncident);
       // Send to the general response room (all response-unit users)
-      io.to('response').emit('new_incident', incident);
+      io.to('response').emit('new_incident', completeIncident);
     } catch (err) {
       console.error('Socket emitNewIncident failed (socket may not be ready):', err.message);
     }

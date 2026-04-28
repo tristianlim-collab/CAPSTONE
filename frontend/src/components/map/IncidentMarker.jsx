@@ -222,12 +222,19 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
       <Popup className="min-w-[280px] max-w-[350px]">
         <div className="font-sans">
           <div className="flex items-center justify-between border-b pb-2 mb-2">
-            <strong className="text-lg">{`INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
+            <strong className="text-lg">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
             <span className={`px-2 py-1 text-xs font-bold rounded-full ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
               {incident.status}
             </span>
           </div>
+
           <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
+
+          {/* Location/Barangay Display */}
+          {incident.barangay && (
+            <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.barangay_name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
+          )}
+
           {colorMode === 'lgu' && (
             <p className="text-sm mb-1"><strong>LGU Indicator:</strong> {lguIndicator.label}</p>
           )}
@@ -237,17 +244,30 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
 
-          {/* Reporter Personal Info */}
-          {incident.reporter && (
+          {/* Reporter Personal Info - FIX: Check both reporter object and fallback to user from incident */}
+          {(incident.reporter || incident.reported_by) && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
-              <p className="text-xs text-gray-600"><strong>Name:</strong> {incident.reporter.name || 'Not provided'}</p>
-              <p className="text-xs text-gray-600"><strong>Phone:</strong> {incident.reporter.contact_number || 'Not provided'}</p>
+              <p className="text-xs text-gray-600">
+                <strong>Name:</strong> {incident.reporter?.name || 'Not provided'}
+              </p>
+              <p className="text-xs text-gray-600">
+                <strong>Phone:</strong> {incident.reporter?.contact_number || 'Not provided'}
+              </p>
+              <p className="text-xs text-gray-600">
+                <strong>Email:</strong> {incident.reporter?.email || 'Not provided'}
+              </p>
             </div>
           )}
 
-          {/* Evidence Gallery */}
-          <EvidenceGallery evidence={incident.evidence} />
+          {/* Evidence Gallery - PROMINENT DISPLAY */}
+          {incident.evidence && incident.evidence.length > 0 ? (
+            <EvidenceGallery evidence={incident.evidence} />
+          ) : (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-400 italic">📸 No photos attached</p>
+            </div>
+          )}
 
           <div className="text-xs text-gray-400 mt-2">
             Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
