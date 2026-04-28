@@ -277,7 +277,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List types = data['data'] ?? data ?? [];
+        final List types = (data is List) ? data : (data['data'] ?? []);
         return types.map((t) => IncidentType.fromJson(t)).toList();
       } else {
         throw Exception('Failed to fetch incident types');

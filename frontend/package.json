@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "@tailwindcss/forms": "^0.5.10",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",
@@ -29,7 +30,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react-swc": "^4.3.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "vite": "^8.0.8"

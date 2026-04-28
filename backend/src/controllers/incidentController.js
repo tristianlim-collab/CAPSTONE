@@ -72,7 +72,8 @@ export const createIncident = async (req, res) => {
     // This prevents false reports from wasting response unit resources
     // Admins can approve, reject, or request more info via POST /api/incidents/:id/verify
 
-    // Broadcast to admin room so they see pending incidents awaiting verification
+    // Broadcast to admin + response rooms so they see the new incident and auto-zoom
+    socketService.emitNewIncident(incident);
     socketService.emitIncidentAwaitingVerification(incident);
 
     res.status(201).json(incident);
@@ -133,7 +134,7 @@ export const getIncidents = async (req, res) => {
       incident_type: true,
       barangay: true,
       reporter: { select: { name: true, email: true, contact_number: true } },
-      assignments: { include: { unit: true } },
+      assignments: { include: { unit: { include: { barangay: true } } } },
       evidence: true
     };
 
@@ -431,7 +432,13 @@ export const verifyIncident = async (req, res) => {
       const updatedIncident = await prisma.incident.update({
         where: { incident_id },
         data: { status: 'VERIFIED' },
-        include: { incident_type: true, reporter: true, assignments: true }
+        include: {
+          incident_type: true,
+          reporter: { select: { name: true, email: true, contact_number: true } },
+          barangay: true,
+          assignments: { include: { unit: { include: { barangay: true } } } },
+          evidence: true
+        }
       });
 
       // Log status change

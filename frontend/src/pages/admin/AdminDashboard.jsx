@@ -31,8 +31,9 @@ export default function AdminDashboard() {
     });
 
     const unsub2 = on('incident_status_updated', (data) => {
+      const fullIncident = data.incident || {};
       setRecentIncidents(prev => prev.map(inc =>
-        inc.incident_id === data.incident_id ? { ...inc, status: data.status } : inc
+        inc.incident_id === data.incident_id ? { ...inc, ...fullIncident, status: data.status } : inc
       ));
       if (data.status === 'RESOLVED' || data.status === 'CLOSED') {
         setStats(s => ({ ...s, active: Math.max(0, s.active - 1), resolved: s.resolved + 1 }));

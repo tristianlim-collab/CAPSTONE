@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js'; // Assume auth middleware 
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/google', authController.googleLogin);
 router.get('/me', authenticate, authController.getMe);
 router.put('/me', authenticate, authController.updateProfile);
 router.put('/me/password', authenticate, authController.updatePassword);

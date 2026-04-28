@@ -1,5 +1,5 @@
 class IncidentType {
-  final int id;
+  final String id;
   final String name;
   final String? colorCode;
   final String iconLabel;
@@ -13,7 +13,7 @@ class IncidentType {
 
   factory IncidentType.fromJson(Map<String, dynamic> json) {
     return IncidentType(
-      id: json['type_id'] ?? json['id'] ?? 0,
+      id: (json['type_id'] ?? json['id'] ?? '').toString(),
       name: json['name'] ?? '',
       colorCode: json['color_code'] ?? '#6B7280',
       iconLabel: json['icon_label'] ?? 'file_text',

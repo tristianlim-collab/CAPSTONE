@@ -214,10 +214,25 @@ export default function IncidentReportForm() {
       toast.error('Please select an emergency type');
       return;
     }
-    // Find type ID from incident types
-    const typeId = incidentTypes.find(t => t.name === selectedType)?.type_id;
+    // Find type ID from incident types - re-fetch if list is empty
+    let types = incidentTypes;
+    if (!types || types.length === 0) {
+      try {
+        const res = await api.get('/incident-types');
+        types = res.data || [];
+        setIncidentTypes(types);
+      } catch (err) {
+        console.error('Failed to fetch incident types on submit:', err);
+        toast.error('Could not load incident types. Please try again.');
+        return;
+      }
+    }
+    const typeId = types.find(t =>
+      t.name?.toLowerCase() === selectedType?.toLowerCase()
+    )?.type_id;
     if (!typeId) {
-      toast.error('Incident type not found');
+      console.error('Type lookup failed. selectedType:', selectedType, 'available types:', types.map(t => t.name));
+      toast.error('Incident type not found. Please re-select the emergency type.');
       return;
     }
 
@@ -238,7 +253,7 @@ export default function IncidentReportForm() {
         map_pin_address: locationAddress,
         severity: severity,
         reporter_name: fullName || undefined,
-        reporter_contact: contactNumber
+        reporter_phone: contactNumber
       });
 
       const incidentId = incRes.data?.incident_id;
@@ -440,9 +455,14 @@ export default function IncidentReportForm() {
             }}
           >
             <option value="">-- Select Emergency Type --</option>
-            {emergencyTypesList.map((type) => (
-              <option key={type.id} value={type.name}>{type.name}</option>
-            ))}
+            {incidentTypes.length > 0
+              ? incidentTypes.map((type) => (
+                  <option key={type.type_id} value={type.name}>{type.name}</option>
+                ))
+              : emergencyTypesList.map((type) => (
+                  <option key={type.id} value={type.name}>{type.name}</option>
+                ))
+            }
           </select>
         </div>
 

@@ -2,6 +2,10 @@ import { prisma } from '../config/database.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { OAuth2Client } from 'google-auth-library';
+import crypto from 'crypto';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 
@@ -81,6 +85,61 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during login' });
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential, role } = req.body;
+    
+    // Verify the Google JWT token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const email = payload.email.toLowerCase();
+    const name = payload.name;
+    
+    const requestedRole = (role && ['REPORTER', 'RESPONSE_UNIT', 'ADMIN'].includes(role)) ? role : 'REPORTER';
+
+    let user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+      // Create user if they don't exist
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 12);
+      
+      user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password_hash: hashedPassword,
+          role: requestedRole,
+        }
+      });
+    } else if (user.role !== requestedRole) {
+      // For development/testing: Update the user's role if they selected a different one
+      user = await prisma.user.update({
+        where: { email },
+        data: { role: requestedRole }
+      });
+    }
+    
+    const token = jwt.sign(
+      { id: user.user_id, role: user.role },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+
+    res.json({
+      token,
+      user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
+    });
+  } catch (error) {
+    console.error('Google Sign-In Error:', error);
+    res.status(401).json({ message: 'Invalid Google credential' });
   }
 };
 

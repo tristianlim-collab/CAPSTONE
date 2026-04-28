@@ -107,7 +107,13 @@ export default function LiveMap({
         if (updatedData.status === 'RESOLVED' || updatedData.status === 'CLOSED' || updatedData.status === 'FALSE_ALARM') {
           return prev.filter(inc => inc.incident_id !== updatedData.incident_id);
         }
-        return prev.map(inc => inc.incident_id === updatedData.incident_id ? { ...inc, ...updatedData } : inc);
+        // Merge the full incident object if provided (e.g. after evidence upload)
+        const fullIncident = updatedData.incident || {};
+        return prev.map(inc =>
+          inc.incident_id === updatedData.incident_id
+            ? { ...inc, ...fullIncident, status: updatedData.status }
+            : inc
+        );
       });
     });
 
@@ -121,7 +127,11 @@ export default function LiveMap({
         setIncidents(prev => {
           const existing = prev.find(i => i.incident_id === data.incident.incident_id);
           if (existing) {
-            return prev.map(inc => inc.incident_id === data.incident.incident_id ? data.incident : inc);
+            // Merge instead of replace to preserve evidence and other data
+            return prev.map(inc => inc.incident_id === data.incident.incident_id
+              ? { ...inc, ...data.incident }
+              : inc
+            );
           }
           return [data.incident, ...prev];
         });

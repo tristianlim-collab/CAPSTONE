@@ -46,11 +46,20 @@ export default {
   emitIncidentStatusUpdate: (data) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_status_updated', data);
-      io.to('response').emit('incident_status_updated', data);
+      // Ensure the incident object includes ALL fields including reporter_name and reporter_phone
+      const completeData = {
+        ...data,
+        incident: {
+          ...data.incident,
+          reporter_name: data.incident?.reporter_name,  // Explicitly include optional fields
+          reporter_phone: data.incident?.reporter_phone
+        }
+      };
+      io.to('admin').emit('incident_status_updated', completeData);
+      io.to('response').emit('incident_status_updated', completeData);
       // Also notify the specific reporter
-      if (data.reported_by) {
-        io.to(`reporter-${data.reported_by}`).emit('incident_status_updated', data);
+      if (completeData.reported_by) {
+        io.to(`reporter-${completeData.reported_by}`).emit('incident_status_updated', completeData);
       }
     } catch (err) {
       console.error('Socket emitIncidentStatusUpdate failed:', err.message);
