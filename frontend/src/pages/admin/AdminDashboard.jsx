@@ -113,7 +113,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Grid Area */}
-      <div className="flex-1 px-6 pb-6 min-h-0">
+      <div className="flex-1 px-6 pb-6 min-h-[800px]">
         {/* Map Area */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-2 flex flex-col relative overflow-hidden h-full">
           <div className="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-slate-200 pointer-events-none">

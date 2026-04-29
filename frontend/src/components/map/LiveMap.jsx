@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import IncidentMarker from './IncidentMarker';
 import BoundaryLayer from './BoundaryLayer';
 import HeatmapLayer from './HeatmapLayer';
 import MapLegend from './MapLegend';
+import LguProximityLayer from './LguProximityLayer';
 import toast from 'react-hot-toast';
 
 import { useSocketContext } from '../../context/SocketContext';
@@ -53,6 +54,26 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
   return null;
 }
 
+import { getAllNirCities, getProximityLevel, getNearestCity } from '../../config/nirLgus';
+
+/**
+ * Extract the city name from an incident object.
+ * Prefers barangay.city, then barangay.municipality.
+ * If missing, falls back to calculating the nearest city from coordinates.
+ */
+function getIncidentCity(incident) {
+  if (!incident) return null;
+  const city = incident.barangay?.city || incident.barangay?.municipality;
+  if (city) return city.toString().trim();
+
+  // Fallback to coordinates
+  if (incident.latitude && incident.longitude) {
+    const nearest = getNearestCity(Number(incident.latitude), Number(incident.longitude));
+    if (nearest) return nearest.name;
+  }
+  return null;
+}
+
 export default function LiveMap({
   center = [10.0000, 122.9000],
   zoom = 9,
@@ -62,7 +83,8 @@ export default function LiveMap({
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
-  const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap'
+  const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
   // Bounds for Negros Island Region
   const NIR_BOUNDS = [
@@ -89,6 +111,8 @@ export default function LiveMap({
         if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
         return [incident, ...prev];
       });
+      // Auto-select new incident for LGU zones
+      setSelectedIncidentId(incident.incident_id);
     });
 
     // Listen for new reports awaiting verification (this is what the backend actually emits)
@@ -99,6 +123,8 @@ export default function LiveMap({
           if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
           return [incident, ...prev];
         });
+        // Auto-select new incident for LGU zones
+        setSelectedIncidentId(incident.incident_id);
       }
     });
 
@@ -119,6 +145,8 @@ export default function LiveMap({
 
     const unsub4 = on('incident_deleted', (data) => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+      // Clear selection if deleted
+      setSelectedIncidentId(prev => prev === data.incident_id ? null : prev);
     });
 
     // Listen for verified incidents
@@ -147,17 +175,34 @@ export default function LiveMap({
     };
   }, [on]);
 
+  // Determine the city for the LGU proximity layer
+  const selectedIncident = selectedIncidentId
+    ? incidents.find(i => i.incident_id === selectedIncidentId)
+    : incidents[0]; // Default to latest
+  const incidentCity = getIncidentCity(selectedIncident);
+
+  // Handler for when a marker is clicked — update the LGU zones focus
+  const handleMarkerSelect = useCallback((incidentId) => {
+    setSelectedIncidentId(incidentId);
+  }, []);
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-sm border border-slate-200">
       {/* Map Controls */}
       <div className="absolute top-4 right-4 z-[1000] flex bg-white rounded-lg shadow-md overflow-hidden">
-        <button 
+        <button
           className={`px-4 py-2 text-sm font-semibold ${mode === 'markers' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => setMode('markers')}
         >
           Live Markers
         </button>
-        <button 
+        <button
+          className={`px-4 py-2 text-sm font-semibold ${mode === 'lgu_zones' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+          onClick={() => setMode('lgu_zones')}
+        >
+          LGU Zones
+        </button>
+        <button
           className={`px-4 py-2 text-sm font-semibold ${mode === 'heatmap' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => setMode('heatmap')}
         >
@@ -165,35 +210,60 @@ export default function LiveMap({
         </button>
       </div>
 
-      <MapContainer 
-        center={center} 
-        zoom={zoom} 
+
+      <MapContainer
+        center={center}
+        zoom={zoom}
         minZoom={5}
-        scrollWheelZoom={true} 
+        scrollWheelZoom={true}
         className="w-full h-full z-0"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
+
         <BoundaryLayer boundaries={boundaries} />
         <AutoZoomToLatestIncident incidents={incidents} enabled={autoZoomOnNewIncident} />
 
-        {mode === 'markers' && incidents.map(incident => (
-          <IncidentMarker key={incident.incident_id} incident={incident} colorMode={markerColorMode} onVerify={onVerify} />
+        {/* LGU Proximity Zones — visible in both markers and lgu_zones modes when markerColorMode is lgu */}
+        {(mode === 'lgu_zones' || (mode === 'markers' && markerColorMode === 'lgu')) && (
+          <LguProximityLayer incidentCity={incidentCity} />
+        )}
+
+        {(mode === 'markers' || mode === 'lgu_zones') && incidents.map(incident => (
+          <IncidentMarker
+            key={incident.incident_id}
+            incident={incident}
+            colorMode={mode === 'lgu_zones' ? 'lgu' : markerColorMode}
+            focusedIncidentCity={incidentCity}
+            onVerify={onVerify}
+            onSelect={handleMarkerSelect}
+            isSelected={selectedIncident?.incident_id === incident.incident_id}
+          />
         ))}
 
         {mode === 'heatmap' && <HeatmapLayer points={incidents} />}
       </MapContainer>
 
-      {mode === 'markers' && <MapLegend />}
-      {mode === 'markers' && markerColorMode === 'lgu' && (
-        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 border border-slate-200 rounded-lg px-3 py-2 shadow-md text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-800">LGU INDICATORS</div>
-          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Own LGU (incident happened here)</div>
-          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Neighbor LGU</div>
-          <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Far LGU</div>
+      {mode === 'markers' && markerColorMode !== 'lgu' && <MapLegend />}
+
+      {/* LGU Zone Legend */}
+      {(mode === 'lgu_zones' || (mode === 'markers' && markerColorMode === 'lgu')) && (
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 shadow-lg text-xs text-slate-700 space-y-1.5">
+          <div className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">LGU Proximity</div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/30" />
+            <span className="font-medium">Incident City</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/30" />
+            <span className="font-medium">Nearby City </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-500/30" />
+            <span className="font-medium">Far City </span>
+          </div>
         </div>
       )}
     </div>

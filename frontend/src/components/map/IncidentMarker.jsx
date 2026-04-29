@@ -4,7 +4,7 @@ import L from 'leaflet';
 import moment from 'moment';
 import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getProvinceForNirLguName } from '../../config/nirLgus';
+import { getProvinceForNirLguName, getNearestCity, getProximityLevel } from '../../config/nirLgus';
 
 const getColor = (status, severity) => {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'grey';
@@ -22,16 +22,31 @@ const getLguName = (objWithBarangay) => {
   return (city || municipality || '').toString().trim();
 };
 
-const getLguIndicator = (incident, user) => {
-  const userLguName = getLguName(user);
-  const incidentLguName = getLguName(incident);
+const getLguIndicator = (incident, user, focusedIncidentCity) => {
+  let incidentLguName = getLguName(incident);
+  
+  if (!incidentLguName && incident.latitude && incident.longitude) {
+    const nearest = getNearestCity(Number(incident.latitude), Number(incident.longitude));
+    if (nearest) incidentLguName = nearest.name;
+  }
 
-  const userLgu = normalize(userLguName);
   const incidentLgu = normalize(incidentLguName);
 
   if (!incidentLgu) {
     return { color: 'orange', label: 'Unknown LGU', lguName: '' };
   }
+
+  // If focusedIncidentCity is provided (Admin Map mode), compare against that
+  if (focusedIncidentCity) {
+    const level = getProximityLevel(focusedIncidentCity, incidentLguName);
+    if (level === 'incident') return { color: 'red', label: 'Incident City', lguName: incidentLguName };
+    if (level === 'nearby') return { color: 'blue', label: 'Nearby City', lguName: incidentLguName };
+    return { color: 'green', label: 'Far City', lguName: incidentLguName };
+  }
+
+  // Otherwise fallback to user comparison (Reporter/Response App mode)
+  const userLguName = getLguName(user);
+  const userLgu = normalize(userLguName);
 
   if (userLgu && incidentLgu && userLgu === incidentLgu) {
     return { color: 'red', label: 'Own LGU', lguName: incidentLguName };
@@ -208,19 +223,25 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
   );
 };
 
-export default function IncidentMarker({ incident, colorMode = 'severity', onVerify }) {
+export default function IncidentMarker({ incident, colorMode = 'severity', onVerify, onSelect, isSelected, focusedIncidentCity }) {
   const { user } = useAuth();
-  const lguIndicator = getLguIndicator(incident, user);
+  const lguIndicator = getLguIndicator(incident, user, focusedIncidentCity);
   const color =
     colorMode === 'lgu'
       ? lguIndicator.color
       : getColor(incident.status, incident.severity);
   const icon = createColoredIcon(color);
 
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(incident.incident_id);
+    }
+  };
+
   return (
-    <Marker position={[incident.latitude, incident.longitude]} icon={icon}>
+    <Marker position={[incident.latitude, incident.longitude]} icon={icon} eventHandlers={{ click: handleClick }}>
       <Popup className="min-w-[280px] max-w-[350px]">
-        <div className="font-sans">
+        <div className="font-sans pr-1 pb-1">
           <div className="flex items-center justify-between border-b pb-2 mb-2">
             <strong className="text-lg">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
             <span className={`px-2 py-1 text-xs font-bold rounded-full ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -239,12 +260,6 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
             <p className="text-sm mb-1 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
           )}
 
-          {colorMode === 'lgu' && (
-            <p className="text-sm mb-1"><strong>LGU Indicator:</strong> {lguIndicator.label}</p>
-          )}
-          {colorMode === 'lgu' && lguIndicator.lguName && (
-            <p className="text-sm mb-1"><strong>LGU:</strong> {lguIndicator.lguName}</p>
-          )}
           <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
           <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
 
