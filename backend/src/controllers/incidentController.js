@@ -389,12 +389,22 @@ export const verifyIncident = async (req, res) => {
       const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
 
       // Find nearest units and assign
-      const nearestUnits = await geoService.findNearestUnits(
+      let nearestUnits = await geoService.findNearestUnits(
         edited_data?.latitude || incident.latitude,
         edited_data?.longitude || incident.longitude,
         1,
         targetUnitType
       );
+
+      // Fallback: If no unit of the target type is available, just find ANY nearest unit
+      if (!nearestUnits || nearestUnits.length === 0) {
+         nearestUnits = await geoService.findNearestUnits(
+           edited_data?.latitude || incident.latitude,
+           edited_data?.longitude || incident.longitude,
+           1,
+           null
+         );
+      }
 
       const assignments = [];
       if (nearestUnits && nearestUnits.length > 0) {
@@ -428,10 +438,10 @@ export const verifyIncident = async (req, res) => {
         }
       }
 
-      // Update incident status to VERIFIED
+      // Update incident status to RESPONDING
       const updatedIncident = await prisma.incident.update({
         where: { incident_id },
-        data: { status: 'VERIFIED' },
+        data: { status: 'RESPONDING' },
         include: {
           incident_type: true,
           reporter: { select: { name: true, email: true, contact_number: true } },
@@ -446,13 +456,35 @@ export const verifyIncident = async (req, res) => {
         data: {
           incident_id,
           changed_by: req.user.id,
-          status: 'VERIFIED',
+          status: 'RESPONDING',
           remarks: `Approved by admin and dispatched to units`
         }
       });
 
       // Broadcast verification event
       socketService.emitIncidentVerified(updatedIncident, assignments);
+
+      // Emit dispatch-with-directions for each assigned unit that has a pinned base location
+      const incidentLat = edited_data?.latitude || incident.latitude;
+      const incidentLng = edited_data?.longitude || incident.longitude;
+      for (const assignment of assignments) {
+        const unit = assignment.unit;
+        if (unit && unit.latitude && unit.longitude) {
+          socketService.emitDispatchWithDirections(unit.unit_id, {
+            unit_id: unit.unit_id,
+            unit_name: unit.unit_name,
+            incident_id: updatedIncident.incident_id,
+            incident_code: updatedIncident.incident_code,
+            incident_lat: incidentLat,
+            incident_lng: incidentLng,
+            unit_lat: unit.latitude,
+            unit_lng: unit.longitude,
+            incident_description: updatedIncident.description,
+            incident_type: updatedIncident.incident_type?.name,
+            severity: updatedIncident.severity,
+          });
+        }
+      }
 
       res.json({
         message: 'Incident approved and dispatched',

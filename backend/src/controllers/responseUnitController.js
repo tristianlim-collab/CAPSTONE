@@ -53,10 +53,18 @@ export const updateStatus = async (req, res) => {
 
 export const updateUnit = async (req, res) => {
   try {
-    const { unit_name, unit_type, contact_number, barangay_id } = req.body;
+    const { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
+    const data = {};
+    if (unit_name !== undefined) data.unit_name = unit_name;
+    if (unit_type !== undefined) data.unit_type = unit_type;
+    if (contact_number !== undefined) data.contact_number = contact_number;
+    if (barangay_id !== undefined) data.barangay_id = barangay_id;
+    if (latitude !== undefined) data.latitude = latitude;
+    if (longitude !== undefined) data.longitude = longitude;
+
     const unit = await prisma.responseUnit.update({
       where: { unit_id: req.params.id },
-      data: { unit_name, unit_type, contact_number, barangay_id }
+      data
     });
     res.json(unit);
   } catch (error) {

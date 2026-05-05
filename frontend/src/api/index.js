@@ -136,4 +136,10 @@ export const evidenceAPI = {
   getByIncident: (incidentId) => api.get(`/evidence/${incidentId}`),
 };
 
+// Audit Log endpoints
+export const auditAPI = {
+  getLogs: (params) => api.get('/audit', { params }),
+  getActions: () => api.get('/audit/actions'),
+};
+
 export default api;

@@ -25,6 +25,7 @@ model User {
   status_logs    IncidentStatusLog[]  @relation("ChangedBy")
   notifications  Notification[]       @relation("AssignedTo")
   post_reports   PostIncidentReport[] @relation("PostReportSubmitter")
+  audit_logs     SystemAuditLog[]     @relation("AuditUser")
   barangay       Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit           ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
 
@@ -272,4 +273,18 @@ enum FileFormat {
   PDF
   EXCEL
   CSV
+}
+
+model SystemAuditLog {
+  log_id     String   @id @default(uuid())
+  user_id    String
+  action     String
+  resource   String
+  resource_id String?
+  details    String?
+  ip_address String?
+  created_at DateTime @default(now())
+  user       User     @relation("AuditUser", fields: [user_id], references: [user_id])
+
+  @@map("SYSTEM_AUDIT_LOGS")
 }

@@ -141,7 +141,7 @@ export default function IncidentReportForm() {
       const timeout = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=16&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=18&addressdetails=1`,
         {
           headers: {
             'Accept': 'application/json',
@@ -378,7 +378,7 @@ export default function IncidentReportForm() {
 
           {/* Mini Map */}
           <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden mb-3">
-            <div className="h-[200px] w-full rounded-xl overflow-hidden bg-slate-100 z-0 relative">
+            <div className="h-[350px] w-full rounded-xl overflow-hidden bg-slate-100 z-0 relative">
               {geoLoading && !location ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin mb-2"></div>
@@ -392,8 +392,9 @@ export default function IncidentReportForm() {
                   className="z-0"
                 >
                   <TileLayer
-                    attribution='&copy; OpenStreetMap'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; Google Maps'
+                    url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
+                    maxZoom={20}
                   />
                   <LocationMarker location={location} setLocation={(loc) => {
                     setLocation(loc);

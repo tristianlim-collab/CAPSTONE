@@ -367,4 +367,22 @@ export default {
       console.error('Socket emitNewAssignment failed:', err.message);
     }
   },
+
+  /**
+   * Emit dispatch directions to the assigned response unit.
+   * Sent when admin approves a report — contains route data from unit base to incident.
+   */
+  emitDispatchWithDirections: (unitId, payload) => {
+    try {
+      const io = getIO();
+      // Send to the specific unit room
+      io.to(`unit-${unitId}`).emit('unit_dispatch_with_directions', payload);
+      // Also send to the general response room so ResponseMap can render the route
+      io.to('response').emit('unit_dispatch_with_directions', payload);
+      // Also send to admin room so LiveMap can render the route
+      io.to('admin').emit('unit_dispatch_with_directions', payload);
+    } catch (err) {
+      console.error('Socket emitDispatchWithDirections failed:', err.message);
+    }
+  },
 };

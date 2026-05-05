@@ -1,37 +1,24 @@
 import React, { useMemo } from 'react';
-import { Circle, Tooltip } from 'react-leaflet';
+import { CircleMarker, Tooltip } from 'react-leaflet';
 import { getAllNirCities, getProximityLevel } from '../../config/nirLgus';
 
 /**
  * Proximity color config
  */
 const PROXIMITY_CONFIG = {
-  incident: {
-    color: '#EF4444',      // red-500
-    fillColor: '#EF4444',
-    fillOpacity: 0.25,
-    weight: 2,
-    dashArray: null,
-    label: 'INCIDENT ZONE',
-    radius: 5000,          // 5km radius for incident city
-  },
   nearby: {
-    color: '#3B82F6',      // blue-500
-    fillColor: '#3B82F6',
-    fillOpacity: 0.12,
-    weight: 1.5,
-    dashArray: '6 4',
-    label: 'NEARBY',
-    radius: 4000,          // 4km radius for nearby cities
+    color: '#1D4ED8',      // darker blue outline
+    fillColor: '#3B82F6',  // blue fill
+    fillOpacity: 0.8,
+    weight: 2,
+    radius: 10,            // Increased size to be a 'little big'
   },
   far: {
-    color: '#22C55E',      // green-500
-    fillColor: '#22C55E',
-    fillOpacity: 0.07,
-    weight: 1,
-    dashArray: '4 6',
-    label: 'FAR',
-    radius: 3500,          // 3.5km radius for far cities
+    color: '#15803D',      // darker green outline
+    fillColor: '#22C55E',  // green fill
+    fillOpacity: 0.8,
+    weight: 2,
+    radius: 10,            // Increased size to be a 'little big'
   },
 };
 
@@ -41,9 +28,9 @@ const PROXIMITY_CONFIG = {
  * Renders colored circle overlays on each city/municipality in the
  * Negros Island Region based on proximity to the selected incident.
  *
- * - Red circle  → city where the incident happened
- * - Blue circle → nearby cities (same province)
- * - Green circle → far cities (different province)
+ * - Incident city gets NO circle (just the marker)
+ * - Blue dot → nearby cities (direct neighbors)
+ * - Green dot → far cities (others)
  *
  * @param {{ incidentCity: string|null }} props
  */
@@ -56,20 +43,22 @@ export default function LguProximityLayer({ incidentCity }) {
     return cities.map(city => {
       const level = getProximityLevel(incidentCity, city.name);
       const config = PROXIMITY_CONFIG[level];
+      // Only return if it has a valid config (incident will be undefined/skipped)
+      if (!config) return null;
       return { ...city, level, config };
-    });
+    }).filter(Boolean);
   }, [incidentCity, cities]);
 
   if (!incidentCity || cityOverlays.length === 0) return null;
 
   return (
     <>
-      {/* Render far cities first, then nearby, then incident — so incident is on top */}
-      {['far', 'nearby', 'incident'].map(level =>
+      {/* Render far cities first, then nearby */}
+      {['far', 'nearby'].map(level =>
         cityOverlays
           .filter(c => c.level === level)
           .map(city => (
-            <Circle
+            <CircleMarker
               key={`proximity-${city.name}`}
               center={[city.lat, city.lng]}
               radius={city.config.radius}
@@ -78,33 +67,19 @@ export default function LguProximityLayer({ incidentCity }) {
                 fillColor: city.config.fillColor,
                 fillOpacity: city.config.fillOpacity,
                 weight: city.config.weight,
-                dashArray: city.config.dashArray,
               }}
             >
               <Tooltip
-                direction="center"
-                permanent={city.level === 'incident'}
-                className={`
-                  !bg-transparent !border-0 !shadow-none !p-0
-                  ${city.level === 'incident' ? '!font-bold !text-red-700 !text-xs' : '!text-[10px] !text-slate-600'}
-                `}
+                direction="top"
+                offset={[0, -10]}
+                className="!bg-white/95 !border !border-slate-200 !shadow-sm !px-2 !py-1 !rounded-lg"
               >
-                <div className="text-center">
-                  <div className={`font-bold ${
-                    city.level === 'incident' ? 'text-red-700 text-xs' :
-                    city.level === 'nearby' ? 'text-blue-700 text-[10px]' :
-                    'text-green-700 text-[10px]'
-                  }`}>
-                    {city.name}
-                  </div>
-                  {city.level === 'incident' && (
-                    <div className="text-[9px] text-red-500 font-semibold tracking-wider uppercase mt-0.5 animate-pulse">
-                      ⚠ INCIDENT ZONE
-                    </div>
-                  )}
+                <div className={`font-bold ${city.level === 'nearby' ? 'text-blue-700' : 'text-green-700'
+                  } text-xs`}>
+                  {city.name} {city.level === 'nearby' ? '(Neighbor)' : ''}
                 </div>
               </Tooltip>
-            </Circle>
+            </CircleMarker>
           ))
       )}
     </>

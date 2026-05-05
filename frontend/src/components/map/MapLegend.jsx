@@ -4,7 +4,6 @@ export default function MapLegend() {
   const legendItems = [
     { color: 'bg-red-600', label: 'Critical' },
     { color: 'bg-orange-500', label: 'High' },
-    { color: 'bg-yellow-400', label: 'Medium' },
     { color: 'bg-green-500', label: 'Low' },
     { color: 'bg-gray-400', label: 'Resolved/Closed' },
   ];

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { incidentAPI } from '../../api';
+import api, { incidentAPI } from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation } from 'lucide-react';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -38,8 +39,50 @@ const ICONS = {
   RESPONDING: createColoredIcon('#3b82f6'), // blue
 };
 
-// Green icon for response units
-const UNIT_ICON = createColoredIcon('#22c55e'); // green
+// Custom rich colored marker icons for response units
+const createUnitIcon = (unit) => {
+  const status = unit.availability_status;
+  const color = status === 'AVAILABLE' ? '#22c55e' : status === 'BUSY' ? '#f59e0b' : '#94a3b8';
+  
+  let iconContent = '🛡️';
+  if (unit.unit_type === 'FIRE') iconContent = '🚒';
+  else if (unit.unit_type === 'MEDICAL') iconContent = '🚑';
+  else if (unit.unit_type === 'POLICE') iconContent = '🚓';
+  else if (unit.unit_type === 'BARANGAY') iconContent = '🏛️';
+  else if (unit.unit_type === 'DRRMO') iconContent = '🚨';
+
+  return L.divIcon({
+    className: 'custom-unit-marker-rich',
+    html: `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -100%); width: max-content;">
+        <div style="
+          background: white; 
+          padding: 4px 8px; 
+          border-radius: 8px; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+          font-weight: bold; 
+          font-size: 11px; 
+          color: #1e293b; 
+          margin-bottom: 4px;
+          border: 2px solid ${color};
+          white-space: nowrap;
+        ">
+          ${iconContent} ${unit.unit_name}
+        </div>
+        <div style="
+          width: 14px; height: 14px;
+          background: ${color};
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        "></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -40],
+  });
+};
 
 // Auto-zoom to latest incident when one arrives
 function AutoZoomToLatestIncident({ incidents, enabled }) {
@@ -78,12 +121,48 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
   return null;
 }
 
+// Helper: fetch route from OSRM
+async function fetchRouteFromOSRM(fromLat, fromLng, toLat, toLng) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      // OSRM returns [lng, lat], we need [lat, lng] for Leaflet
+      const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      const duration = data.routes[0].duration; // seconds
+      const distance = data.routes[0].distance; // meters
+      return { coords, duration, distance };
+    }
+  } catch (err) {
+    console.error('OSRM route fetch error:', err);
+  }
+  return null;
+}
+
+// Component to fly map to show entire route
+function FlyToRouteBounds({ routeCoords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (routeCoords && routeCoords.length > 1) {
+      const bounds = L.latLngBounds(routeCoords);
+      map.flyToBounds(bounds, { padding: [60, 60], duration: 1.0 });
+    }
+  }, [routeCoords, map]);
+  return null;
+}
+
 const ResponseMap = () => {
   const [incidents, setIncidents] = useState([]);
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
+  const { user } = useAuth();
   const { on, connected } = useSocketContext();
+
+  // Dispatch route state: { incident_id, coords, unit_name, duration, distance, unit_lat, unit_lng, incident_lat, incident_lng }
+  const [activeRoute, setActiveRoute] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   // Default center: Negros Island Region, Philippines
   const defaultCenter = [10.0000, 122.9000];
@@ -124,15 +203,7 @@ const ResponseMap = () => {
       }
     });
 
-    // Also listen for incidents awaiting verification (new reports)
-    const unsub1b = on('incident_awaiting_verification', (data) => {
-      if (data.incident?.latitude && data.incident?.longitude) {
-        setIncidents(prev => {
-          if (prev.find(i => i.incident_id === data.incident.incident_id)) return prev;
-          return [data.incident, ...prev];
-        });
-      }
-    });
+    // (Removed incident_awaiting_verification listener: Response units shouldn't see unverified reports)
 
     const unsub2 = on('incident_status_updated', (data) => {
       // Re-fetch the incident to ensure we have all data
@@ -142,7 +213,7 @@ const ResponseMap = () => {
         setIncidents(prev => {
           return prev
             .map(inc => inc.incident_id === data.incident_id ? res.data : inc)
-            .filter(inc => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status));
+            .filter(inc => ['VERIFIED', 'RESPONDING'].includes(inc.status));
         });
       }).catch(err => {
         // Fallback to local update
@@ -152,7 +223,7 @@ const ResponseMap = () => {
               ? { ...inc, status: data.status, ...(data.incident || {}) }
               : inc
             )
-            .filter(inc => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status));
+            .filter(inc => ['VERIFIED', 'RESPONDING'].includes(inc.status));
         });
       });
     });
@@ -184,7 +255,59 @@ const ResponseMap = () => {
       }
     });
 
-    return () => { unsub1(); unsub1b(); unsub2(); unsub3(); unsub4(); unsub5(); };
+    // Listen for dispatch with directions (auto-route)
+    const unsub6 = on('unit_dispatch_with_directions', async (data) => {
+      console.log('[ResponseMap] Received dispatch directions:', data);
+      setRouteLoading(true);
+      
+      // Show toast notification
+      toast(
+        `🚨 Dispatched to ${data.incident_code}!\n${data.incident_type || 'Incident'} • ${data.severity || 'HIGH'} severity`,
+        {
+          icon: '🗺️',
+          duration: 8000,
+          style: {
+            fontWeight: 'bold',
+            borderLeft: '4px solid #3b82f6',
+            background: '#eff6ff',
+          },
+        }
+      );
+
+      // Fetch route from OSRM
+      const route = await fetchRouteFromOSRM(
+        Number(data.unit_lat), Number(data.unit_lng),
+        Number(data.incident_lat), Number(data.incident_lng)
+      );
+
+      const routeData = {
+        incident_id: data.incident_id,
+        incident_code: data.incident_code,
+        unit_name: data.unit_name,
+        unit_lat: Number(data.unit_lat),
+        unit_lng: Number(data.unit_lng),
+        incident_lat: Number(data.incident_lat),
+        incident_lng: Number(data.incident_lng),
+      };
+
+      if (route) {
+        setActiveRoute({ ...routeData, coords: route.coords, duration: route.duration, distance: route.distance });
+      } else {
+        // Fallback: draw a straight line
+        setActiveRoute({
+          ...routeData,
+          coords: [
+            [Number(data.unit_lat), Number(data.unit_lng)],
+            [Number(data.incident_lat), Number(data.incident_lng)]
+          ],
+          duration: null,
+          distance: null,
+        });
+      }
+      setRouteLoading(false);
+    });
+
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
   }, [on]);
 
   const fetchIncidents = async () => {
@@ -196,12 +319,68 @@ const ResponseMap = () => {
         include: 'evidence,reporter,type,barangay'
       });
       if (res.data?.data) {
-        setIncidents(
-          res.data.data.filter(inc =>
-            inc.latitude && inc.longitude &&
-            ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(inc.status)
-          )
+        const relevantIncidents = res.data.data.filter(inc =>
+          inc.latitude && inc.longitude &&
+          ['VERIFIED', 'RESPONDING'].includes(inc.status)
         );
+        setIncidents(relevantIncidents);
+
+        // Auto-load route if already verified/responding
+        const dispatchedIncident = relevantIncidents.find(inc =>
+          ['VERIFIED', 'RESPONDING'].includes(inc.status)
+        );
+        if (dispatchedIncident && !activeRoute) {
+          // Try to get unit coordinates from the assignment
+          const assignedUnit = dispatchedIncident.assignments && dispatchedIncident.assignments.length > 0 ? dispatchedIncident.assignments[0]?.unit : null;
+          let unitLat = assignedUnit?.latitude;
+          let unitLng = assignedUnit?.longitude;
+
+          // Fallback: use user object's unit coordinates, or fetch active positions
+          if (!unitLat || !unitLng) {
+             if (user?.unit?.latitude && user?.unit?.longitude) {
+               unitLat = user.unit.latitude;
+               unitLng = user.unit.longitude;
+             } else {
+               try {
+                 const positionsRes = await api.get('/response-units/positions/active');
+                 // Try to find the user's linked unit, otherwise just grab the first available unit on the map
+                 const myUnit = positionsRes.data.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || positionsRes.data[0];
+                 if (myUnit) {
+                   unitLat = Number(myUnit.latitude);
+                   unitLng = Number(myUnit.longitude);
+                 }
+               } catch (e) {
+                 console.error('Failed to fetch unit locations fallback', e);
+               }
+             }
+          }
+
+          if (unitLat && unitLng) {
+            setRouteLoading(true);
+            const route = await fetchRouteFromOSRM(
+              unitLat, unitLng,
+              Number(dispatchedIncident.latitude), Number(dispatchedIncident.longitude)
+            );
+
+            const routeData = {
+              incident_id: dispatchedIncident.incident_id,
+              incident_code: dispatchedIncident.incident_code,
+              unit_name: assignedUnit?.unit_name || 'Response Unit',
+              unit_lat: unitLat,
+              unit_lng: unitLng,
+              incident_lat: Number(dispatchedIncident.latitude),
+              incident_lng: Number(dispatchedIncident.longitude),
+            };
+
+            if (route) {
+              setActiveRoute({ ...routeData, coords: route.coords, duration: route.duration, distance: route.distance });
+            } else {
+              // Fallback: straight line
+              setActiveRoute({ ...routeData, coords: [[unitLat, unitLng], [Number(dispatchedIncident.latitude), Number(dispatchedIncident.longitude)]], duration: null, distance: null });
+            }
+            setRouteLoading(false);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load incidents for map', error);
@@ -212,7 +391,7 @@ const ResponseMap = () => {
 
   const fetchActiveUnits = async () => {
     try {
-      const res = await incidentAPI.request.get('/response-units/positions/active');
+      const res = await api.get('/response-units/positions/active');
       if (res.data && Array.isArray(res.data)) {
         setUnits(res.data.filter(unit => unit.latitude && unit.longitude));
       }
@@ -322,10 +501,7 @@ const ResponseMap = () => {
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]"></span> 
-              Reported ({incidents.filter(i => i.status === 'REPORTED').length})
-            </div>
+
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]"></span> 
               Verified ({incidents.filter(i => i.status === 'VERIFIED').length})
@@ -352,10 +528,27 @@ const ResponseMap = () => {
               style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
             >
               <TileLayer
-                attribution='&copy; OpenStreetMap contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; Google Maps'
+                url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
+                maxZoom={20}
               />
-              <AutoZoomToLatestIncident incidents={incidents} enabled={true} />
+              <AutoZoomToLatestIncident incidents={incidents} enabled={!activeRoute} />
+              {activeRoute && <FlyToRouteBounds routeCoords={activeRoute.coords} />}
+
+              {/* Dispatch Route Polyline */}
+              {activeRoute && activeRoute.coords && (
+                <Polyline
+                  positions={activeRoute.coords}
+                  pathOptions={{
+                    color: '#3b82f6',
+                    weight: 5,
+                    opacity: 0.85,
+                    dashArray: '12, 8',
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                  }}
+                />
+              )}
             
             {incidents.map((incident) => (
               <Marker
@@ -421,7 +614,7 @@ const ResponseMap = () => {
               <Marker
                 key={unit.unit_id}
                 position={[unit.latitude, unit.longitude]}
-                icon={UNIT_ICON}
+                icon={createUnitIcon(unit)}
               >
                 <Popup className="unit-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
                   <div className="p-3 min-w-[200px] bg-white">
@@ -445,7 +638,42 @@ const ResponseMap = () => {
             ))}
           </MapContainer>
           </div>
-        </div>
+
+           {/* Active Route Info Bar */}
+           {activeRoute && (
+             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-500 text-white p-4 z-[400] flex items-center justify-between shadow-lg">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                   <Navigation className="w-5 h-5 text-white" />
+                 </div>
+                 <div>
+                   <p className="font-bold text-sm">Route to {activeRoute.incident_code}</p>
+                   <p className="text-xs text-blue-100">
+                     {activeRoute.unit_name}
+                     {activeRoute.distance && ` • ${(activeRoute.distance / 1000).toFixed(1)} km`}
+                     {activeRoute.duration && ` • ~${Math.ceil(activeRoute.duration / 60)} min`}
+                   </p>
+                 </div>
+               </div>
+               <div className="flex items-center gap-2">
+                 <a
+                   href={`https://www.google.com/maps/dir/?api=1&origin=${activeRoute.unit_lat},${activeRoute.unit_lng}&destination=${activeRoute.incident_lat},${activeRoute.incident_lng}&travelmode=driving`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="px-3 py-1.5 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
+                 >
+                   Open Google Maps
+                 </a>
+                 <button
+                   onClick={() => setActiveRoute(null)}
+                   className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                 >
+                   <X size={16} />
+                 </button>
+               </div>
+             </div>
+           )}
+         </div>
 
         {/* Fullscreen Photo Modal */}
         {fullscreenPhoto && (

@@ -21,12 +21,14 @@ import ResponseMap from './pages/response/ResponseMap';
 import ResponseNotifications from './pages/response/ResponseNotifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
-import RolesPermissions from './pages/admin/RolesPermissions';
+import ResponseUnitManagement from './pages/admin/ResponseUnitManagement';
 import IncidentManagement from './pages/admin/IncidentManagement';
 import Analytics from './pages/admin/Analytics';
-import NotificationSettings from './pages/admin/NotificationSettings';
 import SystemSettings from './pages/admin/SystemSettings';
 import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
+import Reports from './pages/admin/Reports';
+import IncidentArchive from './pages/admin/IncidentArchive';
+import AuditLogs from './pages/admin/AuditLogs';
 
 // Administration Layouts
 import AdminLayout from './components/layout/AdminLayout';
@@ -58,10 +60,12 @@ const App = () => {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="verification" element={<IncidentVerificationQueue />} />
               <Route path="users" element={<UserManagement />} />
-              <Route path="roles" element={<RolesPermissions />} />
+              <Route path="response-units" element={<ResponseUnitManagement />} />
               <Route path="categories" element={<IncidentManagement />} />
               <Route path="analytics" element={<Analytics />} />
-              <Route path="notifications" element={<NotificationSettings />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="archive" element={<IncidentArchive />} />
+              <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="settings" element={<SystemSettings />} />
             </Route>
 

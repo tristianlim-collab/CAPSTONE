@@ -1,0 +1,162 @@
+[
+  {
+    "name": "Bacolod",
+    "lat": 10.7770007,
+    "lng": 123.0180147
+  },
+  {
+    "name": "Bago",
+    "lat": 10.5376299,
+    "lng": 122.8352802
+  },
+  {
+    "name": "Cadiz",
+    "lat": 10.956652,
+    "lng": 123.3057034
+  },
+  {
+    "name": "Escalante",
+    "lat": 10.8412587,
+    "lng": 123.499306
+  },
+  {
+    "name": "Himamaylan",
+    "lat": 10.0992841,
+    "lng": 122.870539
+  },
+  {
+    "name": "Kabankalan",
+    "lat": 9.9889153,
+    "lng": 122.8134802
+  },
+  {
+    "name": "La Carlota",
+    "lat": 10.4268649,
+    "lng": 122.9208074
+  },
+  {
+    "name": "Sagay",
+    "lat": 10.8960681,
+    "lng": 123.4154617
+  },
+  {
+    "name": "San Carlos",
+    "lat": 10.486048,
+    "lng": 123.4190385
+  },
+  {
+    "name": "Silay",
+    "lat": 10.7994126,
+    "lng": 122.9756149
+  },
+  {
+    "name": "Sipalay",
+    "lat": 9.7491266,
+    "lng": 122.4040602
+  },
+  {
+    "name": "Talisay",
+    "lat": 10.7372649,
+    "lng": 122.9673325
+  },
+  {
+    "name": "Victorias",
+    "lat": 10.9013412,
+    "lng": 123.0714943
+  },
+  {
+    "name": "Binalbagan",
+    "lat": 10.1937474,
+    "lng": 122.8587743
+  },
+  {
+    "name": "Calatrava",
+    "lat": 10.5940442,
+    "lng": 123.4763844
+  },
+  {
+    "name": "Candoni",
+    "lat": 9.8306756,
+    "lng": 122.6429611
+  },
+  {
+    "name": "Cauayan",
+    "lat": 9.9733632,
+    "lng": 122.6260198
+  },
+  {
+    "name": "Enrique B. Magalona",
+    "lat": 10.8779074,
+    "lng": 122.9835497
+  },
+  {
+    "name": "Hinigaran",
+    "lat": 10.2713832,
+    "lng": 122.8519909
+  },
+  {
+    "name": "Hinoba-an",
+    "lat": 9.6021766,
+    "lng": 122.4670994
+  },
+  {
+    "name": "Ilog",
+    "lat": 10.0242067,
+    "lng": 122.7691808
+  },
+  {
+    "name": "Isabela",
+    "lat": 10.2047969,
+    "lng": 122.9892506
+  },
+  {
+    "name": "La Castellana",
+    "lat": 10.3230498,
+    "lng": 123.0187418
+  },
+  {
+    "name": "Manapla",
+    "lat": 10.9591466,
+    "lng": 123.1234936
+  },
+  {
+    "name": "Moises Padilla",
+    "lat": 10.2708302,
+    "lng": 123.0733691
+  },
+  {
+    "name": "Murcia",
+    "lat": 10.6066483,
+    "lng": 123.0404676
+  },
+  {
+    "name": "Pontevedra",
+    "lat": 10.3751168,
+    "lng": 122.866821
+  },
+  {
+    "name": "Pulupandan",
+    "lat": 10.5192005,
+    "lng": 122.8034563
+  },
+  {
+    "name": "Salvador Benedicto",
+    "lat": 10.577077,
+    "lng": 123.220367
+  },
+  {
+    "name": "San Enrique",
+    "lat": 10.419678,
+    "lng": 122.8495462
+  },
+  {
+    "name": "Toboso",
+    "lat": 10.7169474,
+    "lng": 123.5135576
+  },
+  {
+    "name": "Valladolid",
+    "lat": 10.461548,
+    "lng": 122.8234493
+  }
+]

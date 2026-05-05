@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true, // Enables access from network
+    allowedHosts: true, // Allow all ngrok URLs
     port: 5173,
     proxy: {
       '/api': {

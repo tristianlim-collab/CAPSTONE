@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import moment from 'moment';
-import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2, Car } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getProvinceForNirLguName, getNearestCity, getProximityLevel } from '../../config/nirLgus';
+import api from '../../api';
 
 const getColor = (status, severity) => {
   if (status === 'RESOLVED' || status === 'CLOSED') return 'grey';
@@ -135,11 +136,34 @@ const EvidenceGallery = ({ evidence }) => {
   );
 };
 
-// Quick Verify Buttons for REPORTED incidents (shown inside map popup)
 const QuickVerifyActions = ({ incident, onVerify }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [nearestUnit, setNearestUnit] = useState(null);
+  const [loadingUnit, setLoadingUnit] = useState(false);
+
+  useEffect(() => {
+    if (incident.status === 'REPORTED') {
+      const fetchNearestUnit = async () => {
+        try {
+          setLoadingUnit(true);
+          const type = incident.incident_type?.default_unit_type || 'BARANGAY';
+          const res = await api.get('/assignments/nearest', { 
+            params: { incident_id: incident.incident_id, limit: 1, unit_type: type } 
+          });
+          if (res.data && res.data.length > 0) {
+            setNearestUnit(res.data[0]);
+          }
+        } catch (err) {
+          console.error('Failed to fetch nearest unit', err);
+        } finally {
+          setLoadingUnit(false);
+        }
+      };
+      fetchNearestUnit();
+    }
+  }, [incident.incident_id, incident.status, incident.incident_type]);
 
   if (!onVerify || incident.status !== 'REPORTED') return null;
 
@@ -174,6 +198,28 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
   return (
     <div className="mt-3 pt-3 border-t border-gray-200">
       <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">⚠ Awaiting Verification</p>
+      
+      <div className="mb-3 p-2 bg-slate-50 border border-slate-200 rounded-md">
+        <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Target Response Unit</p>
+        {loadingUnit ? (
+          <div className="flex items-center gap-1 text-xs text-slate-400">
+            <Loader2 className="w-3 h-3 animate-spin" /> Calculating nearest unit...
+          </div>
+        ) : nearestUnit ? (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <Car className="w-3.5 h-3.5 text-blue-600" />
+              <span className="text-xs font-bold text-slate-800">{nearestUnit.unit_name}</span>
+            </div>
+            <span className="text-[10px] text-slate-500 ml-5 font-semibold">
+              Type: {nearestUnit.type} {nearestUnit.distance_km ? `• Dist: ${nearestUnit.distance_km.toFixed(1)} km` : ''}
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500 italic">No available units found nearby.</p>
+        )}
+      </div>
+
       <div className="flex gap-2">
         <button
           onClick={handleApprove}

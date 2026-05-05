@@ -86,9 +86,9 @@ export default function IncidentVerificationQueue() {
       });
     });
     const unsub2 = on('incident_verified', (data) => {
-      setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: 'VERIFIED' } : i));
-      // Clear selection if the verified incident was selected
-      setSelectedIncident(prev => prev?.incident_id === data.incident_id ? null : prev);
+      setIncidents(prev => prev.map(i => i.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...i, status: 'RESPONDING', assignments: data.assignments } : i));
+      // Update selection if the verified incident is currently selected
+      setSelectedIncident(prev => prev?.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...prev, status: 'RESPONDING', assignments: data.assignments } : prev);
     });
     const unsub3 = on('incident_rejected', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: 'FALSE_ALARM' } : i));
@@ -138,10 +138,15 @@ export default function IncidentVerificationQueue() {
     setSubmitting(true);
     try {
       const payload = { action: 'APPROVE', edited_data: editMode ? editData : undefined };
-      await api.post(`/incidents/${selectedIncident.incident_id}/verify`, payload);
+      const res = await api.post(`/incidents/${selectedIncident.incident_id}/verify`, payload);
       toast.success('Incident approved and dispatched!');
-      setIncidents(prev => prev.map(i => i.incident_id === selectedIncident.incident_id ? { ...i, status: 'VERIFIED' } : i));
-      setSelectedIncident(null);
+      
+      const updatedIncident = res.data?.incident || { ...selectedIncident, status: 'RESPONDING' };
+      const newAssignments = res.data?.assignments || [];
+      
+      setIncidents(prev => prev.map(i => i.incident_id === selectedIncident.incident_id ? { ...i, ...updatedIncident, assignments: newAssignments } : i));
+      setSelectedIncident(prev => ({ ...prev, ...updatedIncident, assignments: newAssignments }));
+      setEditMode(false);
       setActionModal({ open: false, action: null, message: '' });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to approve incident');
@@ -390,6 +395,26 @@ export default function IncidentVerificationQueue() {
                     <p className="mt-1 text-sm text-slate-700">{selectedIncident.reporter?.name}</p>
                     {selectedIncident.reporter?.contact_number && (<p className="text-xs text-slate-500">{selectedIncident.reporter.contact_number}</p>)}
                   </div>
+
+                  {/* Assigned Units */}
+                  {selectedIncident.assignments && selectedIncident.assignments.length > 0 && (
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 uppercase">Assigned Unit(s)</label>
+                      <div className="mt-2 space-y-2">
+                        {selectedIncident.assignments.map((assignment, idx) => (
+                          <div key={idx} className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                              <Car size={16} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-indigo-900">{assignment.unit?.unit_name || 'Unknown Unit'}</p>
+                              <p className="text-xs font-medium text-indigo-700 capitalize">Status: {assignment.status.toLowerCase()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                     </>
                   )}
                 </div>

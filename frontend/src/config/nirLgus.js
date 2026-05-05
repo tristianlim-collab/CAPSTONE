@@ -4,39 +4,39 @@ const normalize = (value) => (value || '').toString().trim().toLowerCase();
 // Each entry: { name, lat, lng }
 const NEGROS_OCCIDENTAL_CITIES = [
   // Cities
-  { name: 'Bacolod', lat: 10.6840, lng: 122.9740 },
-  { name: 'Bago', lat: 10.5380, lng: 122.8380 },
-  { name: 'Cadiz', lat: 10.9480, lng: 123.3080 },
-  { name: 'Escalante', lat: 10.8410, lng: 123.4990 },
-  { name: 'Himamaylan', lat: 9.8170, lng: 122.8700 },
-  { name: 'Kabankalan', lat: 9.5845, lng: 122.8170 },
-  { name: 'La Carlota', lat: 10.4130, lng: 122.9210 },
-  { name: 'Sagay', lat: 10.9440, lng: 123.4240 },
-  { name: 'San Carlos', lat: 10.4920, lng: 123.4110 },
-  { name: 'Silay', lat: 10.8110, lng: 122.9700 },
-  { name: 'Sipalay', lat: 9.7500, lng: 122.4000 },
+  { name: 'Bacolod', lat: 10.6765, lng: 122.9509 },
+  { name: 'Bago', lat: 10.5376, lng: 122.8353 },
+  { name: 'Cadiz', lat: 10.9567, lng: 123.3057 },
+  { name: 'Escalante', lat: 10.8413, lng: 123.4993 },
+  { name: 'Himamaylan', lat: 10.0993, lng: 122.8705 },
+  { name: 'Kabankalan', lat: 9.9889, lng: 122.8135 },
+  { name: 'La Carlota', lat: 10.4269, lng: 122.9208 },
+  { name: 'Sagay', lat: 10.8961, lng: 123.4155 },
+  { name: 'San Carlos', lat: 10.4860, lng: 123.4190 },
+  { name: 'Silay', lat: 10.7994, lng: 122.9753 },
+  { name: 'Sipalay', lat: 9.7491, lng: 122.4041 },
   { name: 'Talisay', lat: 10.7370, lng: 122.9670 },
-  { name: 'Victorias', lat: 10.9010, lng: 123.1000 },
+  { name: 'Victorias', lat: 10.9013, lng: 123.0715 },
   // Municipalities
-  { name: 'Binalbagan', lat: 10.1960, lng: 122.8630 },
-  { name: 'Calatrava', lat: 10.6000, lng: 123.5000 },
-  { name: 'Candoni', lat: 9.8170, lng: 122.6170 },
-  { name: 'Cauayan', lat: 9.8630, lng: 122.4870 },
-  { name: 'Enrique B. Magalona', lat: 10.8670, lng: 123.0830 },
-  { name: 'Hinigaran', lat: 10.2750, lng: 122.8500 },
-  { name: 'Hinoba-an', lat: 9.6000, lng: 122.5000 },
-  { name: 'Ilog', lat: 9.7670, lng: 122.7670 },
-  { name: 'Isabela', lat: 10.2040, lng: 122.9710 },
-  { name: 'La Castellana', lat: 10.3320, lng: 122.9360 },
-  { name: 'Manapla', lat: 10.9580, lng: 123.1210 },
-  { name: 'Moises Padilla', lat: 10.2730, lng: 122.9870 },
-  { name: 'Murcia', lat: 10.6040, lng: 122.9250 },
-  { name: 'Pontevedra', lat: 9.8580, lng: 122.7670 },
-  { name: 'Pulupandan', lat: 10.5250, lng: 122.7920 },
-  { name: 'Salvador Benedicto', lat: 10.6170, lng: 123.0170 },
-  { name: 'San Enrique', lat: 10.4170, lng: 122.8500 },
-  { name: 'Toboso', lat: 10.6050, lng: 123.5150 },
-  { name: 'Valladolid', lat: 10.4650, lng: 122.8230 },
+  { name: 'Binalbagan', lat: 10.1937, lng: 122.8588 },
+  { name: 'Calatrava', lat: 10.5940, lng: 123.4764 },
+  { name: 'Candoni', lat: 9.8307, lng: 122.6430 },
+  { name: 'Cauayan', lat: 9.9734, lng: 122.6260 },
+  { name: 'Enrique B. Magalona', lat: 10.8771, lng: 122.9814 },
+  { name: 'Hinigaran', lat: 10.2714, lng: 122.8520 },
+  { name: 'Hinoba-an', lat: 9.6022, lng: 122.4671 },
+  { name: 'Ilog', lat: 10.0242, lng: 122.7692 },
+  { name: 'Isabela', lat: 10.2048, lng: 122.9893 },
+  { name: 'La Castellana', lat: 10.3230, lng: 123.0187 },
+  { name: 'Manapla', lat: 10.9591, lng: 123.1235 },
+  { name: 'Moises Padilla', lat: 10.2708, lng: 123.0734 },
+  { name: 'Murcia', lat: 10.6066, lng: 123.0405 },
+  { name: 'Pontevedra', lat: 10.3751, lng: 122.8668 },
+  { name: 'Pulupandan', lat: 10.5192, lng: 122.8035 },
+  { name: 'Salvador Benedicto', lat: 10.5771, lng: 123.2204 },
+  { name: 'San Enrique', lat: 10.4197, lng: 122.8495 },
+  { name: 'Toboso', lat: 10.7169, lng: 123.5136 },
+  { name: 'Valladolid', lat: 10.4615, lng: 122.8234 },
 ];
 
 const NEGROS_ORIENTAL_CITIES = [
@@ -155,14 +155,57 @@ export function getNearestCity(lat, lng) {
 
 
 /**
+ * Adjacency map strictly following the North-South highway sequence.
+ * Inland connections are removed so only the exact 'next city' north or south becomes blue.
+ */
+const LGU_ADJACENCY = {
+  // Coastal North to South Sequence
+  'san carlos': ['calatrava', 'salvador benedicto'],
+  'calatrava': ['san carlos', 'toboso'],
+  'toboso': ['calatrava', 'escalante'],
+  'escalante': ['toboso', 'sagay'],
+  'sagay': ['escalante', 'cadiz'],
+  'cadiz': ['sagay', 'manapla'],
+  'manapla': ['cadiz', 'victorias'],
+  'victorias': ['manapla', 'enrique b. magalona'],
+  'enrique b. magalona': ['victorias', 'silay'],
+  'silay': ['enrique b. magalona', 'talisay'],
+  'talisay': ['silay', 'bacolod'],
+  'bacolod': ['talisay', 'bago'],
+  'bago': ['bacolod', 'pulupandan', 'valladolid'],
+  'pulupandan': ['bago', 'valladolid'],
+  'valladolid': ['pulupandan', 'bago', 'san enrique'],
+  'san enrique': ['valladolid', 'pontevedra'],
+  'pontevedra': ['san enrique', 'hinigaran'],
+  'hinigaran': ['pontevedra', 'binalbagan'],
+  'binalbagan': ['hinigaran', 'himamaylan'],
+  'himamaylan': ['binalbagan', 'kabankalan'],
+  'kabankalan': ['himamaylan', 'ilog'],
+  'ilog': ['kabankalan', 'cauayan'],
+  'cauayan': ['ilog', 'sipalay'],
+  'sipalay': ['cauayan', 'hinoba-an'],
+  'hinoba-an': ['sipalay'],
+
+  // Inland Cities (Strictly neighbor to their access points)
+  'murcia': ['bacolod', 'salvador benedicto'],
+  'salvador benedicto': ['murcia', 'san carlos'],
+  'la carlota': ['bago', 'la castellana'],
+  'la castellana': ['la carlota', 'isabela', 'moises padilla'],
+  'isabela': ['la castellana', 'binalbagan', 'moises padilla'],
+  'moises padilla': ['la castellana', 'isabela'],
+  'candoni': ['cauayan', 'sipalay']
+};
+
+/**
  * Get the proximity level of a target city relative to an incident city.
- * - 'incident' → same city (red)
- * - 'nearby'   → nearby city within ~45km (blue)
- * - 'far'      → far city / different region (green)
+ * - 'incident' → same city (no marker)
+ * - 'nearby'   → immediate border neighbor (blue)
+ * - 'far'      → neighbors of neighbors (green)
+ * - 'none'     → do not show marker
  *
  * @param {string} incidentCityName - The city where the incident occurred
  * @param {string} targetCityName   - The city to evaluate
- * @returns {'incident'|'nearby'|'far'}
+ * @returns {'incident'|'nearby'|'far'|'none'}
  */
 export function getProximityLevel(incidentCityName, targetCityName) {
   const incNorm = normalize(incidentCityName);
@@ -170,25 +213,40 @@ export function getProximityLevel(incidentCityName, targetCityName) {
 
   if (incNorm === tgtNorm) return 'incident';
 
-  const incCity = findCityByName(incNorm);
-  const tgtCity = findCityByName(tgtNorm);
-
-  if (incCity && tgtCity) {
-    const dist = distanceKm(incCity.lat, incCity.lng, tgtCity.lat, tgtCity.lng);
-    // If distance is less than 45km, consider it nearby
-    if (dist <= 45) {
-      return 'nearby';
-    }
-    return 'far';
-  }
-
-  // Fallback to province matching if coords are missing for some reason
-  const incProvince = PROVINCE_BY_LGU.get(incNorm);
-  const tgtProvince = PROVINCE_BY_LGU.get(tgtNorm);
-
-  if (incProvince && tgtProvince && incProvince === tgtProvince) {
+  // 1. Check direct neighbors (blue)
+  const neighbors = LGU_ADJACENCY[incNorm] || [];
+  if (neighbors.includes(tgtNorm)) {
     return 'nearby';
   }
 
-  return 'far';
+  // 2. Check secondary neighbors (green) - neighbors of neighbors
+  let secondaryNeighbors = [];
+  for (const n of neighbors) {
+    const nextNeighbors = LGU_ADJACENCY[n] || [];
+    secondaryNeighbors.push(...nextNeighbors);
+  }
+  
+  // Remove duplicates, the incident city itself, and any immediate neighbors
+  secondaryNeighbors = [...new Set(secondaryNeighbors)].filter(c => c !== incNorm && !neighbors.includes(c));
+  
+  if (secondaryNeighbors.includes(tgtNorm)) {
+    return 'far';
+  }
+
+  // 3. Fallback to strict distance if not in adjacency list (e.g. Oriental/Siquijor)
+  // Only if no adjacency list exists for the incident city
+  if (neighbors.length === 0) {
+    const incCity = findCityByName(incNorm);
+    const tgtCity = findCityByName(tgtNorm);
+
+    if (incCity && tgtCity) {
+      const dist = distanceKm(incCity.lat, incCity.lng, tgtCity.lat, tgtCity.lng);
+      // 25km strict threshold for immediate neighbors
+      if (dist <= 25) return 'nearby';
+      // 25-50km for secondary neighbors
+      if (dist > 25 && dist <= 50) return 'far';
+    }
+  }
+
+  return 'none';
 }

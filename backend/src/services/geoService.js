@@ -40,8 +40,7 @@ const geoService = {
                  ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography
                ) as distance
         FROM "RESPONSE_UNIT"
-        WHERE availability_status = 'AVAILABLE' 
-          AND latitude IS NOT NULL 
+        WHERE latitude IS NOT NULL 
           AND longitude IS NOT NULL
         ${typeFilter}
         ORDER BY distance ASC

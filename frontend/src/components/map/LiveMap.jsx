@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker as LeafletMarker, Popup, useMap, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import IncidentMarker from './IncidentMarker';
 import BoundaryLayer from './BoundaryLayer';
@@ -9,7 +9,8 @@ import LguProximityLayer from './LguProximityLayer';
 import toast from 'react-hot-toast';
 
 import { useSocketContext } from '../../context/SocketContext';
-import { incidentAPI } from '../../api';
+import api, { incidentAPI } from '../../api';
+import { getAllNirCities, getProximityLevel, getNearestCity } from '../../config/nirLgus';
 
 // Fix for default Leaflet icon paths in React
 import L from 'leaflet';
@@ -54,8 +55,6 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
   return null;
 }
 
-import { getAllNirCities, getProximityLevel, getNearestCity } from '../../config/nirLgus';
-
 /**
  * Extract the city name from an incident object.
  * Prefers barangay.city, then barangay.municipality.
@@ -74,17 +73,35 @@ function getIncidentCity(incident) {
   return null;
 }
 
+// Helper: fetch route from OSRM
+async function fetchRouteFromOSRM(fromLat, fromLng, toLat, toLng) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      return coords;
+    }
+  } catch (err) {
+    console.error('OSRM route fetch error:', err);
+  }
+  return null;
+}
+
 export default function LiveMap({
   center = [10.0000, 122.9000],
-  zoom = 9,
+  zoom = 9.5,
   autoZoomOnNewIncident = true,
   markerColorMode = 'severity',
   onVerify
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
+  const [units, setUnits] = useState([]);
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [routes, setRoutes] = useState({});
 
   // Bounds for Negros Island Region
   const NIR_BOUNDS = [
@@ -94,16 +111,89 @@ export default function LiveMap({
 
   const { on } = useSocketContext();
 
+  // Custom rich colored marker icons for response units
+  const createUnitIcon = (unit) => {
+    const status = unit.availability_status;
+    const color = status === 'AVAILABLE' ? '#22c55e' : status === 'BUSY' ? '#f59e0b' : '#94a3b8';
+    
+    let iconContent = '🛡️';
+    if (unit.unit_type === 'FIRE') iconContent = '🚒';
+    else if (unit.unit_type === 'MEDICAL') iconContent = '🚑';
+    else if (unit.unit_type === 'POLICE') iconContent = '🚓';
+    else if (unit.unit_type === 'BARANGAY') iconContent = '🏛️';
+    else if (unit.unit_type === 'DRRMO') iconContent = '🚨';
+
+    return L.divIcon({
+      className: 'custom-unit-marker-rich',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -100%); width: max-content;">
+          <div style="
+            background: white; 
+            padding: 4px 8px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            font-weight: bold; 
+            font-size: 11px; 
+            color: #1e293b; 
+            margin-bottom: 4px;
+            border: 2px solid ${color};
+            white-space: nowrap;
+          ">
+            ${iconContent} ${unit.unit_name}
+          </div>
+          <div style="
+            width: 14px; height: 14px;
+            background: ${color};
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          "></div>
+        </div>
+      `,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+      popupAnchor: [0, -40],
+    });
+  };
+
   useEffect(() => {
     // Fetch initial active incidents with full data
     incidentAPI.getAll({
       limit: 100,
       include: 'evidence,reporter,type,barangay'
-    }).then(res => {
+    }).then(async (res) => {
       // Filter out resolved incidents for the map
       const activeIncidents = res.data?.data?.filter(inc => inc.status !== 'RESOLVED' && inc.status !== 'CLOSED' && inc.status !== 'FALSE_ALARM') || [];
       setIncidents(activeIncidents);
+
+      // Auto-load routes for VERIFIED/RESPONDING incidents with assignments
+      const initialRoutes = {};
+      for (const inc of activeIncidents) {
+        if (['VERIFIED', 'RESPONDING'].includes(inc.status) && inc.assignments && inc.assignments.length > 0) {
+          for (const assignment of inc.assignments) {
+            const unit = assignment.unit;
+            if (unit && unit.latitude && unit.longitude && inc.latitude && inc.longitude) {
+              const coords = await fetchRouteFromOSRM(unit.latitude, unit.longitude, inc.latitude, inc.longitude);
+              if (coords) {
+                initialRoutes[`${inc.incident_id}_${unit.unit_id}`] = coords;
+              }
+            }
+          }
+        }
+      }
+      if (Object.keys(initialRoutes).length > 0) {
+        setRoutes(prev => ({ ...prev, ...initialRoutes }));
+      }
     }).catch(err => console.error("Map fetch error:", err));
+
+    // Fetch active response unit positions
+    api.get('/response-units/positions/active')
+      .then(res => {
+        if (res.data && Array.isArray(res.data)) {
+          setUnits(res.data.filter(unit => unit.latitude && unit.longitude));
+        }
+      })
+      .catch(err => console.error("Unit position fetch error:", err));
 
     // Socket.io Subscriptions
     const unsub1 = on('new_incident', (incident) => {
@@ -166,14 +256,72 @@ export default function LiveMap({
       }
     });
 
+    // Listen for unit location updates
+    const unsub6 = on('unit_location_updated', (data) => {
+      setUnits(prev => {
+        const exists = prev.find(u => u.unit_id === data.unitId);
+        if (exists) {
+          return prev.map(u =>
+            u.unit_id === data.unitId
+              ? { ...u, latitude: data.lat, longitude: data.lng }
+              : u
+          );
+        }
+        // If a new unit appears, add it
+        return [...prev, { unit_id: data.unitId, unit_name: data.unitName, latitude: data.lat, longitude: data.lng, availability_status: 'AVAILABLE' }];
+      });
+    });
+
+    // Listen for dispatch directions — immediately draw route on approval
+    const unsub7 = on('unit_dispatch_with_directions', async (data) => {
+      console.log('[LiveMap] Received dispatch directions:', data);
+      if (data.unit_lat && data.unit_lng && data.incident_lat && data.incident_lng) {
+        const coords = await fetchRouteFromOSRM(
+          Number(data.unit_lat), Number(data.unit_lng), 
+          Number(data.incident_lat), Number(data.incident_lng)
+        );
+        if (coords) {
+          const routeKey = `${data.incident_id}_${data.unit_id}`;
+          setRoutes(prev => ({ ...prev, [routeKey]: coords }));
+        }
+      }
+    });
+
     return () => {
       unsub1();
       unsub2();
       unsub3();
       unsub4();
       unsub5();
+      unsub6();
+      unsub7();
     };
   }, [on]);
+
+  // Route cleanup effect — remove routes when incident is resolved/closed
+  useEffect(() => {
+    setRoutes(prev => {
+      const activeIncidentIds = new Set(
+        incidents
+          .filter(inc => ['VERIFIED', 'RESPONDING', 'DISPATCHED'].includes(inc.status))
+          .map(inc => inc.incident_id)
+      );
+
+      const cleaned = {};
+      for (const [key, coords] of Object.entries(prev)) {
+        const incidentId = key.split('_')[0];
+        if (activeIncidentIds.has(incidentId)) {
+          cleaned[key] = coords;
+        }
+      }
+
+      // Only update state if something actually changed
+      if (Object.keys(cleaned).length !== Object.keys(prev).length) {
+        return cleaned;
+      }
+      return prev;
+    });
+  }, [incidents]);
 
   // Determine the city for the LGU proximity layer
   const selectedIncident = selectedIncidentId
@@ -200,27 +348,21 @@ export default function LiveMap({
           className={`px-4 py-2 text-sm font-semibold ${mode === 'lgu_zones' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => setMode('lgu_zones')}
         >
-          LGU Zones
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-semibold ${mode === 'heatmap' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-          onClick={() => setMode('heatmap')}
-        >
           Heatmap
         </button>
       </div>
 
 
       <MapContainer
-        center={center}
-        zoom={zoom}
+        bounds={NIR_BOUNDS}
         minZoom={5}
         scrollWheelZoom={true}
         className="w-full h-full z-0"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; Google Maps'
+          url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
+          maxZoom={20}
         />
 
         <BoundaryLayer boundaries={boundaries} />
@@ -243,6 +385,50 @@ export default function LiveMap({
           />
         ))}
 
+        {/* Dispatch Routes Polyline */}
+        {(mode === 'markers' || mode === 'lgu_zones') && Object.values(routes).map((routeCoords, idx) => (
+          <Polyline
+            key={`route-${idx}`}
+            positions={routeCoords}
+            pathOptions={{
+              color: '#3b82f6',
+              weight: 5,
+              opacity: 0.85,
+              dashArray: '10, 10',
+              lineCap: 'round',
+              lineJoin: 'round'
+            }}
+          />
+        ))}
+
+        {/* Response Unit Markers */}
+        {(mode === 'markers' || mode === 'lgu_zones') && units.map(unit => (
+          <LeafletMarker
+            key={`unit-${unit.unit_id}`}
+            position={[unit.latitude, unit.longitude]}
+            icon={createUnitIcon(unit)}
+          >
+            <Popup className="unit-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
+              <div className="p-3 min-w-[200px] bg-white">
+                <div className="flex items-start justify-between mb-2 border-b border-slate-100 pb-2">
+                  <div>
+                    <span className="font-bold text-slate-800 text-sm block">{unit.unit_name}</span>
+                    <span className="text-xs text-slate-400 block mt-0.5">{unit.unit_type}</span>
+                  </div>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${
+                    unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
+                  } shadow-sm`}>
+                    {unit.availability_status}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-600">
+                  <span className="block">📍 {unit.latitude.toFixed(4)}, {unit.longitude.toFixed(4)}</span>
+                </div>
+              </div>
+            </Popup>
+          </LeafletMarker>
+        ))}
+
         {mode === 'heatmap' && <HeatmapLayer points={incidents} />}
       </MapContainer>
 
@@ -263,6 +449,21 @@ export default function LiveMap({
           <div className="flex items-center gap-2.5">
             <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-500/30" />
             <span className="font-medium">Far City </span>
+          </div>
+        </div>
+      )}
+
+      {/* Response Unit Legend */}
+      {units.length > 0 && (
+        <div className="absolute bottom-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 shadow-lg text-xs text-slate-700 space-y-1.5">
+          <div className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Response Units ({units.length})</div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-500/30" />
+            <span className="font-medium">Available</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm shadow-amber-500/30" />
+            <span className="font-medium">Busy</span>
           </div>
         </div>
       )}
