@@ -454,7 +454,7 @@ export default function IncidentReportScreen({ navigation }) {
           {generatedDescription ? (
             <View style={styles.autoDescBox}>
               <Text style={styles.autoDescText}>
-                <Text style={{ fontWeight: '600' }}>Auto description: </Text>
+                <Text style={{ fontWeight: '600' }}>Description: </Text>
                 {generatedDescription}
               </Text>
             </View>
