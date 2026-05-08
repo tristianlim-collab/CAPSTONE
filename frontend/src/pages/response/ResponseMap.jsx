@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import api, { incidentAPI } from '../../api';
+import api, { incidentAPI, postReportAPI } from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation, Navigation2, PlusCircle, CheckCircle2, Send } from 'lucide-react';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -164,6 +164,18 @@ const ResponseMap = () => {
   const [activeRoute, setActiveRoute] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
 
+  const [updatingId, setUpdatingId] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupUnitType, setBackupUnitType] = useState('FIRE');
+  const [reportData, setReportData] = useState({
+    actions_taken: '',
+    casualties: 0,
+    damages_estimate: '',
+    remarks: ''
+  });
+  const [selectedIncidentForAction, setSelectedIncidentForAction] = useState(null);
+
   // Default center: Negros Island Region, Philippines
   const defaultCenter = [10.0000, 122.9000];
 
@@ -171,6 +183,112 @@ const ResponseMap = () => {
     fetchIncidents();
     fetchActiveUnits();
   }, []);
+
+  const handleUpdateStatus = async (incidentId, status) => {
+    try {
+      setUpdatingId(incidentId);
+      await incidentAPI.updateStatus(incidentId, { status });
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === incidentId ? { ...inc, status } : inc
+      ));
+      toast.success(`Status updated to ${status.replace('_', ' ')}`);
+    } catch (err) {
+      toast.error('Failed to update status');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRequestBackup = async () => {
+    if (!selectedIncidentForAction) return;
+    try {
+      await incidentAPI.requestBackup(selectedIncidentForAction.incident_id, backupUnitType);
+      toast.success(`${backupUnitType} Backup dispatched!`);
+      setShowBackupModal(false);
+      setSelectedIncidentForAction(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request backup');
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!selectedIncidentForAction) return;
+    if (!reportData.actions_taken) {
+      return toast.error('Actions taken description is required');
+    }
+
+    try {
+      setUpdatingId('report');
+      await postReportAPI.submit({
+        incident_id: selectedIncidentForAction.incident_id,
+        ...reportData
+      });
+      // Filter out of active
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === selectedIncidentForAction.incident_id ? { ...inc, status: 'RESOLVED' } : inc
+      ));
+      toast.success('Incident resolved and report submitted');
+      setShowReportModal(false);
+      setReportData({ actions_taken: '', casualties: 0, damages_estimate: '', remarks: '' });
+      setSelectedIncidentForAction(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit report');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleGetDirections = async (e, incident) => {
+    e.stopPropagation();
+    setRouteLoading(true);
+    let unitLat, unitLng, unitName = 'Response Unit';
+    
+    const assignedUnit = incident.assignments && incident.assignments.length > 0 ? incident.assignments[0]?.unit : null;
+    if (assignedUnit?.latitude && assignedUnit?.longitude) {
+      unitLat = assignedUnit.latitude;
+      unitLng = assignedUnit.longitude;
+      unitName = assignedUnit.unit_name || unitName;
+    } else if (user?.unit?.latitude && user?.unit?.longitude) {
+      unitLat = user.unit.latitude;
+      unitLng = user.unit.longitude;
+      unitName = user.unit?.unit_name || unitName;
+    } else {
+      const myUnit = units.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || units[0];
+      if (myUnit) {
+        unitLat = Number(myUnit.latitude);
+        unitLng = Number(myUnit.longitude);
+        unitName = myUnit.unit_name || unitName;
+      }
+    }
+    
+    if (!unitLat || !unitLng) {
+      toast.error("Could not determine your current location for routing.");
+      setRouteLoading(false);
+      return;
+    }
+    
+    const route = await fetchRouteFromOSRM(
+      unitLat, unitLng,
+      Number(incident.latitude), Number(incident.longitude)
+    );
+
+    const routeData = {
+      incident_id: incident.incident_id,
+      incident_code: incident.incident_code,
+      unit_name: unitName,
+      unit_lat: unitLat,
+      unit_lng: unitLng,
+      incident_lat: Number(incident.latitude),
+      incident_lng: Number(incident.longitude),
+    };
+
+    if (route) {
+      setActiveRoute({ ...routeData, coords: route.coords, duration: route.duration, distance: route.distance });
+    } else {
+      setActiveRoute({ ...routeData, coords: [[unitLat, unitLng], [Number(incident.latitude), Number(incident.longitude)]], duration: null, distance: null });
+    }
+    setRouteLoading(false);
+  };
 
   // Listen for new incidents in real-time
   useEffect(() => {
@@ -513,7 +631,7 @@ const ResponseMap = () => {
           </div>
         </div>
       
-        <div className="flex-1 relative z-0 h-[600px] sm:h-[calc(100vh-16rem)] min-h-[500px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex-1 relative z-0 h-[700px] sm:h-[calc(100vh-12rem)] min-h-[600px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           {loading && (
             <div className="absolute inset-0 bg-white/60 z-[500] flex flex-col items-center justify-center backdrop-blur-sm">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
@@ -605,6 +723,60 @@ const ResponseMap = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-4 flex flex-col gap-2">
+                      <button
+                        onClick={(e) => handleGetDirections(e, incident)}
+                        disabled={routeLoading}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
+                      >
+                        {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
+                        Get Directions
+                      </button>
+
+                      {(incident.status === 'VERIFIED' || incident.status === 'RESPONDING') && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
+                            className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
+                          >
+                            <PlusCircle size={14} /> Backup
+                          </button>
+                          <button
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              await handleUpdateStatus(incident.incident_id, 'ON_SCENE');
+                              setSelectedIncidentForAction(incident); 
+                              setShowReportModal(true);
+                            }}
+                            disabled={updatingId === incident.incident_id}
+                            className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                          >
+                            {updatingId === incident.incident_id ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                            Arrive
+                          </button>
+                        </div>
+                      )}
+
+                      {incident.status === 'ON_SCENE' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(incident.incident_id, 'FALSE_ALARM'); }}
+                            disabled={updatingId === incident.incident_id}
+                            className="flex items-center justify-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                          >
+                            False Alarm
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowReportModal(true); }}
+                            className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
+                          >
+                            <CheckCircle2 size={14} /> Resolve
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -674,6 +846,111 @@ const ResponseMap = () => {
              </div>
            )}
          </div>
+
+        {/* Modals */}
+        {showBackupModal && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">Request Backup</h3>
+              <p className="text-sm text-slate-500 mb-4">Select the type of unit you need for backup for incident {selectedIncidentForAction?.incident_code}.</p>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {['FIRE', 'POLICE', 'MEDICAL', 'DRRMO'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setBackupUnitType(type)}
+                    className={`p-3 rounded-xl font-bold text-sm border-2 transition-all ${backupUnitType === type ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-600 bg-white'
+                      }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => { setShowBackupModal(false); setSelectedIncidentForAction(null); }} className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button
+                  onClick={handleRequestBackup}
+                  className="px-4 py-2 font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-sm shadow-amber-500/20"
+                >
+                  Send Request
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showReportModal && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center p-4 overflow-y-auto pt-8">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl my-4 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-slate-800 mb-1">Post-Incident Report</h3>
+              <p className="text-sm text-slate-500 mb-6">Complete this report to resolve incident {selectedIncidentForAction?.incident_code}.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Actions Taken <span className="text-red-500">*</span></label>
+                  <textarea
+                    value={reportData.actions_taken}
+                    onChange={e => setReportData({ ...reportData, actions_taken: e.target.value })}
+                    placeholder="Describe treatments, fire suppression, crowd control, etc."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Casualties</label>
+                    <input
+                      type="number"
+                      value={reportData.casualties}
+                      onChange={e => setReportData({ ...reportData, casualties: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Response Time (mins)</label>
+                    <input
+                      type="number"
+                      value={reportData.response_time_minutes}
+                      onChange={e => setReportData({ ...reportData, response_time_minutes: e.target.value })}
+                      placeholder="e.g. 15"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Damages Estimate</label>
+                  <input
+                    type="text"
+                    value={reportData.damages_estimate}
+                    onChange={e => setReportData({ ...reportData, damages_estimate: e.target.value })}
+                    placeholder="e.g. None, Minor vehicle damage, Extensi..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Final Remarks</label>
+                  <textarea
+                    value={reportData.remarks}
+                    onChange={e => setReportData({ ...reportData, remarks: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <button onClick={() => { setShowReportModal(false); setSelectedIncidentForAction(null); }} className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button
+                  onClick={handleSubmitReport}
+                  disabled={updatingId === 'report' || !reportData.actions_taken}
+                  className="flex items-center gap-2 px-5 py-2.5 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm shadow-emerald-600/20 disabled:opacity-50"
+                >
+                  {updatingId === 'report' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  Submit & Resolve
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Fullscreen Photo Modal */}
         {fullscreenPhoto && (

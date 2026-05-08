@@ -503,8 +503,8 @@ export default function ResponseDashboard() {
       )}
 
       {showReportModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto pt-20">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl my-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto pt-8">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl my-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-slate-800 mb-1">Post-Incident Report</h3>
             <p className="text-sm text-slate-500 mb-6">Complete this report to resolve the incident officially.</p>
 
