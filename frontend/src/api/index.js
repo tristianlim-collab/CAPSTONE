@@ -101,6 +101,8 @@ export const responseUnitAPI = {
 export const postReportAPI = {
   submit: (data) => api.post('/post-reports', data),
   getByIncident: (incidentId) => api.get(`/post-reports/${incidentId}`),
+  getAll: (params) => api.get('/post-reports', { params }),
+  updateStatus: (id, data) => api.patch(`/post-reports/${id}`, data),
 };
 
 // Analytics endpoints

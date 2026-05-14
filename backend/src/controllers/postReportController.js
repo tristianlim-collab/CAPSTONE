@@ -78,3 +78,88 @@ export const getByIncident = async (req, res) => {
     res.status(500).json({ message: 'Error fetching report', error: error.message });
   }
 };
+
+/**
+ * Get all post-incident reports (Admin)
+ * GET /api/post-reports
+ */
+export const getAllReports = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const { status, from_date, to_date, search } = req.query;
+
+    const where = {};
+    if (status) where.status = status;
+
+    // Date range filter
+    if (from_date || to_date) {
+      where.submitted_at = {};
+      if (from_date) where.submitted_at.gte = new Date(from_date);
+      if (to_date) where.submitted_at.lte = new Date(to_date);
+    }
+
+    // Text search (incident code, description)
+    if (search) {
+      where.OR = [
+        { incident: { incident_code: { contains: search, mode: 'insensitive' } } },
+        { actions_taken: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const reports = await prisma.postIncidentReport.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        incident: { include: { incident_type: true, barangay: true, reporter: { select: { name: true } } } },
+        submitter: { select: { name: true, email: true, role: true } }
+      },
+      orderBy: { submitted_at: 'desc' }
+    });
+
+    const total = await prisma.postIncidentReport.count({ where });
+
+    res.json({
+      data: reports,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching reports', error: error.message });
+  }
+};
+
+/**
+ * Update post-incident report status and admin notes (Admin)
+ * PATCH /api/post-reports/:id
+ */
+export const updateReportStatus = async (req, res) => {
+  try {
+    const { status, admin_notes } = req.body;
+
+    if (!['PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be PENDING, UNDER_REVIEW, APPROVED, or REJECTED' });
+    }
+
+    const report = await prisma.postIncidentReport.update({
+      where: { report_id: req.params.id },
+      data: {
+        status,
+        admin_notes: admin_notes || null,
+        reviewed_by_id: status !== 'PENDING' ? req.user.id : null,
+        reviewed_at: status !== 'PENDING' ? new Date() : null
+      },
+      include: {
+        incident: { include: { incident_type: true, barangay: true } },
+        submitter: { select: { name: true, email: true } }
+      }
+    });
+
+    res.json(report);
+  } catch (error) {
+    console.error('updateReportStatus error:', error);
+    res.status(500).json({ message: 'Error updating report', error: error.message });
+  }
+};

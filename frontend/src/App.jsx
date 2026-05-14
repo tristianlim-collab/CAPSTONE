@@ -26,7 +26,7 @@ import IncidentManagement from './pages/admin/IncidentManagement';
 import Analytics from './pages/admin/Analytics';
 import SystemSettings from './pages/admin/SystemSettings';
 import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
-import Reports from './pages/admin/Reports';
+import PostIncidentReports from './pages/admin/PostIncidentReports';
 import IncidentArchive from './pages/admin/IncidentArchive';
 import AuditLogs from './pages/admin/AuditLogs';
 
@@ -63,7 +63,7 @@ const App = () => {
               <Route path="response-units" element={<ResponseUnitManagement />} />
               <Route path="categories" element={<IncidentManagement />} />
               <Route path="analytics" element={<Analytics />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="post-incident-reports" element={<PostIncidentReports />} />
               <Route path="archive" element={<IncidentArchive />} />
               <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="settings" element={<SystemSettings />} />
@@ -71,7 +71,7 @@ const App = () => {
 
             {/* Response Unit Routes */}
             <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
-            
+
             <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/response/dashboard" replace />} />
               <Route path="dashboard" element={<ResponseDashboard />} />

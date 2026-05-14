@@ -26,7 +26,8 @@ const AdminLayout = () => {
     { name: 'Response Units', path: '/admin/response-units', icon: <Truck size={20} /> },
     { name: 'Incident Categories', path: '/admin/categories', icon: <AlertTriangle size={20} /> },
     { name: 'Analytics & Reports', path: '/admin/analytics', icon: <BarChart3 size={20} /> },
-    { name: 'Generated Reports', path: '/admin/reports', icon: <ClipboardList size={20} /> },
+    { name: 'Post-Incident Reports', path: '/admin/post-incident-reports', icon: <ClipboardList size={20} /> },
+    { name: 'Audit Logs', path: '/admin/audit-logs', icon: <ScrollText size={20} /> },
     { name: 'System Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 

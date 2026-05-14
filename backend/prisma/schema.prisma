@@ -25,6 +25,7 @@ model User {
   status_logs    IncidentStatusLog[]  @relation("ChangedBy")
   notifications  Notification[]       @relation("AssignedTo")
   post_reports   PostIncidentReport[] @relation("PostReportSubmitter")
+  reviewed_reports PostIncidentReport[] @relation("PostReportReviewedBy")
   audit_logs     SystemAuditLog[]     @relation("AuditUser")
   barangay       Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit           ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
@@ -106,18 +107,23 @@ model Incident {
 }
 
 model PostIncidentReport {
-  report_id        String   @id @default(uuid())
-  incident_id      String   @unique
+  report_id        String        @id @default(uuid())
+  incident_id      String        @unique
   submitted_by     String
   response_time_minutes Int?
   actions_taken    String
-  casualties       Int      @default(0)
+  casualties       Int           @default(0)
   damages_estimate String?
   remarks          String?
-  photos           String[] @default([])
-  submitted_at     DateTime @default(now())
-  incident         Incident @relation(fields: [incident_id], references: [incident_id])
-  submitter        User     @relation("PostReportSubmitter", fields: [submitted_by], references: [user_id])
+  photos           String[]      @default([])
+  submitted_at     DateTime      @default(now())
+  status           ReportStatus  @default(PENDING)
+  admin_notes      String?
+  reviewed_by_id   String?
+  reviewed_at      DateTime?
+  incident         Incident      @relation(fields: [incident_id], references: [incident_id])
+  submitter        User          @relation("PostReportSubmitter", fields: [submitted_by], references: [user_id])
+  reviewed_by      User?         @relation("PostReportReviewedBy", fields: [reviewed_by_id], references: [user_id])
 
   @@map("POST_INCIDENT_REPORTS")
 }
@@ -259,7 +265,16 @@ enum AlertChannel {
 enum DeliveryStatus {
   PENDING
   SENT
+  DELIVERED
+  READ
   FAILED
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
 }
 
 enum ReportType {

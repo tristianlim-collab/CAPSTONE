@@ -382,33 +382,47 @@ export const verifyIncident = async (req, res) => {
         });
       }
 
-      // Determine target unit type from the incident type's configuration (not hardcoded)
+      // Determine target unit type from the incident type's configuration
       const incidentType = await prisma.incidentType.findUnique({
         where: { type_id: edited_data?.incident_type_id || incident.incident_type_id }
       });
       const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
+      const incidentLat = edited_data?.latitude || incident.latitude;
+      const incidentLng = edited_data?.longitude || incident.longitude;
+      const incidentBarangayId = incident.barangay_id;
 
-      // Find nearest units and assign
-      let nearestUnits = await geoService.findNearestUnits(
-        edited_data?.latitude || incident.latitude,
-        edited_data?.longitude || incident.longitude,
-        1,
-        targetUnitType
+      // Determine how many units to assign based on severity
+      // CRITICAL = up to 5 units, HIGH = up to 3 units, MEDIUM = 2 units, LOW = 1 unit
+      const severityLimitMap = {
+        CRITICAL: 5,
+        HIGH: 3,
+        MEDIUM: 2,
+        LOW: 1
+      };
+      const unitsToAssign = severityLimitMap[incident.severity] || 1;
+
+      // Use smart assignment to find best-matching units
+      let assignedUnits = await geoService.findSmartResponseUnits(
+        incidentLat,
+        incidentLng,
+        targetUnitType,
+        incidentBarangayId,
+        unitsToAssign
       );
 
-      // Fallback: If no unit of the target type is available, just find ANY nearest unit
-      if (!nearestUnits || nearestUnits.length === 0) {
-         nearestUnits = await geoService.findNearestUnits(
-           edited_data?.latitude || incident.latitude,
-           edited_data?.longitude || incident.longitude,
-           1,
-           null
-         );
+      // Fallback: If no units of the target type, try finding ANY available unit
+      if (!assignedUnits || assignedUnits.length === 0) {
+        // Find nearest units of any type as fallback
+        assignedUnits = await geoService.findNearestUnits(
+          incidentLat,
+          incidentLng,
+          unitsToAssign
+        );
       }
 
       const assignments = [];
-      if (nearestUnits && nearestUnits.length > 0) {
-        for (const unit of nearestUnits) {
+      if (assignedUnits && assignedUnits.length > 0) {
+        for (const unit of assignedUnits) {
           const assignment = await prisma.incidentAssignment.create({
             data: {
               incident_id,
@@ -465,8 +479,6 @@ export const verifyIncident = async (req, res) => {
       socketService.emitIncidentVerified(updatedIncident, assignments);
 
       // Emit dispatch-with-directions for each assigned unit that has a pinned base location
-      const incidentLat = edited_data?.latitude || incident.latitude;
-      const incidentLng = edited_data?.longitude || incident.longitude;
       for (const assignment of assignments) {
         const unit = assignment.unit;
         if (unit && unit.latitude && unit.longitude) {
@@ -479,9 +491,11 @@ export const verifyIncident = async (req, res) => {
             incident_lng: incidentLng,
             unit_lat: unit.latitude,
             unit_lng: unit.longitude,
+            distance_meters: assignment.distance_meters || null,
             incident_description: updatedIncident.description,
             incident_type: updatedIncident.incident_type?.name,
             severity: updatedIncident.severity,
+            priority: updatedIncident.priority
           });
         }
       }

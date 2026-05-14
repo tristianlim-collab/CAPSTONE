@@ -53,11 +53,11 @@ const talisayBarangays = [
 ];
 
 const incidentTypeSeed = [
-  { name: "Fire", color_code: "#F97316", icon_label: "Flame", description: "Structural or open fire incident" },
-  { name: "Accident/Medical", color_code: "#EF4444", icon_label: "Ambulance", description: "Accident and medical emergencies" },
-  { name: "Crime", color_code: "#8B5CF6", icon_label: "ShieldAlert", description: "Crime-related incident" },
-  { name: "Infrastructure Damage", color_code: "#F59E0B", icon_label: "Construction", description: "Road/bridge/public utility damage" },
-  { name: "Public Disturbance", color_code: "#3B82F6", icon_label: "Users", description: "Public order disturbance" },
+  { name: "Fire", color_code: "#F97316", icon_label: "Flame", description: "Structural or open fire incident", default_unit_type: "FIRE" },
+  { name: "Accident/Medical", color_code: "#EF4444", icon_label: "Ambulance", description: "Accident and medical emergencies", default_unit_type: "DRRMO" },
+  { name: "Crime", color_code: "#8B5CF6", icon_label: "ShieldAlert", description: "Crime-related incident", default_unit_type: "POLICE" },
+  { name: "Infrastructure Damage", color_code: "#F59E0B", icon_label: "Construction", description: "Road/bridge/public utility damage", default_unit_type: "DRRMO" },
+  { name: "Public Disturbance", color_code: "#3B82F6", icon_label: "Users", description: "Public order disturbance", default_unit_type: "POLICE" },
 ];
 
 async function main() {

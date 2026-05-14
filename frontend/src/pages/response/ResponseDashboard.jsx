@@ -115,6 +115,40 @@ export default function ResponseDashboard() {
     return `${Math.floor(hours / 24)} days ago`;
   };
 
+  // Calculate distance in kilometers using Haversine formula
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Estimate arrival time in minutes (assuming average speed of 40 km/h in urban areas)
+  const estimateArrivalTime = (distanceKm) => {
+    const averageSpeed = 40; // km/h
+    const timeMinutes = Math.ceil((distanceKm / averageSpeed) * 60);
+    return timeMinutes;
+  };
+
+  // Get unit base location (from user if response unit, else from first assignment)
+  const getUnitBaseLocation = () => {
+    if (user?.unit_id && user?.latitude && user?.longitude) {
+      return { lat: user.latitude, lng: user.longitude };
+    }
+    // If no user location, return null
+    return null;
+  };
+
+  const unitLocation = getUnitBaseLocation();
+  const distanceToIncident = priorityIncident && unitLocation
+    ? calculateDistance(unitLocation.lat, unitLocation.lng, priorityIncident.latitude, priorityIncident.longitude)
+    : null;
+  const estimatedArrival = distanceToIncident ? estimateArrivalTime(distanceToIncident) : null;
+
   const handleAcceptDispatch = async (incident) => {
     setAcceptingId(incident.incident_id);
     try {
@@ -347,14 +381,30 @@ export default function ResponseDashboard() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Distance & Arrival Time Info */}
+                  {distanceToIncident && (
+                    <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                      <Navigation className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="text-sm font-semibold text-blue-900">
+                          {distanceToIncident.toFixed(1)} km away
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          Est. {estimatedArrival} min arrival
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-3">
                     <User className="text-slate-400 shrink-0 mt-0.5" size={18} />
                     <div>
                       <p className="text-sm font-semibold text-slate-800">
-                        Reported by: {priorityIncident.reporter?.name || 'Anonymous'}
+                        Reported by: {priorityIncident.reporter?.name || priorityIncident.reporter_name || 'Anonymous'}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {priorityIncident.reporter?.contact_number || 'No contact info'}
+                        {priorityIncident.reporter?.contact_number || priorityIncident.reporter_phone || 'No contact info'}
                       </p>
                     </div>
                   </div>
