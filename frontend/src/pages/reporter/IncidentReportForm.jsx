@@ -214,6 +214,10 @@ export default function IncidentReportForm() {
       toast.error('Please select an emergency type');
       return;
     }
+    if (photos.length === 0) {
+      toast.error('Please attach at least 1 photo as evidence');
+      return;
+    }
     // Find type ID from incident types - re-fetch if list is empty
     let types = incidentTypes;
     if (!types || types.length === 0) {
@@ -317,14 +321,14 @@ export default function IncidentReportForm() {
             <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center shrink-0 mx-auto mb-3">
               <Camera size={24} />
             </div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Photo Evidence</h3>
-            <p className="text-xs text-slate-400 mt-1">(Optional but recommended)</p>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Photo Evidence <span className="text-red-500">*</span></h3>
+            <p className="text-xs text-slate-400 mt-1">(Required)</p>
           </div>
 
           <div className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100/50 transition-colors relative overflow-hidden">
             <Camera size={32} className="text-blue-400 mb-2" />
             <p className="text-sm font-bold text-blue-700 text-center">Click to take or upload photo</p>
-            <p className="text-xs text-blue-500 mt-1">(Optional but recommended)</p>
+            <p className="text-xs text-blue-500 mt-1">(Required - at least 1 photo needed)</p>
             <input
               type="file"
               accept="image/*"
@@ -550,9 +554,9 @@ export default function IncidentReportForm() {
         <div className="max-w-[430px] mx-auto space-y-3">
           <button
             onClick={handleSubmit}
-            disabled={loading || !location || !selectedType}
+            disabled={loading || !location || !selectedType || photos.length === 0}
             className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
-              !loading && location && selectedType
+              !loading && location && selectedType && photos.length > 0
                 ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
             }`}

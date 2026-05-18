@@ -16,7 +16,7 @@ const Analytics = () => {
           analyticsAPI.getResponseTime(),
           analyticsAPI.getByType()
         ]);
-        
+
         if (sumRes.data?.data) setStats(sumRes.data.data);
         if (timeRes.data?.data) setResponseTime(timeRes.data.data.average_minutes || 0);
         if (typeRes.data?.data) {
@@ -25,7 +25,7 @@ const Analytics = () => {
           const formattedTypes = typeRes.data.data.map(t => {
             const pct = totalIncidents === 0 ? 0 : Math.round((t._count._all / totalIncidents) * 100);
             return {
-               label: `Type ID: ${t.incident_type_id || 'Unknown'}`, 
+               label: `Type ID: ${t.incident_type_id || 'Unknown'}`,
                value: pct,
                count: t._count._all
             };
@@ -40,6 +40,35 @@ const Analytics = () => {
     };
     fetchAnalytics();
   }, []);
+
+  const handleExportCSV = () => {
+    const resolutionRate = stats.total ? Math.round((stats.resolved / stats.total) * 100) : 0;
+
+    const csvData = [
+      ['Metric', 'Value'],
+      ['Total Incidents', stats.total],
+      ['Active Incidents', stats.active],
+      ['Resolved Incidents', stats.resolved],
+      ['Average Response Time (minutes)', responseTime],
+      ['Resolution Rate (%)', resolutionRate],
+      [''],
+      ['Incidents by Category', 'Count', 'Percentage'],
+      ...byType.map(item => [item.label, item.count, `${item.value}%`])
+    ];
+
+    const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `analytics-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
@@ -57,7 +86,7 @@ const Analytics = () => {
             <Calendar size={16} />
             This Month
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm active:scale-95">
+          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm active:scale-95" onClick={handleExportCSV}>
             <Download size={16} />
             Export CSV
           </button>

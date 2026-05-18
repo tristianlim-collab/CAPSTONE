@@ -249,6 +249,7 @@ export default function IncidentReportScreen({ navigation }) {
   const handleSubmit = async () => {
     if (!location) { Alert.alert('Error', 'Please detect your location'); return; }
     if (!selectedType) { Alert.alert('Error', 'Please select an emergency type'); return; }
+    if (photos.length === 0) { Alert.alert('Error', 'Please attach at least 1 photo as evidence'); return; }
 
     let types = incidentTypes;
     if (!types.length) {
