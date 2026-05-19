@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Download, Calendar, Activity, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { analyticsAPI } from '../../api';
+import TrendForecast from '../../components/admin/TrendForecast';
 
 const Analytics = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0 });
@@ -138,31 +139,12 @@ const Analytics = () => {
       {/* Charts Area */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
         {/* Incident Frequency Chart Placeholder */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800">Incident Volume Trends</h3>
-            <select className="bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500/20">
-              <option>Oct - Nov 2023</option>
-              <option>Sep - Oct 2023</option>
-            </select>
-          </div>
-          <div className="flex-1 rounded-xl bg-slate-50/50 border border-slate-100 flex items-center justify-center relative overflow-hidden">
-            {/* Mock Chart Area */}
-            <div className="absolute inset-0 flex items-end px-4 pt-10 pb-4 gap-2">
-              {[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((h, i) => (
-                <div key={i} className="flex-1 bg-indigo-500/10 rounded-t-md hover:bg-indigo-500/30 transition-colors relative group">
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                    Day {i + 1}: {h}
-                  </div>
-                  <div className="w-full bg-indigo-500 rounded-t-sm transition-all duration-1000 ease-out absolute bottom-0" style={{ height: `${h}%` }} />
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="lg:col-span-2">
+          <TrendForecast days={7} />
         </div>
 
         {/* Heatmap/Breakdown Placeholder */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-800">Incidents by Category</h3>
           </div>

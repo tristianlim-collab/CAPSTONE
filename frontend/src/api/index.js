@@ -111,6 +111,9 @@ export const analyticsAPI = {
   getByType: () => api.get('/analytics/by-type'),
   getTrend: () => api.get('/analytics/trend'),
   getResponseTime: () => api.get('/analytics/response-time'),
+  getForecast: (days, model) => api.get(`/analytics/forecast/${days}`, { params: { model } }),
+  getModelComparison: () => api.get('/analytics/models/comparison'),
+  getPredictionHealth: () => api.get('/analytics/prediction/health'),
 };
 
 // Report endpoints

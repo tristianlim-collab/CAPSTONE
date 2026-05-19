@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js';
 import { success, error } from "../utils/apiResponse.js";
+import predictionService from '../services/predictionService.js';
 
 
 
@@ -81,6 +82,63 @@ export const getPeakHours = async (_req, res) => {
       buckets[hour].count += 1;
     });
     return res.status(200).json(success({ data: buckets, message: "Peak hours fetched" }));
+  } catch (err) {
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+/**
+ * Get incident forecast for next N days
+ */
+export const getForecast = async (req, res) => {
+  try {
+    const days = parseInt(req.params.days) || 7;
+    const model = req.query.model || 'sarima';
+
+    if (days < 1 || days > 365) {
+      return res.status(400).json(error({ message: 'Days must be between 1 and 365' }));
+    }
+
+    const forecastData = await predictionService.forecast(days, model);
+
+    return res.status(200).json(success({
+      data: forecastData,
+      message: `Forecast for next ${days} days fetched`
+    }));
+  } catch (err) {
+    console.error('Forecast error:', err);
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+/**
+ * Get model comparison and metrics
+ */
+export const getModelComparison = async (_req, res) => {
+  try {
+    const comparison = await predictionService.getComparison();
+
+    return res.status(200).json(success({
+      data: comparison,
+      message: 'Model comparison fetched'
+    }));
+  } catch (err) {
+    console.error('Model comparison error:', err);
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+/**
+ * Get prediction service health
+ */
+export const getPredictionHealth = async (_req, res) => {
+  try {
+    const health = await predictionService.health();
+
+    return res.status(200).json(success({
+      data: health,
+      message: 'Prediction service health checked'
+    }));
   } catch (err) {
     return res.status(500).json(error({ message: err.message }));
   }

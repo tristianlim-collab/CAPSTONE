@@ -8,6 +8,9 @@ import {
   getResponseTime,
   getSummary,
   getTrend,
+  getForecast,
+  getModelComparison,
+  getPredictionHealth,
 } from "../controllers/analyticsController.js";
 
 const router = Router();
@@ -19,5 +22,10 @@ router.get("/trend", getTrend);
 router.get("/response-time", getResponseTime);
 router.get("/heatmap", getHeatmap);
 router.get("/peak-hours", getPeakHours);
+
+// Forecasting endpoints
+router.get("/forecast/:days", getForecast);
+router.get("/models/comparison", getModelComparison);
+router.get("/prediction/health", getPredictionHealth);
 
 export default router;
