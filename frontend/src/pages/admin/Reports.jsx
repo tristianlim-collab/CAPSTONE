@@ -42,6 +42,34 @@ const Reports = () => {
     }
   };
 
+  const handleDownload = async (doc) => {
+    try {
+      const format = doc.file_format.toLowerCase();
+      // Use the filters applied during generation if any
+      const params = doc.filters_applied || {};
+      
+      const response = await reportAPI.export(format, params);
+      
+      // Create blob link to download
+      const blob = new Blob([response.data], { 
+        type: format === 'pdf' ? 'application/pdf' : 
+              format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 
+              'text/csv' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${doc.report_title}.${format === 'excel' ? 'xlsx' : format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('Failed to download report');
+      console.error(err);
+    }
+  };
+
   const getFormatIcon = (format) => {
     switch (format) {
       case 'PDF': return <FileText size={20} className="text-rose-500" />;
@@ -140,7 +168,10 @@ const Reports = () => {
                       <div className="text-sm text-slate-500 font-medium">{new Date(doc.generated_at).toLocaleDateString()}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-300 text-indigo-600 rounded-lg text-xs font-bold transition-colors active:scale-95 shadow-sm">
+                      <button 
+                        onClick={() => handleDownload(doc)}
+                        className="px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-300 text-indigo-600 rounded-lg text-xs font-bold transition-colors active:scale-95 shadow-sm"
+                      >
                         Download
                       </button>
                     </td>

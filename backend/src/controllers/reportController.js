@@ -9,7 +9,7 @@ export const generateReport = async (req, res) => {
 
     const report = await prisma.generatedReport.create({
       data: {
-        generated_by: req.user.user_id,
+        generated_by: req.user.id,
         report_title: report_title || `${report_type || "INCIDENT_SUMMARY"} Report`,
         report_type: report_type || "INCIDENT_SUMMARY",
         file_format: file_format || "CSV",

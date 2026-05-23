@@ -36,7 +36,7 @@ export const sendNotification = async (req, res) => {
       data: {
         incident_id,
         unit_id,
-        assigned_by: req.user?.user_id || null,
+        assigned_by: req.user?.id || null,
         channel,
         message_body,
         delivery_status: "SENT",
@@ -97,7 +97,7 @@ export const broadcastAlert = async (req, res) => {
 
     // Log the broadcast as an audit event
     await logAuditEvent({
-      user_id: req.user.user_id,
+      user_id: req.user.id,
       action: "BROADCAST_ALERT",
       resource: "Notification",
       resource_id: broadcastId,

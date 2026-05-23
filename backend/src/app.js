@@ -14,6 +14,7 @@ import reportRoutes from "./routes/reportRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import postReportRoutes from "./routes/postReportRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
+import systemConfigRoutes from "./routes/systemConfigRoutes.js";
 import { success, error } from "./utils/apiResponse.js";
 
 const app = express();
@@ -41,6 +42,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/post-reports", postReportRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/config", systemConfigRoutes);
 
 app.get("/api/health", (_req, res) => {
 	return res.status(200).json(

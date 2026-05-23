@@ -75,7 +75,7 @@ const UserManagement = () => {
            setSaving(false);
            return;
         }
-        await authAPI.register(formData);
+        await userAPI.create(formData);
         toast.success('User account created');
       }
       closeModal();
@@ -224,14 +224,14 @@ const UserManagement = () => {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openModal(u)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Edit">
+                    <div className="flex items-center justify-center gap-2 transition-opacity">
+                      <button onClick={() => openModal(u)} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Edit">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => handleToggleStatus(u.user_id)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors" title="Toggle Access">
+                      <button onClick={() => handleToggleStatus(u.user_id)} className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors" title="Toggle Access">
                         <Power size={16} />
                       </button>
-                      <button onClick={() => handleDelete(u.user_id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                      <button onClick={() => handleDelete(u.user_id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </div>

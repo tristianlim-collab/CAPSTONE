@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Download, Calendar, Activity, Clock, CheckCircle, Loader2 } from 'lucide-react';
-import { analyticsAPI } from '../../api';
+import React, { useState, useEffect, useRef } from 'react';
+import { BarChart3, TrendingUp, Download, Calendar, Activity, Clock, CheckCircle, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
+import { analyticsAPI, reportAPI } from '../../api';
+import toast from 'react-hot-toast';
 
 const Analytics = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0 });
   const [responseTime, setResponseTime] = useState(0);
   const [byType, setByType] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -41,6 +45,57 @@ const Analytics = () => {
     fetchAnalytics();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true);
+      setShowExportMenu(false);
+      const toastId = toast.loading(`Generating ${format.toUpperCase()} export...`);
+      
+      const response = await reportAPI.export(format, {}); // export all for analytics
+      
+      // Create a blob from the response
+      let blobType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      if (format === 'csv') blobType = 'text/csv';
+      if (format === 'pdf') blobType = 'application/pdf';
+      
+      const blob = new Blob([response.data], { type: blobType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from header if possible, else generate one
+      let filename = `GAOIRS_Incidents_${new Date().toISOString().slice(0,10)}.${format}`;
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.indexOf('filename=') !== -1) {
+        const matches = /filename="([^"]*)"/.exec(disposition);
+        if (matches != null && matches[1]) filename = matches[1];
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Export downloaded successfully', { id: toastId });
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('Failed to generate export');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
       {/* Header */}
@@ -57,10 +112,30 @@ const Analytics = () => {
             <Calendar size={16} />
             This Month
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm active:scale-95">
-            <Download size={16} />
-            Export CSV
-          </button>
+          <div className="relative" ref={exportMenuRef}>
+            <button 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm active:scale-95"
+            >
+              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {isExporting ? 'Exporting...' : 'Export'}
+            </button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50 animate-fade-in">
+                <button onClick={() => handleExport('xlsx')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
+                  <FileSpreadsheet size={16} className="text-emerald-600" /> Export as Excel
+                </button>
+                <button onClick={() => handleExport('csv')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
+                  <FileText size={16} className="text-sky-600" /> Export as CSV
+                </button>
+                <button onClick={() => handleExport('pdf')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                  <FileText size={16} className="text-rose-600" /> Export as PDF
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

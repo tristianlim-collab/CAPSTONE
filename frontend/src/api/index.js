@@ -41,6 +41,7 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/me', data),
   updatePassword: (data) => api.put('/auth/me/password', data),
+  updateFcmToken: (fcm_token) => api.patch('/auth/fcm-token', { fcm_token }),
 };
 
 // Barangay endpoints
@@ -51,6 +52,7 @@ export const barangayAPI = {
 // User endpoints
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),
+  create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   updateRole: (id, role) => api.patch(`/users/${id}/role`, { role }),
   toggleStatus: (id) => api.patch(`/users/${id}/toggle`),
@@ -114,7 +116,13 @@ export const analyticsAPI = {
 // Report endpoints
 export const reportAPI = {
   getHistory: () => api.get('/reports/history'),
-  generate: (params) => api.post('/reports/generate', null, { params })
+  generate: (params) => api.post('/reports/generate', null, { params }),
+  export: (format, params) => {
+    if (format === 'pdf') {
+      return api.get('/reports/export/pdf', { params, responseType: 'blob' });
+    }
+    return api.get('/reports/export', { params: { ...params, format }, responseType: 'blob' });
+  }
 };
 
 // Upload endpoints
@@ -140,6 +148,12 @@ export const evidenceAPI = {
 export const auditAPI = {
   getLogs: (params) => api.get('/audit', { params }),
   getActions: () => api.get('/audit/actions'),
+};
+
+// System Config endpoints
+export const systemConfigAPI = {
+  getAll: () => api.get('/config'),
+  update: (data) => api.post('/config', data)
 };
 
 export default api;

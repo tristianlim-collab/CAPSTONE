@@ -3,6 +3,12 @@ import forms from "@tailwindcss/forms";
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  safelist: [
+    { pattern: /bg-(orange|rose|blue|indigo|emerald|yellow|purple|slate)-(50|100|500|600)/ },
+    { pattern: /text-(orange|rose|blue|indigo|emerald|yellow|purple|slate)-(500|600|700)/ },
+    { pattern: /border-(orange|rose|blue|indigo|emerald|yellow|purple|slate)-(200|500)/ },
+    'border-t-4',
+  ],
   theme: {
     extend: {
       colors: {

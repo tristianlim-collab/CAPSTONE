@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, CheckCircle2, XCircle, X } from 'lucide-react';
-import { incidentAPI, incidentTypeAPI } from '../../api';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, CheckCircle2, XCircle, X, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { incidentAPI, incidentTypeAPI, reportAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const STATUS_CFG = {
@@ -18,6 +18,9 @@ const IncidentArchive = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
   const PER_PAGE = 15;
 
   useEffect(() => { fetchData(); }, []);
@@ -32,6 +35,60 @@ const IncidentArchive = () => {
       setTypes(Array.isArray(tRaw) ? tRaw : []);
     } catch { toast.error('Failed to load archive'); }
     finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true);
+      setShowExportMenu(false);
+      const toastId = toast.loading(`Generating ${format.toUpperCase()} export...`);
+      
+      const response = await reportAPI.export(format, {
+        status: statusFilter,
+        type_id: typeFilter
+      });
+      
+      // Create a blob from the response
+      let blobType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      if (format === 'csv') blobType = 'text/csv';
+      if (format === 'pdf') blobType = 'application/pdf';
+      
+      const blob = new Blob([response.data], { type: blobType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from header if possible, else generate one
+      let filename = `GAOIRS_Incidents_${new Date().toISOString().slice(0,10)}.${format}`;
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.indexOf('filename=') !== -1) {
+        const matches = /filename="([^"]*)"/.exec(disposition);
+        if (matches != null && matches[1]) filename = matches[1];
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Export downloaded successfully', { id: toastId });
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('Failed to generate export');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -63,7 +120,36 @@ const IncidentArchive = () => {
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
-      <div><h2 className="text-2xl font-bold text-slate-800 tracking-tight">Incident Archive</h2><p className="text-sm text-slate-500 mt-1">Browse and review resolved, closed, and false-alarm incidents.</p></div>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Incident Archive</h2>
+          <p className="text-sm text-slate-500 mt-1">Browse and review resolved, closed, and false-alarm incidents.</p>
+        </div>
+        <div className="relative" ref={exportMenuRef}>
+          <button 
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm"
+          >
+            {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            {isExporting ? 'Exporting...' : 'Export'}
+          </button>
+          
+          {showExportMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50 animate-fade-in">
+              <button onClick={() => handleExport('xlsx')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
+                <FileSpreadsheet size={16} className="text-emerald-600" /> Export as Excel
+              </button>
+              <button onClick={() => handleExport('csv')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
+                <FileText size={16} className="text-sky-600" /> Export as CSV
+              </button>
+              <button onClick={() => handleExport('pdf')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                <FileText size={16} className="text-rose-600" /> Export as PDF
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

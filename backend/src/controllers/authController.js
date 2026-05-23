@@ -11,7 +11,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, contact_number } = req.body;
+    const { name, email, password, role, contact_number, fcm_token } = req.body;
     
     // Validate phone number format if provided
     if (contact_number) {
@@ -37,7 +37,8 @@ export const register = async (req, res) => {
         email,
         password_hash: hashedPassword,
         role: userRole,
-        contact_number
+        contact_number,
+        fcm_token: fcm_token || null,
       }
     });
 
@@ -59,7 +60,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    let { email, password } = req.body;
+    let { email, password, fcm_token } = req.body;
     email = email.trim().toLowerCase();
     
     const user = await prisma.user.findUnique({ where: { email } });
@@ -77,6 +78,14 @@ export const login = async (req, res) => {
       config.jwt.secret,
       { expiresIn: config.jwt.expiresIn }
     );
+
+    // Update FCM token if provided
+    if (fcm_token) {
+      await prisma.user.update({
+        where: { user_id: user.user_id },
+        data: { fcm_token },
+      }).catch(err => console.error('FCM token update error:', err.message));
+    }
 
     res.json({
       token,
@@ -146,7 +155,7 @@ export const googleLogin = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { user_id: req.user.user_id || req.user.id },
+      where: { user_id: req.user.id || req.user.id },
       select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, unit: true }
     });
     
@@ -163,7 +172,7 @@ export const getMe = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { name, email, contact_number } = req.body;
-    const userId = req.user.id || req.user.user_id;
+    const userId = req.user.id || req.user.id;
 
     // Validate phone number format if provided
     if (contact_number) {
@@ -197,7 +206,7 @@ export const updateProfile = async (req, res) => {
 export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const userId = req.user.id || req.user.user_id;
+    const userId = req.user.id;
 
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -216,5 +225,30 @@ export const updatePassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error updating password', error: error.message });
+  }
+};
+
+/**
+ * Update or refresh the user's FCM push notification token.
+ * Called when the mobile/web app gets a new FCM token.
+ */
+export const updateFcmToken = async (req, res) => {
+  try {
+    const userId = req.params.id || req.user.id || req.user.id;
+    const { fcm_token } = req.body;
+
+    if (!fcm_token) {
+      return res.status(400).json({ message: 'fcm_token is required' });
+    }
+
+    await prisma.user.update({
+      where: { user_id: userId },
+      data: { fcm_token },
+    });
+
+    res.json({ message: 'FCM token updated successfully' });
+  } catch (error) {
+    console.error('FCM token update error:', error);
+    res.status(500).json({ message: 'Error updating FCM token', error: error.message });
   }
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { authAPI } from '../api';
+import pushNotificationService from '../services/push_notification_service';
 
 const AuthContext = createContext();
 
@@ -38,6 +39,19 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     }
     setUser(data.user);
+
+    // Register push notifications and send token to backend
+    try {
+      const pushToken = await pushNotificationService.registerForPushNotifications();
+      if (pushToken) {
+        await api.patch('/auth/fcm-token', { fcm_token: pushToken }).catch(err =>
+          console.warn('[Auth] FCM token update failed:', err.message)
+        );
+      }
+    } catch (err) {
+      console.warn('[Auth] Push registration failed (non-fatal):', err.message);
+    }
+
     return data.user;
   };
 
@@ -50,10 +64,32 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     }
     setUser(data.user);
+
+    // Register push notifications and send token to backend
+    try {
+      const pushToken = await pushNotificationService.registerForPushNotifications();
+      if (pushToken) {
+        await api.patch('/auth/fcm-token', { fcm_token: pushToken }).catch(err =>
+          console.warn('[Auth] FCM token update failed:', err.message)
+        );
+      }
+    } catch (err) {
+      console.warn('[Auth] Push registration failed (non-fatal):', err.message);
+    }
+
     return data.user;
   };
 
   const logout = async () => {
+    // Clear push notification token from backend
+    try {
+      await api.patch('/auth/fcm-token', { fcm_token: null }).catch(() => {});
+      pushNotificationService.stopListening();
+      await pushNotificationService.clearToken();
+    } catch (err) {
+      console.warn('[Auth] Push cleanup failed (non-fatal):', err.message);
+    }
+
     await AsyncStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
