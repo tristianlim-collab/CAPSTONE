@@ -11,6 +11,8 @@ import {
   getForecast,
   getModelComparison,
   getPredictionHealth,
+  getKDE,
+  trainModels,
 } from "../controllers/analyticsController.js";
 
 const router = Router();
@@ -27,5 +29,7 @@ router.get("/peak-hours", getPeakHours);
 router.get("/forecast/:days", getForecast);
 router.get("/models/comparison", getModelComparison);
 router.get("/prediction/health", getPredictionHealth);
+router.get("/visualize/kde", getKDE);
+router.post("/train", trainModels);
 
 export default router;

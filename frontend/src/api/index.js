@@ -114,6 +114,8 @@ export const analyticsAPI = {
   getForecast: (days, model) => api.get(`/analytics/forecast/${days}`, { params: { model } }),
   getModelComparison: () => api.get('/analytics/models/comparison'),
   getPredictionHealth: () => api.get('/analytics/prediction/health'),
+  getKDE: () => api.get('/analytics/visualize/kde'),
+  train: (data) => api.post('/analytics/train', data),
 };
 
 // Report endpoints

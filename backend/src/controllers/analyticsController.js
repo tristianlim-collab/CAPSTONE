@@ -93,7 +93,7 @@ export const getPeakHours = async (_req, res) => {
 export const getForecast = async (req, res) => {
   try {
     const days = parseInt(req.params.days) || 7;
-    const model = req.query.model || 'sarima';
+    const model = req.query.model || 'prophet';
 
     if (days < 1 || days > 365) {
       return res.status(400).json(error({ message: 'Days must be between 1 and 365' }));
@@ -140,6 +140,41 @@ export const getPredictionHealth = async (_req, res) => {
       message: 'Prediction service health checked'
     }));
   } catch (err) {
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+/**
+ * Get KDE visualization data
+ */
+export const getKDE = async (_req, res) => {
+  try {
+    const kdeData = await predictionService.kde();
+
+    return res.status(200).json(success({
+      data: kdeData,
+      message: 'KDE visualization data fetched'
+    }));
+  } catch (err) {
+    console.error('KDE error:', err);
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+/**
+ * Train models
+ */
+export const trainModels = async (req, res) => {
+  try {
+    const { dates, counts } = req.body;
+    const result = await predictionService.train(dates, counts);
+
+    return res.status(200).json(success({
+      data: result,
+      message: 'Models trained successfully'
+    }));
+  } catch (err) {
+    console.error('Training error:', err);
     return res.status(500).json(error({ message: err.message }));
   }
 };

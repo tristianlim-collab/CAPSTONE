@@ -17,9 +17,9 @@ const TrendForecast = ({ days = 7, onError = null }) => {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('sarima');
+  const [selectedModel, setSelectedModel] = useState('prophet');
   const [models, setModels] = useState([]);
-  const [champion, setChampion] = useState(null);
+  const [champion, setChampion] = useState('Prophet');
 
   // Format chart data
   const formatChartData = (predictions, dates) => {
@@ -45,7 +45,7 @@ const TrendForecast = ({ days = 7, onError = null }) => {
 
       // Get forecast
       const forecastRes = await fetch(
-        `/api/analytics/forecast/${days}?model=${selectedModel}`,
+        `/api/analytics/forecast/${days}?model=prophet`,
         { headers }
       );
 
@@ -61,7 +61,7 @@ const TrendForecast = ({ days = 7, onError = null }) => {
 
       if (comparisonData?.data?.models) {
         setModels(comparisonData.data.models);
-        setChampion(comparisonData.data.champion);
+        setChampion(comparisonData.data.champion || 'Prophet');
       }
 
       setForecast(forecastData);
@@ -76,13 +76,13 @@ const TrendForecast = ({ days = 7, onError = null }) => {
 
   useEffect(() => {
     fetchForecast();
-  }, [days, selectedModel]);
+  }, [days]);
 
   // Extract data from forecast
   const getChartData = () => {
     if (!forecast?.data?.predictions) return [];
 
-    const modelData = forecast.data.predictions[selectedModel];
+    const modelData = forecast.data.predictions['prophet'];
     if (!modelData) return [];
 
     return formatChartData(modelData.predictions, modelData.dates);
@@ -168,20 +168,11 @@ const TrendForecast = ({ days = 7, onError = null }) => {
           <div className="flex gap-3">
             <button
               onClick={fetchForecast}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors shadow-sm text-sm active:scale-95"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm text-sm active:scale-95"
             >
               <RefreshCw size={16} />
-              Refresh
+              Refresh Forecast
             </button>
-
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium transition-colors shadow-sm text-sm cursor-pointer hover:bg-indigo-700"
-            >
-              <option value="sarima">SARIMA</option>
-              <option value="prophet">Prophet</option>
-            </select>
           </div>
         </div>
 

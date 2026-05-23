@@ -14,7 +14,7 @@ const predictionService = {
    * @param {string} model - Model to use: 'sarima', 'prophet', or 'all'
    * @returns {Promise} Forecast data
    */
-  async forecast(days = 7, model = 'sarima') {
+  async forecast(days = 7, model = 'prophet') {
     try {
       const response = await axios.get(`${ML_SERVICE_URL}/api/predict/${days}`, {
         params: { model, include_ci: 'true' }
@@ -69,6 +69,20 @@ const predictionService = {
     } catch (error) {
       console.error('Training error:', error.message);
       throw new Error(`Failed to train models: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get KDE visualization data
+   * @returns {Promise} KDE data
+   */
+  async kde() {
+    try {
+      const response = await axios.get(`${ML_SERVICE_URL}/api/visualize/kde`);
+      return response.data;
+    } catch (error) {
+      console.error('KDE service error:', error.message);
+      throw new Error(`Failed to get KDE data: ${error.message}`);
     }
   }
 };
