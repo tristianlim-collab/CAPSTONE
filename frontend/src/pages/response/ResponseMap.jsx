@@ -6,7 +6,8 @@ import { useSocketContext } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation, Navigation2, PlusCircle, CheckCircle2, Send } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation, Navigation2, PlusCircle, CheckCircle2, Send, Filter } from 'lucide-react';
+import MapFilterModal from '../../components/map/MapFilterModal';
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl;
@@ -176,6 +177,10 @@ const ResponseMap = () => {
   });
   const [selectedIncidentForAction, setSelectedIncidentForAction] = useState(null);
 
+  // Filter state for map filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({});
+
   // Default center: Negros Island Region, Philippines
   const defaultCenter = [10.0000, 122.9000];
 
@@ -183,6 +188,13 @@ const ResponseMap = () => {
     fetchIncidents();
     fetchActiveUnits();
   }, []);
+
+  // Refetch incidents when filters change
+  useEffect(() => {
+    if (Object.keys(filters).length > 0) {
+      fetchIncidents(filters);
+    }
+  }, [filters]);
 
   const handleUpdateStatus = async (incidentId, status) => {
     try {
@@ -428,18 +440,27 @@ const ResponseMap = () => {
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
   }, [on]);
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = async (filterParams = {}) => {
     try {
       setLoading(true);
-      // Fetch with evidence and reporter data included
-      const res = await incidentAPI.getAll({
+      // Build API params
+      const apiParams = {
         limit: 100,
-        include: 'evidence,reporter,type,barangay'
-      });
+        include: 'evidence,reporter,type,barangay',
+        // Add filters if they exist; responders see only VERIFIED and RESPONDING by default unless overridden
+        status: filterParams.status || 'VERIFIED,RESPONDING'
+      };
+
+      // Add optional filters
+      if (filterParams.type_id) apiParams.type_id = filterParams.type_id;
+      if (filterParams.from_date) apiParams.from_date = filterParams.from_date;
+      if (filterParams.to_date) apiParams.to_date = filterParams.to_date;
+
+      // Fetch with evidence and reporter data included
+      const res = await incidentAPI.getAll(apiParams);
       if (res.data?.data) {
         const relevantIncidents = res.data.data.filter(inc =>
-          inc.latitude && inc.longitude &&
-          ['VERIFIED', 'RESPONDING'].includes(inc.status)
+          inc.latitude && inc.longitude
         );
         setIncidents(relevantIncidents);
 
@@ -621,13 +642,21 @@ const ResponseMap = () => {
           <div className="flex flex-wrap gap-4">
 
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]"></span> 
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]"></span>
               Verified ({incidents.filter(i => i.status === 'VERIFIED').length})
             </div>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span> 
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span>
               Responding ({incidents.filter(i => i.status === 'RESPONDING').length})
             </div>
+
+            <button
+              onClick={() => setShowFilters(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium active:scale-95"
+            >
+              <Filter size={16} />
+              Filter Map
+            </button>
           </div>
         </div>
       
@@ -974,6 +1003,18 @@ const ResponseMap = () => {
             </div>
           </div>
         )}
+
+        {/* Filter Modal */}
+        <MapFilterModal
+          isOpen={showFilters}
+          onClose={() => setShowFilters(false)}
+          onFiltersChange={(newFilters) => {
+            setFilters(newFilters);
+            setShowFilters(false);
+          }}
+          initialFilters={filters}
+          defaultPreset="active"
+        />
       </div>
     </div>
   );

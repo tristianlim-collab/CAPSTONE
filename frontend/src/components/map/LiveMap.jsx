@@ -94,7 +94,8 @@ export default function LiveMap({
   zoom = 9.5,
   autoZoomOnNewIncident = true,
   markerColorMode = 'severity',
-  onVerify
+  onVerify,
+  filters = {}
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
@@ -158,12 +159,20 @@ export default function LiveMap({
 
   useEffect(() => {
     // Fetch initial active incidents with full data
-    incidentAPI.getAll({
+    const params = {
       limit: 100,
       include: 'evidence,reporter,type,barangay'
-    }).then(async (res) => {
-      // Filter out resolved incidents for the map
-      const activeIncidents = res.data?.data?.filter(inc => inc.status !== 'RESOLVED' && inc.status !== 'CLOSED' && inc.status !== 'FALSE_ALARM') || [];
+    };
+
+    // Add filters to params if they exist
+    if (filters.status) params.status = filters.status;
+    if (filters.type_id) params.type_id = filters.type_id;
+    if (filters.from_date) params.from_date = filters.from_date;
+    if (filters.to_date) params.to_date = filters.to_date;
+
+    incidentAPI.getAll(params).then(async (res) => {
+      // No need to filter out resolved incidents since API handles it
+      const activeIncidents = res.data?.data || [];
       setIncidents(activeIncidents);
 
       // Auto-load routes for VERIFIED/RESPONDING incidents with assignments
@@ -297,6 +306,44 @@ export default function LiveMap({
       unsub7();
     };
   }, [on]);
+
+  // Refetch incidents when filters change
+  useEffect(() => {
+    const params = {
+      limit: 100,
+      include: 'evidence,reporter,type,barangay'
+    };
+
+    // Add filters to params if they exist
+    if (filters.status) params.status = filters.status;
+    if (filters.type_id) params.type_id = filters.type_id;
+    if (filters.from_date) params.from_date = filters.from_date;
+    if (filters.to_date) params.to_date = filters.to_date;
+
+    incidentAPI.getAll(params).then(async (res) => {
+      const activeIncidents = res.data?.data || [];
+      setIncidents(activeIncidents);
+
+      // Auto-load routes for verified incidents with assignments
+      const initialRoutes = {};
+      for (const inc of activeIncidents) {
+        if (['VERIFIED', 'RESPONDING'].includes(inc.status) && inc.assignments && inc.assignments.length > 0) {
+          for (const assignment of inc.assignments) {
+            const unit = assignment.unit;
+            if (unit && unit.latitude && unit.longitude && inc.latitude && inc.longitude) {
+              const coords = await fetchRouteFromOSRM(unit.latitude, unit.longitude, inc.latitude, inc.longitude);
+              if (coords) {
+                initialRoutes[`${inc.incident_id}_${unit.unit_id}`] = coords;
+              }
+            }
+          }
+        }
+      }
+      if (Object.keys(initialRoutes).length > 0) {
+        setRoutes(prev => ({ ...prev, ...initialRoutes }));
+      }
+    }).catch(err => console.error("Map filter fetch error:", err));
+  }, [filters]);
 
   // Route cleanup effect — remove routes when incident is resolved/closed
   useEffect(() => {

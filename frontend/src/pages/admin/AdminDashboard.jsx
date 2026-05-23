@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LiveMap from '../../components/map/LiveMap';
-import { Activity, ShieldAlert, Users, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
+import { Activity, ShieldAlert, Users, TrendingUp, AlertTriangle, Loader2, Filter } from 'lucide-react';
 import { analyticsAPI, incidentAPI } from '../../api';
+import MapFilterModal from '../../components/map/MapFilterModal';
 import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
@@ -12,6 +13,8 @@ export default function AdminDashboard() {
   const [recentIncidents, setRecentIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const { on, connected } = useSocketContext();
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
     fetchDashboardData();
@@ -86,9 +89,17 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">System Overview</h1>
           <p className="text-sm text-slate-500 mt-1">Live monitoring and real-time statistics active.</p>
         </div>
-        <div className="text-xs bg-white px-4 py-2.5 rounded-xl shadow-sm border border-emerald-100 font-bold text-emerald-600 flex items-center gap-2 uppercase tracking-widest">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-          Real-time Sync Active
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl transition-all text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 ${Object.keys(filters).length > 0
+              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+          >
+            <Filter size={14} className={Object.keys(filters).length > 0 ? 'text-indigo-700' : 'text-indigo-600'} />
+            Filter Map {Object.keys(filters).length > 0 && `(${Object.keys(filters).length})`}
+          </button>
         </div>
       </div>
 
@@ -121,10 +132,19 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-500 font-medium">Click a marker to verify incidents directly</p>
           </div>
           <div className="flex-1 rounded-[20px] overflow-hidden bg-slate-100 relative">
-            <LiveMap zoom={13} center={[14.6760, 121.0437]} autoZoomOnNewIncident={true} markerColorMode="lgu" onVerify={handleVerifyFromMap} />
+            <LiveMap zoom={13} center={[10.7421, 122.9688]} autoZoomOnNewIncident={true} markerColorMode="lgu" onVerify={handleVerifyFromMap} filters={filters} />
           </div>
         </div>
       </div>
+
+      {/* Filter Modal */}
+      <MapFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onFiltersChange={setFilters}
+        initialFilters={filters}
+        defaultPreset="active"
+      />
     </div>
   );
 }

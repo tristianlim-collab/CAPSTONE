@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js';
 import socketService from '../services/socketService.js';
+import bcrypt from 'bcryptjs';
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -9,7 +10,7 @@ export const getAllUsers = async (req, res) => {
     const users = await prisma.user.findMany({
       skip,
       take: limit,
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true }
     });
     
     const total = await prisma.user.count();
@@ -83,5 +84,36 @@ export const toggleStatus = async (req, res) => {
     res.json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: 'Error toggling user status' });
+  }
+};
+
+export const createUser = async (req, res) => {
+  try {
+    const { name, email, password, role, contact_number } = req.body;
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password_hash: hashedPassword,
+        role: role || 'REPORTER',
+        contact_number
+      }
+    });
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error creating user' });
   }
 };

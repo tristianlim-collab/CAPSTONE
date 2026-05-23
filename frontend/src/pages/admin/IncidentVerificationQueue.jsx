@@ -189,8 +189,14 @@ export default function IncidentVerificationQueue() {
 
   const getTypeColor = (type_id) => {
     const type = incidentTypes.find(t => t.type_id === type_id);
-    const colorMap = { FIRE: '#F97316', MEDICAL_EMERGENCY: '#EF4444', ACCIDENT: '#F59E0B', 'CRIME-RELATED': '#8B5CF6', OTHER: '#6B7280' };
-    return colorMap[type?.name] || '#6B7280';
+    if (!type) return '#6B7280';
+    const name = type.name.toUpperCase();
+    if (name.includes('FIRE')) return '#F97316';
+    if (name.includes('MEDICAL') || name.includes('ACCIDENT')) return '#EF4444';
+    if (name.includes('CRIME')) return '#8B5CF6';
+    if (name.includes('INFRASTRUCTURE')) return '#F59E0B';
+    if (name.includes('DISTURBANCE')) return '#3B82F6';
+    return '#6B7280';
   };
 
   const getSeverityColor = (severity) => {

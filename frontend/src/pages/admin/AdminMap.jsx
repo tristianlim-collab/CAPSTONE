@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import LiveMap from '../../components/map/LiveMap';
+import MapFilterModal from '../../components/map/MapFilterModal';
 import { Map, Filter } from 'lucide-react';
 
 const AdminMap = () => {
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({});
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
   return (
     <div className="flex flex-col h-full space-y-4 animate-fade-in relative">
       {/* Header overlay */}
@@ -15,7 +23,10 @@ const AdminMap = () => {
           <p className="text-sm text-slate-500 mt-1">Real-time geospatial tracking of all active emergencies.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium">
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium active:scale-95"
+          >
             <Filter size={16} />
             Filter Incidents
           </button>
@@ -24,8 +35,23 @@ const AdminMap = () => {
 
       {/* Map Area */}
       <div className="flex-1 min-h-[800px] w-full rounded-2xl overflow-hidden shadow-md border border-slate-200 relative">
-        <LiveMap zoom={13} center={[14.6760, 121.0437]} autoZoomOnNewIncident markerColorMode="lgu" />
+        <LiveMap
+          zoom={13}
+          center={[14.6760, 121.0437]}
+          autoZoomOnNewIncident
+          markerColorMode="lgu"
+          filters={filters}
+        />
       </div>
+
+      {/* Filter Modal */}
+      <MapFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onFiltersChange={handleFiltersChange}
+        initialFilters={filters}
+        defaultPreset="active"
+      />
     </div>
   );
 };

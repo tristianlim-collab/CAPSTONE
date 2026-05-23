@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
+import { requestNotificationPermission, setupSocketNotifications } from "../utils/pushNotifications";
 
 const SocketContext = createContext(null);
 
@@ -46,6 +47,11 @@ export const SocketProvider = ({ children }) => {
 					socket.emit("join_reporter", userId);
 				}
 			}
+
+			// Request browser notification permission and set up listeners
+			requestNotificationPermission().then(() => {
+				setupSocketNotifications(socket);
+			});
 		});
 
 		socket.on("disconnect", () => {

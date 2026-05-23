@@ -15,8 +15,10 @@ model User {
   password_hash  String
   contact_number String?
   role           Role
+  is_active      Boolean              @default(true)
   barangay_id    String?
   unit_id        String?
+  fcm_token      String?              // Firebase Cloud Messaging token for push notifications
   created_at     DateTime             @default(now())
   evidence       Evidence[]           @relation("UploadedBy")
   reports        GeneratedReport[]    @relation("GeneratedBy")
@@ -29,6 +31,7 @@ model User {
   audit_logs     SystemAuditLog[]     @relation("AuditUser")
   barangay       Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit           ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
+  configs        SystemConfig[]
 
   @@map("USER")
 }
@@ -302,4 +305,16 @@ model SystemAuditLog {
   user       User     @relation("AuditUser", fields: [user_id], references: [user_id])
 
   @@map("SYSTEM_AUDIT_LOGS")
+}
+
+model SystemConfig {
+  config_key   String   @id
+  config_value String   // Stored as encrypted JSON string for sensitive data
+  description  String?
+  is_encrypted Boolean  @default(false)
+  updated_at   DateTime @updatedAt
+  updated_by   String?
+  user         User?    @relation(fields: [updated_by], references: [user_id])
+
+  @@map("SYSTEM_CONFIG")
 }

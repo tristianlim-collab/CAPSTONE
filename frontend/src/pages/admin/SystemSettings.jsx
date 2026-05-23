@@ -1,8 +1,61 @@
-import React, { useMemo, useState } from 'react';
-import { Settings, Save, Globe, Database, ShieldCheck, Mail, Key, Bell, MessageSquare, Smartphone, Shield, ShieldAlert, Users, Copy, Check, ToggleLeft, ToggleRight } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Settings, Save, Globe, Database, ShieldCheck, Mail, Key, Bell, MessageSquare, Smartphone, Shield, ShieldAlert, Users, Copy, Check, ToggleLeft, ToggleRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { systemConfigAPI } from '../../api';
+import toast from 'react-hot-toast';
 
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState('general');
+
+  // ─── System Configurations State ───
+  const [configs, setConfigs] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Show/Hide password toggle
+  const [showSecrets, setShowSecrets] = useState({});
+
+  useEffect(() => {
+    fetchConfigs();
+  }, []);
+
+  const fetchConfigs = async () => {
+    try {
+      setIsLoading(true);
+      const res = await systemConfigAPI.getAll();
+      if (res.data?.data) {
+        setConfigs(res.data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to load system configurations');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfigChange = (key, value, isEncrypted = false, description = '') => {
+    setConfigs(prev => ({
+      ...prev,
+      [key]: {
+        value: value === '********' ? prev[key]?.value || '********' : value,
+        is_encrypted: isEncrypted,
+        description
+      }
+    }));
+  };
+
+  const handleSaveConfigs = async () => {
+    try {
+      setIsSaving(true);
+      const toastId = toast.loading('Saving configurations...');
+      await systemConfigAPI.update(configs);
+      toast.success('Configurations saved successfully!', { id: toastId });
+      fetchConfigs(); // Refresh to update '********' masks
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save configurations');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // ─── Notification Settings State ───
   const [notifSettings, setNotifSettings] = useState({
@@ -54,9 +107,13 @@ const SystemSettings = () => {
           </h2>
           <p className="text-sm text-slate-500 mt-1">Configure system settings, roles, notifications, and environment hooks.</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm shadow-indigo-600/20 active:scale-95">
-          <Save size={18} />
-          Save Changes
+        <button 
+          onClick={handleSaveConfigs}
+          disabled={isSaving || isLoading}
+          className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition-all shadow-sm shadow-indigo-600/20 active:scale-95"
+        >
+          {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
@@ -93,38 +150,42 @@ const SystemSettings = () => {
                 <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2">General Info</h3>
                 <p className="text-sm text-slate-500">Core system identity details. Appears on all citizen-facing interfaces.</p>
               </div>
-              <form className="space-y-6">
-                <div className="space-y-3">
-                  <label className="block text-sm font-bold text-slate-700">Organization Name</label>
-                  <input type="text" defaultValue="City Disaster Risk Reduction Council" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              {isLoading ? (
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
+              ) : (
+                <form className="space-y-6">
                   <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">Support Email</label>
-                    <input type="email" defaultValue="support@cityresponse.gov.ph" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                    <label className="block text-sm font-bold text-slate-700">Organization Name</label>
+                    <input type="text" value={configs.SYSTEM_NAME?.value || configs.SYSTEM_NAME || ''} onChange={(e) => handleConfigChange('SYSTEM_NAME', e.target.value)} placeholder="City Disaster Risk Reduction Council" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
                   </div>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">Hotline Number</label>
-                    <input type="tel" defaultValue="911" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <label className="block text-sm font-bold text-slate-700">Primary Timezone</label>
-                  <select className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white text-slate-700">
-                    <option value="Asia/Manila">Asia/Manila (PHT)</option>
-                    <option value="UTC">Coordinated Universal Time (UTC)</option>
-                  </select>
-                </div>
-                <div className="pt-4 pb-2">
-                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800">
-                    <div className="mt-0.5"><Save size={18} className="text-amber-600" /></div>
-                    <div>
-                      <h4 className="font-bold text-sm">System Maintenance Window</h4>
-                      <p className="text-xs mt-1 text-amber-700/80">Changing core settings may cause temporary disruption. Schedule updates during off-peak hours.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-slate-700">Support Email</label>
+                      <input type="email" value={configs.SUPPORT_EMAIL?.value || configs.SUPPORT_EMAIL || ''} onChange={(e) => handleConfigChange('SUPPORT_EMAIL', e.target.value)} placeholder="support@gaoirs.gov.ph" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-slate-700">Hotline Number</label>
+                      <input type="tel" value={configs.HOTLINE_NUMBER?.value || configs.HOTLINE_NUMBER || ''} onChange={(e) => handleConfigChange('HOTLINE_NUMBER', e.target.value)} placeholder="+63 2 XXXX XXXX" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
                     </div>
                   </div>
-                </div>
-              </form>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">Primary Timezone</label>
+                    <select value={configs.TIMEZONE?.value || configs.TIMEZONE || 'Asia/Manila'} onChange={(e) => handleConfigChange('TIMEZONE', e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white text-slate-700">
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="UTC">Coordinated Universal Time (UTC)</option>
+                    </select>
+                  </div>
+                  <div className="pt-4 pb-2">
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800">
+                      <div className="mt-0.5"><Save size={18} className="text-amber-600" /></div>
+                      <div>
+                        <h4 className="font-bold text-sm">System Maintenance Window</h4>
+                        <p className="text-xs mt-1 text-amber-700/80">Changing core settings may cause temporary disruption. Schedule updates during off-peak hours.</p>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              )}
             </>
           )}
 
@@ -238,8 +299,93 @@ const SystemSettings = () => {
             </>
           )}
 
+          {/* ─── SMTP Server Tab ─── */}
+          {activeTab === 'mail' && (
+            <>
+              <div className="mb-6 pb-6 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-2">
+                  <Mail size={20} className="text-indigo-600" />
+                  SMTP Email Server
+                </h3>
+                <p className="text-sm text-slate-500">Configure outgoing mail server for alerts and notifications.</p>
+              </div>
+              {isLoading ? (
+                 <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-slate-700">SMTP Host</label>
+                      <input type="text" value={configs.SMTP_HOST?.value || configs.SMTP_HOST || ''} onChange={(e) => handleConfigChange('SMTP_HOST', e.target.value)} placeholder="smtp.example.com" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-slate-700">SMTP Port</label>
+                      <input type="number" value={configs.SMTP_PORT?.value || configs.SMTP_PORT || ''} onChange={(e) => handleConfigChange('SMTP_PORT', e.target.value)} placeholder="587" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">SMTP User</label>
+                    <input type="text" value={configs.SMTP_USER?.value || configs.SMTP_USER || ''} onChange={(e) => handleConfigChange('SMTP_USER', e.target.value)} placeholder="api_user" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                  </div>
+                  <div className="space-y-3 relative">
+                    <label className="block text-sm font-bold text-slate-700">SMTP Password</label>
+                    <div className="relative">
+                      <input type={showSecrets['SMTP_PASS'] ? 'text' : 'password'} value={configs.SMTP_PASS?.value === '********' ? '********' : (configs.SMTP_PASS?.value || configs.SMTP_PASS || '')} onChange={(e) => handleConfigChange('SMTP_PASS', e.target.value, true)} placeholder="••••••••" className="w-full px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                      <button type="button" onClick={() => setShowSecrets(p => ({...p, SMTP_PASS: !p.SMTP_PASS}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
+                        {showSecrets['SMTP_PASS'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">This value is encrypted at rest. Enter a new password to change it.</p>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">From Address</label>
+                    <input type="email" value={configs.SMTP_FROM?.value || configs.SMTP_FROM || ''} onChange={(e) => handleConfigChange('SMTP_FROM', e.target.value)} placeholder="noreply@gaoirs.gov.ph" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ─── API Keys / Secrets Tab ─── */}
+          {activeTab === 'secrets' && (
+            <>
+              <div className="mb-6 pb-6 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-2">
+                  <Key size={20} className="text-indigo-600" />
+                  API Keys & Secrets
+                </h3>
+                <p className="text-sm text-slate-500">Manage third-party service credentials (e.g. Twilio for SMS).</p>
+              </div>
+              {isLoading ? (
+                 <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
+              ) : (
+                <div className="space-y-6">
+                  <h4 className="font-bold text-slate-700 pb-2 border-b border-slate-100">Twilio SMS Configuration</h4>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">Account SID</label>
+                    <input type="text" value={configs.TWILIO_SID?.value || configs.TWILIO_SID || ''} onChange={(e) => handleConfigChange('TWILIO_SID', e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxx" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
+                  </div>
+                  <div className="space-y-3 relative">
+                    <label className="block text-sm font-bold text-slate-700">Auth Token</label>
+                    <div className="relative">
+                      <input type={showSecrets['TWILIO_TOKEN'] ? 'text' : 'password'} value={configs.TWILIO_TOKEN?.value === '********' ? '********' : (configs.TWILIO_TOKEN?.value || configs.TWILIO_TOKEN || '')} onChange={(e) => handleConfigChange('TWILIO_TOKEN', e.target.value, true)} placeholder="••••••••" className="w-full px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
+                      <button type="button" onClick={() => setShowSecrets(p => ({...p, TWILIO_TOKEN: !p.TWILIO_TOKEN}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
+                        {showSecrets['TWILIO_TOKEN'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">This value is encrypted at rest. Enter a new token to change it.</p>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">Sender Phone Number</label>
+                    <input type="text" value={configs.TWILIO_PHONE?.value || configs.TWILIO_PHONE || ''} onChange={(e) => handleConfigChange('TWILIO_PHONE', e.target.value)} placeholder="+1234567890" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* ─── Placeholder for other tabs ─── */}
-          {!['general', 'roles', 'notifications'].includes(activeTab) && (
+          {!['general', 'roles', 'notifications', 'mail', 'secrets'].includes(activeTab) && (
             <div className="text-sm text-slate-500">
               This section is not yet connected. (Tab: <span className="font-semibold text-slate-700">{activeTab}</span>)
             </div>
