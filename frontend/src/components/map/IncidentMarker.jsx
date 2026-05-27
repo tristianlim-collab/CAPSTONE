@@ -63,14 +63,30 @@ const getLguIndicator = (incident, user, focusedIncidentCity) => {
   return { color: 'green', label: 'Far LGU', lguName: incidentLguName };
 };
 
-const createColoredIcon = (color) => {
-  return new L.Icon({
-    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+const createColoredIcon = (color, isNew) => {
+  const markerHtml = `
+    <div class="marker-container ${isNew ? 'marker-pulse' : ''}">
+      <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png" 
+           style="width: 25px; height: 41px;" />
+    </div>
+    <style>
+      @keyframes marker-pulse {
+        0% { transform: scale(1); filter: drop-shadow(0 0 0px ${color}); }
+        50% { transform: scale(1.2); filter: drop-shadow(0 0 15px ${color}); }
+        100% { transform: scale(1); filter: drop-shadow(0 0 0px ${color}); }
+      }
+      .marker-pulse {
+        animation: marker-pulse 1.2s infinite ease-in-out;
+      }
+    </style>
+  `;
+
+  return L.divIcon({
+    className: 'custom-incident-marker',
+    html: markerHtml,
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
-    shadowSize: [41, 41]
   });
 };
 
@@ -271,12 +287,22 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
 
 export default function IncidentMarker({ incident, colorMode = 'severity', onVerify, onSelect, isSelected, focusedIncidentCity }) {
   const { user } = useAuth();
+  const markerRef = React.useRef(null);
+  
   const lguIndicator = getLguIndicator(incident, user, focusedIncidentCity);
   const color =
     colorMode === 'lgu'
       ? lguIndicator.color
       : getColor(incident.status, incident.severity);
-  const icon = createColoredIcon(color);
+  
+  const isNew = incident.status === 'REPORTED';
+  const icon = createColoredIcon(color, isNew);
+
+  useEffect(() => {
+    if (isSelected && markerRef.current) {
+      markerRef.current.openPopup();
+    }
+  }, [isSelected]);
 
   const handleClick = () => {
     if (onSelect) {
@@ -285,7 +311,12 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
   };
 
   return (
-    <Marker position={[incident.latitude, incident.longitude]} icon={icon} eventHandlers={{ click: handleClick }}>
+    <Marker 
+      ref={markerRef}
+      position={[incident.latitude, incident.longitude]} 
+      icon={icon} 
+      eventHandlers={{ click: handleClick }}
+    >
       <Popup className="min-w-[280px] max-w-[350px]">
         <div className="font-sans pr-1 pb-1">
           <div className="flex items-center justify-between border-b pb-2 mb-2">

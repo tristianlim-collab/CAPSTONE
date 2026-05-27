@@ -42,7 +42,11 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
 
     if (previousLatestId.current !== latestId) {
-      map.flyTo([lat, lng], 16, { duration: 0.8 });
+      map.flyTo([lat, lng], 16, { 
+        duration: 2.0, 
+        easeLinearity: 0.25,
+        noMoveStart: true 
+      });
       previousLatestId.current = latestId;
       toast('🔴 New incident reported! Map zoomed to location.', {
         icon: '🚨',
@@ -52,6 +56,19 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
   }, [enabled, incidents, map]);
 
+  return null;
+}
+
+function FlyToSelectedIncident({ selectedIncident }) {
+  const map = useMap();
+  useEffect(() => {
+    if (selectedIncident?.latitude && selectedIncident?.longitude) {
+      map.flyTo([Number(selectedIncident.latitude), Number(selectedIncident.longitude)], 17, {
+        duration: 1.5,
+        easeLinearity: 0.25,
+      });
+    }
+  }, [selectedIncident, map]);
   return null;
 }
 
@@ -127,33 +144,21 @@ export default function LiveMap({
     return L.divIcon({
       className: 'custom-unit-marker-rich',
       html: `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -100%); width: max-content;">
+        <div style="display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%);">
           <div style="
-            background: white; 
-            padding: 4px 8px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-            font-weight: bold; 
-            font-size: 11px; 
-            color: #1e293b; 
-            margin-bottom: 4px;
-            border: 2px solid ${color};
-            white-space: nowrap;
-          ">
-            ${iconContent} ${unit.unit_name}
-          </div>
-          <div style="
-            width: 14px; height: 14px;
-            background: ${color};
-            border: 2px solid white;
+            width: 20px; height: 20px;
+            background: white;
+            border: 4px solid ${color};
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          "></div>
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+            transition: all 0.2s ease-in-out;
+          ">
+          </div>
         </div>
       `,
-      iconSize: [0, 0],
+      iconSize: [20, 20],
       iconAnchor: [0, 0],
-      popupAnchor: [0, -40],
+      popupAnchor: [0, -10],
     });
   };
 
@@ -414,6 +419,7 @@ export default function LiveMap({
 
         <BoundaryLayer boundaries={boundaries} />
         <AutoZoomToLatestIncident incidents={incidents} enabled={autoZoomOnNewIncident} />
+        <FlyToSelectedIncident selectedIncident={selectedIncident} />
 
         {/* LGU Proximity Zones — visible in both markers and lgu_zones modes when markerColorMode is lgu */}
         {(mode === 'lgu_zones' || (mode === 'markers' && markerColorMode === 'lgu')) && (

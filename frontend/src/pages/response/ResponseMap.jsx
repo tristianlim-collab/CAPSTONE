@@ -109,7 +109,11 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
 
     if (previousLatestId.current !== latestId) {
-      map.flyTo([lat, lng], 16, { duration: 0.8 });
+      map.flyTo([lat, lng], 16, { 
+        duration: 2.0, 
+        easeLinearity: 0.25,
+        noMoveStart: true 
+      });
       previousLatestId.current = latestId;
       toast('🚨 New incident! Auto-zooming to location...', {
         icon: '📍',
@@ -119,6 +123,19 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
   }, [enabled, incidents, map]);
 
+  return null;
+}
+
+function FlyToSelectedIncident({ selectedIncident }) {
+  const map = useMap();
+  useEffect(() => {
+    if (selectedIncident?.latitude && selectedIncident?.longitude) {
+      map.flyTo([Number(selectedIncident.latitude), Number(selectedIncident.longitude)], 17, {
+        duration: 1.5,
+        easeLinearity: 0.25,
+      });
+    }
+  }, [selectedIncident, map]);
   return null;
 }
 
@@ -164,6 +181,7 @@ const ResponseMap = () => {
   // Dispatch route state: { incident_id, coords, unit_name, duration, distance, unit_lat, unit_lng, incident_lat, incident_lng }
   const [activeRoute, setActiveRoute] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
   const [updatingId, setUpdatingId] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -681,6 +699,7 @@ const ResponseMap = () => {
               />
               <AutoZoomToLatestIncident incidents={incidents} enabled={!activeRoute} />
               {activeRoute && <FlyToRouteBounds routeCoords={activeRoute.coords} />}
+              <FlyToSelectedIncident selectedIncident={incidents.find(i => i.incident_id === selectedIncidentId)} />
 
               {/* Dispatch Route Polyline */}
               {activeRoute && activeRoute.coords && (
@@ -702,6 +721,9 @@ const ResponseMap = () => {
                 key={incident.incident_id}
                 position={[incident.latitude, incident.longitude]}
                 icon={ICONS[incident.status] || ICONS.REPORTED}
+                eventHandlers={{
+                  click: () => setSelectedIncidentId(incident.incident_id)
+                }}
               >
                 <Popup className="incident-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
                   <div className="p-4 min-w-[240px] max-w-[300px] bg-white max-h-[500px] overflow-y-auto">
