@@ -163,4 +163,13 @@ export const systemConfigAPI = {
   update: (data) => api.post('/config', data)
 };
 
+// Notification endpoints
+export const notificationAPI = {
+  getAll: () => api.get('/notifications'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  send: (data) => api.post('/notifications/send', data),
+  broadcast: (data) => api.post('/notifications/broadcast', data),
+};
+
 export default api;

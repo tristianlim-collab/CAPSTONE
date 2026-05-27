@@ -18,7 +18,6 @@ const TrendForecast = ({ days = 7, onError = null }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedModel, setSelectedModel] = useState('prophet');
-  const [models, setModels] = useState([]);
   const [champion, setChampion] = useState('Prophet');
 
   // Format chart data
@@ -55,12 +54,10 @@ const TrendForecast = ({ days = 7, onError = null }) => {
 
       const forecastData = await forecastRes.json();
 
-      // Get model comparison
       const comparisonRes = await fetch('/api/analytics/models/comparison', { headers });
       const comparisonData = await comparisonRes.json();
 
-      if (comparisonData?.data?.models) {
-        setModels(comparisonData.data.models);
+      if (comparisonData?.data) {
         setChampion(comparisonData.data.champion || 'Prophet');
       }
 
@@ -157,11 +154,6 @@ const TrendForecast = ({ days = 7, onError = null }) => {
             </h3>
             <p className="text-sm text-slate-500 mt-1">
               Predictive analytics using {selectedModel.toUpperCase()} algorithm
-              {champion && selectedModel === champion.toLowerCase() && (
-                <span className="ml-2 inline-block px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                  ⭐ Champion Model
-                </span>
-              )}
             </p>
           </div>
 
@@ -250,46 +242,9 @@ const TrendForecast = ({ days = 7, onError = null }) => {
         </div>
       )}
 
-      {/* Model Details */}
-      {models.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <h4 className="font-bold text-slate-800 mb-4">Model Comparison</h4>
-          <div className="space-y-3">
-            {models.map((model, idx) => (
-              <div
-                key={idx}
-                className={`p-4 rounded-xl border-2 transition-colors ${
-                  champion === model.name
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-800">{model.name}</p>
-                    {model.aic && (
-                      <p className="text-xs text-slate-600 mt-1">
-                        AIC: {model.aic.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-bold rounded-lg px-3 py-1 ${
-                      champion === model.name
-                        ? 'bg-green-200 text-green-800'
-                        : 'bg-slate-200 text-slate-700'
-                    }`}>
-                      {champion === model.name ? '🏆 Champion' : 'Available'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default TrendForecast;
+

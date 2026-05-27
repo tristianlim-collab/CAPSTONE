@@ -117,7 +117,7 @@ export default function ReporterHomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.slate50} />
-      
+
       {/* Light clean header background */}
       <View style={[styles.headerBg, { paddingTop: insets.top }]} />
 

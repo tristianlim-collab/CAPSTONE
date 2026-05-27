@@ -26,13 +26,14 @@ const SEVERITY_OPTIONS = [
  * @param {boolean} showStatusFilter - Whether to show the status filter (default: true)
  * @param {boolean} compact - Whether to use compact layout (default: false)
  */
-export default function IncidentSearch({ onFiltersChange, incidentTypes = [], showStatusFilter = true, compact = false }) {
+export default function IncidentSearch({ onFiltersChange, incidentTypes = [], responseUnits = [], showStatusFilter = true, compact = false }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [severity, setSeverity] = useState('');
   const [typeId, setTypeId] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [unitId, setUnitId] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const debounceRef = useRef(null);
 
@@ -44,6 +45,7 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], sh
       type_id: overrides.type_id ?? typeId,
       from_date: overrides.from_date ?? fromDate,
       to_date: overrides.to_date ?? toDate,
+      unit_id: overrides.unit_id ?? unitId,
     };
     // Remove empty values
     const cleaned = Object.fromEntries(
@@ -67,8 +69,9 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], sh
   const handleTypeChange = (val) => { setTypeId(val); emitFilters({ type_id: val }); };
   const handleFromDate = (val) => { setFromDate(val); emitFilters({ from_date: val }); };
   const handleToDate = (val) => { setToDate(val); emitFilters({ to_date: val }); };
+  const handleUnitChange = (val) => { setUnitId(val); emitFilters({ unit_id: val }); };
 
-  const hasActiveFilters = status || severity || typeId || fromDate || toDate || search;
+  const hasActiveFilters = status || severity || typeId || fromDate || toDate || search || unitId;
 
   const handleClearAll = () => {
     setSearch('');
@@ -77,6 +80,7 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], sh
     setTypeId('');
     setFromDate('');
     setToDate('');
+    setUnitId('');
     onFiltersChange?.({});
   };
 
@@ -171,6 +175,24 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], sh
                 <option value="">All Types</option>
                 {incidentTypes.map(type => (
                   <option key={type.type_id} value={type.type_id}>{type.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Unit Filter */}
+          {responseUnits.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Unit</label>
+              <select
+                id="incident-unit-filter"
+                value={unitId}
+                onChange={(e) => handleUnitChange(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+              >
+                <option value="">All Units</option>
+                {responseUnits.map(unit => (
+                  <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
                 ))}
               </select>
             </div>

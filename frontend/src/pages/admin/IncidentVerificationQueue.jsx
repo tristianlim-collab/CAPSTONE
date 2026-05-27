@@ -49,6 +49,8 @@ export default function IncidentVerificationQueue() {
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
   const [searchFilters, setSearchFilters] = useState({});
+  const [responseUnits, setResponseUnits] = useState([]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState([]);
 
   const fetchIncidents = useCallback(async (filters = {}) => {
     try {
@@ -70,6 +72,13 @@ export default function IncidentVerificationQueue() {
 
   useEffect(() => {
     fetchIncidents();
+    const fetchUnits = async () => {
+      try {
+        const res = await api.get('/response-units');
+        setResponseUnits(res.data?.data || res.data || []);
+      } catch (err) { console.error('Failed to fetch units:', err); }
+    };
+    fetchUnits();
   }, [fetchIncidents]);
 
   const handleFiltersChange = useCallback((filters) => {
@@ -113,21 +122,22 @@ export default function IncidentVerificationQueue() {
       map_pin_address: incident.map_pin_address
     });
     setEditMode(false);
+    setSelectedUnitIds([]); // Reset manual selection on new incident click
 
     // Fetch complete incident details including evidence and reporter
     try {
       const res = await api.get(`/incidents/${incident.incident_id}`);
-      if (res.data?.data) {
+      if (res.data?.data || res.data) {
+        const fullData = res.data?.data || res.data;
         setSelectedIncident(prev => ({
           ...prev,
-          ...res.data.data,
-          evidence: res.data.data.evidence || [],
-          reporter: res.data.data.reporter || incident.reporter
+          ...fullData,
+          evidence: fullData.evidence || [],
+          reporter: fullData.reporter || incident.reporter
         }));
       }
     } catch (err) {
       console.error('Failed to fetch incident details:', err);
-      // Keep the incident even if full details failed
     } finally {
       setLoadingDetails(false);
     }
@@ -137,7 +147,11 @@ export default function IncidentVerificationQueue() {
     if (!selectedIncident) return;
     setSubmitting(true);
     try {
-      const payload = { action: 'APPROVE', edited_data: editMode ? editData : undefined };
+      const payload = { 
+        action: 'APPROVE', 
+        edited_data: editMode ? editData : undefined,
+        manual_unit_ids: selectedUnitIds.length > 0 ? selectedUnitIds : undefined
+      };
       const res = await api.post(`/incidents/${selectedIncident.incident_id}/verify`, payload);
       toast.success('Incident approved and dispatched!');
       
@@ -232,6 +246,7 @@ export default function IncidentVerificationQueue() {
           <IncidentSearch
             onFiltersChange={handleFiltersChange}
             incidentTypes={incidentTypes}
+            responseUnits={responseUnits}
             showStatusFilter={false}
             compact
           />
@@ -418,6 +433,37 @@ export default function IncidentVerificationQueue() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Task K: Manual Unit Assignment Dropdown */}
+                  {canVerify && !editMode && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Manual Unit Assignment (Optional)</label>
+                      <p className="text-[10px] text-slate-400 mb-2">If left empty, the system will auto-assign using Smart Proximity.</p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
+                        {responseUnits.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No units available</p>
+                        ) : (
+                          responseUnits.map(unit => (
+                            <label key={unit.unit_id} className="flex items-center gap-2 p-1.5 hover:bg-white rounded transition-colors cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedUnitIds.includes(unit.unit_id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) setSelectedUnitIds([...selectedUnitIds, unit.unit_id]);
+                                  else setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.unit_id));
+                                }}
+                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                              />
+                              <div className="flex-1">
+                                <p className="text-xs font-bold text-slate-700 group-hover:text-indigo-600">{unit.unit_name}</p>
+                                <p className="text-[10px] text-slate-400 uppercase">{unit.unit_type} • {unit.availability_status}</p>
+                              </div>
+                            </label>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

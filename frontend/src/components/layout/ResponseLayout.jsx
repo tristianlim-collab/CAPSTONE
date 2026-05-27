@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  LayoutDashboard, Map as MapIcon, Bell, 
+import {
+  LayoutDashboard, Map as MapIcon, Bell,
   LogOut, Shield,
   Menu, X, Search
 } from 'lucide-react';
+import NotificationDropdown from '../notifications/NotificationDropdown';
+import { useNotifications } from '../../context/NotificationContext';
 
 const ResponseLayout = () => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,17 +33,16 @@ const ResponseLayout = () => {
     <div className="flex h-screen bg-[#F8FAFC] text-slate-800 font-sans overflow-hidden">
       {/* Sidebar Overlay for mobile */}
       {!sidebarOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-slate-900/50 z-40 backdrop-blur-sm"
           onClick={() => setSidebarOpen(true)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
-        className={`${
-          sidebarOpen ? '-translate-x-full lg:translate-x-0 w-0 lg:w-72' : 'translate-x-0 w-72'
-        } fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out shadow-sm`}
+      <aside
+        className={`${sidebarOpen ? '-translate-x-full lg:translate-x-0 w-0 lg:w-72' : 'translate-x-0 w-72'
+          } fixed lg:static inset-y-0 left-0 z-50 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ease-in-out shadow-sm`}
       >
         {/* Logo Area */}
         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
@@ -53,7 +55,7 @@ const ResponseLayout = () => {
               <p className="text-[11px] font-medium text-emerald-600 uppercase tracking-wider">Response Unit</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50"
           >
@@ -71,22 +73,23 @@ const ResponseLayout = () => {
                 <NavLink
                   key={item.name}
                   to={item.path}
-                  className={`group relative flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 ${
-                    isActive 
-                      ? 'bg-emerald-50 text-emerald-700' 
+                  className={`group relative flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 ${isActive
+                      ? 'bg-emerald-50 text-emerald-700'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   <div className={`${isActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'} transition-colors`}>
                     {item.icon}
                   </div>
                   <span className={`text-sm flex-1 font-medium ${isActive ? 'font-semibold' : ''}`}>{item.name}</span>
-                  
+
                   {/* Notification badge */}
-                  {item.name === 'Notifications' && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 flex items-center justify-center h-5 rounded-full shadow-sm">2</span>
+                  {item.name === 'Notifications' && unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 flex items-center justify-center h-5 rounded-full shadow-sm">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
                   )}
-                  
+
                   {isActive && (
                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm" />
                   )}
@@ -109,7 +112,7 @@ const ResponseLayout = () => {
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors duration-200"
           >
@@ -124,7 +127,7 @@ const ResponseLayout = () => {
         {/* Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 z-10 sticky top-0">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-2 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
             >
@@ -140,18 +143,15 @@ const ResponseLayout = () => {
             {/* Search (Mock UI) */}
             <div className="hidden md:flex relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search incidents..." 
+              <input
+                type="text"
+                placeholder="Search incidents..."
                 className="pl-10 pr-4 py-2 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-100 border-transparent focus:border-emerald-300 rounded-lg w-64"
               />
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white"></span>
-            </button>
+            <NotificationDropdown />
           </div>
         </header>
 

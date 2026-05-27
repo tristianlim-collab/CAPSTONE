@@ -5,10 +5,68 @@ import { logAuditEvent } from "./auditController.js";
 
 
 
-export const listNotifications = async (_req, res) => {
+export const listNotifications = async (req, res) => {
   try {
-    const data = await prisma.notification.findMany({ orderBy: { sent_at: "desc" } });
+    const { role, unit_id } = req.user;
+    const where = {};
+    
+    // If not admin, filter by unit_id or notifications specifically for this user
+    // (In current schema, notifications are mostly unit-based for responders)
+    if (role === 'RESPONSE_UNIT' && unit_id) {
+      where.unit_id = unit_id;
+    } else if (role === 'REPORTER') {
+      // Reporters might not have many dashboard notifications in this schema yet, 
+      // but we could filter by incident reporter.
+      where.incident = { reported_by: req.user.id };
+    }
+
+    const data = await prisma.notification.findMany({ 
+      where,
+      include: {
+        incident: {
+          select: {
+            incident_code: true,
+            status: true,
+            severity: true
+          }
+        }
+      },
+      orderBy: { sent_at: "desc" },
+      take: 50 // Limit to last 50
+    });
     return res.status(200).json(success({ data, message: "Notifications fetched" }));
+  } catch (err) {
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+export const markAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.update({
+      where: { notification_id: id },
+      data: { delivery_status: "READ" }
+    });
+    return res.status(200).json(success({ message: "Notification marked as read" }));
+  } catch (err) {
+    return res.status(500).json(error({ message: err.message }));
+  }
+};
+
+export const markAllAsRead = async (req, res) => {
+  try {
+    const { role, unit_id } = req.user;
+    const where = { delivery_status: { not: "READ" } };
+
+    if (role === 'RESPONSE_UNIT' && unit_id) {
+      where.unit_id = unit_id;
+    }
+
+    await prisma.notification.updateMany({
+      where,
+      data: { delivery_status: "READ" }
+    });
+    return res.status(200).json(success({ message: "All notifications marked as read" }));
   } catch (err) {
     return res.status(500).json(error({ message: err.message }));
   }

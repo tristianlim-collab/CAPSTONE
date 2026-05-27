@@ -6,6 +6,7 @@ import {
   Activity, BarChart3, Bell, Settings, LogOut, Search,
   Menu, X, FileText, Truck, Archive, Megaphone, ScrollText, ClipboardList
 } from 'lucide-react';
+import NotificationDropdown from '../notifications/NotificationDropdown';
 
 const AdminLayout = () => {
   const { user, logout } = useAuth();
@@ -135,10 +136,7 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-3 sm:gap-5">
             {/* Notifications */}
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white"></span>
-            </button>
+            <NotificationDropdown />
           </div>
         </header>
 

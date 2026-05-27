@@ -38,7 +38,7 @@ export const createIncident = async (req, res) => {
     const detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
 
     // Generate unique code (e.g. INC-Date-Rand)
-    const incident_code = `INC-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const incident_code = `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const incidentType = await prisma.incidentType.findUnique({ where: { type_id: incident_type_id } });
 
@@ -89,13 +89,19 @@ export const getIncidents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const { status, severity, barangay_id, type_id, search, from_date, to_date } = req.query;
+    const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id } = req.query;
 
     const where = {};
     if (status) where.status = status;
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
+
+    if (unit_id) {
+      where.assignments = {
+        some: { unit_id }
+      };
+    }
 
     // Date range filter
     if (from_date || to_date) {
@@ -118,11 +124,17 @@ export const getIncidents = async (req, res) => {
       // Reporters only see their own incidents
       where.reported_by = req.user.id;
     } else if (req.user.role === 'RESPONSE_UNIT') {
-      // Response units ONLY see incidents that are VERIFIED or RESPONDING or RESOLVED
+      // Task K scoping: Responders ONLY see incidents assigned to their unit
+      if (req.user.unit_id) {
+        where.assignments = {
+          some: { unit_id: req.user.unit_id }
+        };
+      }
+      
       // They should NOT see REPORTED (unverified) incidents
       if (!status) {
         where.status = {
-          in: ['VERIFIED', 'RESPONDING', 'RESOLVED', 'CLOSED']
+          in: ['VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED']
         };
       }
     }
@@ -203,7 +215,7 @@ export const getIncidentById = async (req, res) => {
 export const updateIncidentStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
-    
+
     const incident = await prisma.incident.update({
       where: { incident_id: req.params.id },
       data: { status },
@@ -345,7 +357,7 @@ export const requestBackup = async (req, res) => {
  */
 export const verifyIncident = async (req, res) => {
   try {
-    const { action, message, edited_data } = req.body;
+    const { action, message, edited_data, manual_unit_ids } = req.body;
     const incident_id = req.params.id;
 
     // Verify admin role
@@ -397,27 +409,36 @@ export const verifyIncident = async (req, res) => {
         CRITICAL: 5,
         HIGH: 3,
         MEDIUM: 2,
-        LOW: 1
       };
-      const unitsToAssign = severityLimitMap[incident.severity] || 1;
+      const unitsToAssign = severityLimitMap[edited_data?.severity || incident.severity] || 1;
 
-      // Use smart assignment to find best-matching units
-      let assignedUnits = await geoService.findSmartResponseUnits(
-        incidentLat,
-        incidentLng,
-        targetUnitType,
-        incidentBarangayId,
-        unitsToAssign
-      );
-
-      // Fallback: If no units of the target type, try finding ANY available unit
-      if (!assignedUnits || assignedUnits.length === 0) {
-        // Find nearest units of any type as fallback
-        assignedUnits = await geoService.findNearestUnits(
+      // Task K: Allow manual assignment via manual_unit_ids dropdown
+      let assignedUnits = [];
+      
+      if (manual_unit_ids && Array.isArray(manual_unit_ids) && manual_unit_ids.length > 0) {
+        // Fetch manual units from database
+        assignedUnits = await prisma.responseUnit.findMany({
+          where: { unit_id: { in: manual_unit_ids } }
+        });
+      } else {
+        // Fallback to smart assignment if no manual units provided
+        assignedUnits = await geoService.findSmartResponseUnits(
           incidentLat,
           incidentLng,
+          targetUnitType,
+          incidentBarangayId,
           unitsToAssign
         );
+
+        // Fallback: If no units of the target type, try finding ANY available unit
+        if (!assignedUnits || assignedUnits.length === 0) {
+          // Find nearest units of any type as fallback
+          assignedUnits = await geoService.findNearestUnits(
+            incidentLat,
+            incidentLng,
+            unitsToAssign
+          );
+        }
       }
 
       const assignments = [];
