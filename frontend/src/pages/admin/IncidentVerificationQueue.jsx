@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, XCircle, AlertTriangle, MessageSquare, Edit2, MapPin,
-  Clock, User, FileText, Loader2, X, Send, Flame, Stethoscope, Car, ShieldAlert, Filter
+  Clock, User, FileText, Loader2, X, Send, Flame, Stethoscope, Car, ShieldAlert, Filter,
+  ExternalLink, ChevronRight
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import IncidentSearch from '../../components/incidents/IncidentSearch';
+import { IncidentListSkeleton, IncidentDetailSkeleton } from '../../components/incidents/IncidentSkeletons';
 
 const INCIDENT_TYPE_ICONS = {
   FIRE: Flame, MEDICAL_EMERGENCY: Stethoscope, ACCIDENT: Car,
@@ -26,14 +29,23 @@ const STATUS_TABS = [
 ];
 
 const STATUS_COLORS = {
-  REPORTED: 'bg-amber-100 text-amber-700 border-amber-200',
-  VERIFIED: 'bg-blue-100 text-blue-700 border-blue-200',
-  DISPATCHED: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  RESPONDING: 'bg-purple-100 text-purple-700 border-purple-200',
-  RESOLVED: 'bg-green-100 text-green-700 border-green-200',
-  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
-  FALSE_ALARM: 'bg-red-100 text-red-700 border-red-200',
+  REPORTED: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+  VERIFIED: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+  DISPATCHED: 'bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20',
+  RESPONDING: 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20',
+  RESOLVED: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
+  CLOSED: 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-500/20',
+  FALSE_ALARM: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20',
 };
+
+// Map flyTo helper
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
+}
 
 export default function IncidentVerificationQueue() {
   const { on, connected } = useSocketContext();
@@ -51,6 +63,9 @@ export default function IncidentVerificationQueue() {
   const [searchFilters, setSearchFilters] = useState({});
   const [responseUnits, setResponseUnits] = useState([]);
   const [selectedUnitIds, setSelectedUnitIds] = useState([]);
+  
+  // Track new incident IDs for pulse effect
+  const [newIncidentIds, setNewIncidentIds] = useState(new Set());
 
   const fetchIncidents = useCallback(async (filters = {}) => {
     try {
@@ -66,7 +81,7 @@ export default function IncidentVerificationQueue() {
       console.error('Failed to fetch data:', err);
       toast.error('Failed to load incidents');
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500); // Add slight delay for smoother transition
     }
   }, []);
 
@@ -88,20 +103,28 @@ export default function IncidentVerificationQueue() {
 
   useEffect(() => {
     const unsub1 = on('incident_awaiting_verification', (data) => {
+      const inc = data.incident || data;
       setIncidents(prev => {
-        // Deduplication: don't add if already exists
-        if (prev.find(i => i.incident_id === data.incident.incident_id)) return prev;
-        return [data.incident || data, ...prev];
+        if (prev.find(i => i.incident_id === inc.incident_id)) return prev;
+        return [inc, ...prev];
       });
+      // Add to new incident pulse set
+      setNewIncidentIds(prev => new Set(prev).add(inc.incident_id));
+      // Remove pulse after 10 seconds
+      setTimeout(() => {
+        setNewIncidentIds(prev => {
+          const next = new Set(prev);
+          next.delete(inc.incident_id);
+          return next;
+        });
+      }, 10000);
     });
     const unsub2 = on('incident_verified', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...i, status: 'RESPONDING', assignments: data.assignments } : i));
-      // Update selection if the verified incident is currently selected
       setSelectedIncident(prev => prev?.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...prev, status: 'RESPONDING', assignments: data.assignments } : prev);
     });
     const unsub3 = on('incident_rejected', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: 'FALSE_ALARM' } : i));
-      // Clear selection if the rejected incident was selected
       setSelectedIncident(prev => prev?.incident_id === data.incident_id ? null : prev);
     });
     const unsub4 = on('incident_status_updated', (data) => {
@@ -122,9 +145,8 @@ export default function IncidentVerificationQueue() {
       map_pin_address: incident.map_pin_address
     });
     setEditMode(false);
-    setSelectedUnitIds([]); // Reset manual selection on new incident click
+    setSelectedUnitIds([]);
 
-    // Fetch complete incident details including evidence and reporter
     try {
       const res = await api.get(`/incidents/${incident.incident_id}`);
       if (res.data?.data || res.data) {
@@ -153,7 +175,7 @@ export default function IncidentVerificationQueue() {
         manual_unit_ids: selectedUnitIds.length > 0 ? selectedUnitIds : undefined
       };
       const res = await api.post(`/incidents/${selectedIncident.incident_id}/verify`, payload);
-      toast.success('Incident approved and dispatched!');
+      toast.success('Incident approved and dispatched!', { duration: 4000, icon: '🚀' });
       
       const updatedIncident = res.data?.incident || { ...selectedIncident, status: 'RESPONDING' };
       const newAssignments = res.data?.assignments || [];
@@ -233,319 +255,431 @@ export default function IncidentVerificationQueue() {
   const canVerify = selectedIncident?.status === 'REPORTED';
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Incident Reports</h1>
-          <p className="text-slate-600">View all incident reports and manage verification</p>
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Incident Queue</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Verify incoming reports and dispatch units in real-time.</p>
         </div>
-
-        {/* Search & Filter Bar */}
-        <div className="mb-4">
-          <IncidentSearch
-            onFiltersChange={handleFiltersChange}
-            incidentTypes={incidentTypes}
-            responseUnits={responseUnits}
-            showStatusFilter={false}
-            compact
-          />
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
+          {connected ? 'Live Feed Active' : 'Disconnected from Server'}
         </div>
+      </motion.div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {STATUS_TABS.map(tab => {
+      {/* Search & Tabs */}
+      <div className="space-y-6">
+        <IncidentSearch
+          onFiltersChange={handleFiltersChange}
+          incidentTypes={incidentTypes}
+          responseUnits={responseUnits}
+          showStatusFilter={false}
+          compact
+        />
+
+        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+          {STATUS_TABS.map((tab, idx) => {
             const count = tab.key === 'ALL' ? incidents.length : incidents.filter(i => i.status === tab.key).length;
+            const isActive = activeTab === tab.key;
             return (
-              <button
+              <motion.button
                 key={tab.key}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeTab === tab.key
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                }`}
+                className={`flex-none px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all
+                  ${isActive
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800'
+                  }`}
               >
-                {tab.label} <span className="ml-1 opacity-75">({count})</span>
-              </button>
+                {tab.label} <span className={`ml-1.5 opacity-60 ${isActive ? 'text-white' : ''}`}>[{count}]</span>
+              </motion.button>
             );
           })}
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="grid grid-cols-3 gap-8">
-          {/* Incidents List */}
-          <div className="col-span-2">
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        {/* Incidents List */}
+        <div className="xl:col-span-7 space-y-4">
+          <AnimatePresence mode="popLayout">
             {loading ? (
-              <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={32} /></div>
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <IncidentListSkeleton count={4} />
+              </motion.div>
             ) : filteredIncidents.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-                <Filter className="mx-auto text-slate-300 mb-4" size={48} />
-                <p className="text-slate-600 font-semibold">No incidents found for this filter</p>
-              </div>
+              <motion.div 
+                key="empty"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-24 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm"
+              >
+                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Filter className="text-slate-300 dark:text-slate-600" size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">No active reports found</h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Try adjusting your filters or status tabs.</p>
+              </motion.div>
             ) : (
-              <div className="space-y-4">
-                {filteredIncidents.map((incident) => (
-                  <div
+              filteredIncidents.map((incident) => {
+                const isSelected = selectedIncident?.incident_id === incident.incident_id;
+                const isNew = newIncidentIds.has(incident.incident_id);
+                return (
+                  <motion.div
+                    layout
                     key={incident.incident_id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => handleSelectIncident(incident)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedIncident?.incident_id === incident.incident_id
-                        ? 'bg-blue-50 border-blue-300 shadow-md'
-                        : 'bg-white border-slate-200 hover:border-blue-200'
-                    }`}
+                    className={`group p-5 rounded-3xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden
+                      ${isSelected
+                        ? 'bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-500 shadow-xl shadow-indigo-500/10'
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-md'
+                      } ${isNew ? 'pulse-primary ring-2 ring-orange-500 dark:ring-orange-600 border-transparent' : ''}`}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: getTypeColor(incident.incident_type_id) }}>
-                        {React.createElement(getTypeIcon(incident.incident_type_id), { size: 24 })}
+                    {isNew && (
+                      <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl shadow-sm">
+                        New Alert
+                      </div>
+                    )}
+                    <div className="flex items-start gap-5">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: getTypeColor(incident.incident_type_id) }}>
+                        {React.createElement(getTypeIcon(incident.incident_type_id), { size: 28 })}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-bold text-slate-900 truncate">{incident.incident_code}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold border ${getStatusBadge(incident.status)}`}>{incident.status}</span>
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${getSeverityColor(incident.severity)}`}>{incident.severity}</span>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <h3 className="font-black text-slate-900 dark:text-white truncate">#{incident.incident_code}</h3>
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-transparent ${getStatusBadge(incident.status)}`}>
+                              {incident.status.replace('_', ' ')}
+                            </span>
                           </div>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSeverityColor(incident.severity)} shadow-sm`}>
+                            {incident.severity}
+                          </span>
                         </div>
-                        <p className="text-sm text-slate-600 mb-2">{incident.description?.substring(0, 100)}</p>
-                        <div className="flex items-center gap-3 text-xs text-slate-500">
-                          <span className="flex items-center gap-1"><Clock size={14} /> {getTimeAgo(incident.reported_at)}</span>
-                          <span className="flex items-center gap-1"><User size={14} /> {incident.reporter?.name || 'Unknown'}</span>
-                          <span className="flex items-center gap-1"><MapPin size={14} /> {incident.map_pin_address?.substring(0, 40)}</span>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                          {incident.description}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                          <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-400" /> {getTimeAgo(incident.reported_at)}</span>
+                          <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || 'Local Resident'}</span>
+                          <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.barangay?.name || 'Area Known'}</span>
                         </div>
                       </div>
+                      <div className={`self-center ${isSelected ? 'text-indigo-500' : 'text-slate-300'} transition-all group-hover:translate-x-1`}>
+                        <ChevronRight size={24} />
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Details Panel */}
+        <div className="xl:col-span-5 sticky top-28">
+          <AnimatePresence mode="wait">
+            {!selectedIncident ? (
+              <motion.div 
+                key="placeholder"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center"
+              >
+                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300 dark:text-slate-600">
+                  <ShieldAlert size={32} />
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Select an incident to view full intelligence data</p>
+              </motion.div>
+            ) : loadingDetails ? (
+              <motion.div key="details-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <IncidentDetailSkeleton />
+              </motion.div>
+            ) : (
+              <motion.div
+                key={selectedIncident.incident_id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl shadow-indigo-500/10 overflow-hidden flex flex-col"
+              >
+                {/* Panel Header */}
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                      <ShieldAlert size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black tracking-tight">#{selectedIncident.incident_code}</h2>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Incident Investigation</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Details Panel */}
-          <div>
-            {selectedIncident ? (
-              <div className="bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden sticky top-8">
-                <div className="bg-slate-50 p-4 border-b border-slate-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="font-bold text-slate-900">{selectedIncident.incident_code}</h2>
-                    <button onClick={() => setSelectedIncident(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold border ${getStatusBadge(selectedIncident.status)}`}>{selectedIncident.status}</span>
-                    <span className="text-xs text-slate-500">{getTimeAgo(selectedIncident.reported_at)}</span>
-                  </div>
+                  <button onClick={() => setSelectedIncident(null)} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white dark:hover:bg-slate-700 shadow-sm transition-all"><X size={20} /></button>
                 </div>
 
-                <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                  {loadingDetails && (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="animate-spin text-blue-600" size={32} />
+                {/* Panel Body */}
+                <div className="p-8 space-y-8 max-h-[calc(100vh-28rem)] overflow-y-auto hide-scrollbar">
+                  {/* Top Info Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Incident Type</p>
+                      {editMode ? (
+                        <select value={editData.incident_type_id} onChange={(e) => setEditData({ ...editData, incident_type_id: e.target.value })} className="w-full bg-white dark:bg-slate-900 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500/20">
+                          {incidentTypes.map((type) => (<option key={type.type_id} value={type.type_id}>{type.name}</option>))}
+                        </select>
+                      ) : (
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{incidentTypes.find(t => t.type_id === selectedIncident.incident_type_id)?.name}</p>
+                      )}
                     </div>
-                  )}
-                  {!loadingDetails && (
-                    <>
-                  {/* Type */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 uppercase">Type</label>
-                    {editMode ? (
-                      <select value={editData.incident_type_id} onChange={(e) => setEditData({ ...editData, incident_type_id: e.target.value })} className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                        {incidentTypes.map((type) => (<option key={type.type_id} value={type.type_id}>{type.name}</option>))}
-                      </select>
-                    ) : (
-                      <p className="mt-1 font-semibold text-slate-800">{incidentTypes.find(t => t.type_id === selectedIncident.incident_type_id)?.name}</p>
-                    )}
-                  </div>
-
-                  {/* Severity */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 uppercase">Severity</label>
-                    {editMode ? (
-                      <div className="flex gap-2 mt-1">
-                        {['LOW', 'HIGH', 'CRITICAL'].map((level) => (
-                          <button key={level} onClick={() => setEditData({ ...editData, severity: level })}
-                            className={`px-3 py-1 rounded text-xs font-bold transition-all ${editData.severity === level ? (level === 'LOW' ? 'bg-green-500 text-white' : level === 'HIGH' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white') : 'bg-slate-200 text-slate-700'}`}
-                          >{level}</button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className={`mt-1 font-semibold px-2 py-1 rounded inline-block text-xs ${getSeverityColor(selectedIncident.severity)}`}>{selectedIncident.severity}</p>
-                    )}
+                    <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Severity Level</p>
+                      {editMode ? (
+                        <div className="flex gap-1.5">
+                          {['LOW', 'HIGH', 'CRITICAL'].map((level) => (
+                            <button key={level} onClick={() => setEditData({ ...editData, severity: level })}
+                              className={`flex-1 py-1 rounded-lg text-[10px] font-black tracking-tighter transition-all ${editData.severity === level ? 'bg-slate-900 text-white' : 'bg-white text-slate-400 border border-slate-200'}`}
+                            >{level}</button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">{selectedIncident.severity}</p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Description */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 uppercase">Description</label>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={14} className="text-indigo-400" /> Intelligence Brief
+                      </p>
+                    </div>
                     {editMode ? (
-                      <textarea value={editData.description} onChange={(e) => setEditData({ ...editData, description: e.target.value })} maxLength={500} rows="3" className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none" />
+                      <textarea value={editData.description} onChange={(e) => setEditData({ ...editData, description: e.target.value })} maxLength={500} rows="4" className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none" />
                     ) : (
-                      <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap">{selectedIncident.description}</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-indigo-50/20 dark:bg-indigo-500/5 border border-indigo-100/50 dark:border-indigo-500/10 p-5 rounded-3xl italic">
+                        "{selectedIncident.description}"
+                      </p>
                     )}
                   </div>
 
-                  {/* Photo Evidence */}
-                  {selectedIncident.evidence && selectedIncident.evidence.length > 0 && (
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 uppercase">Photo Evidence ({selectedIncident.evidence.length})</label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {selectedIncident.evidence.map((photo, idx) => (
-                          <div key={idx} onClick={() => setFullscreenPhoto(photo.file_path)} className="aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-50 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">
-                            <img src={photo.file_path} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
-                          </div>
-                        ))}
+                  {/* Maps & Evidence Grid */}
+                  <div className="space-y-6">
+                    {/* Map */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <MapPin size={14} className="text-rose-400" /> Precise Location
+                      </p>
+                      <div className="relative group overflow-hidden rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 h-48 shadow-lg">
+                        {selectedIncident.latitude && (
+                          <MapContainer center={[selectedIncident.latitude, selectedIncident.longitude]} zoom={16} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <Marker position={[selectedIncident.latitude, selectedIncident.longitude]} />
+                            <ChangeView center={[selectedIncident.latitude, selectedIncident.longitude]} zoom={16} />
+                          </MapContainer>
+                        )}
+                        <div className="absolute bottom-4 left-4 z-[1000] right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl">
+                           <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 line-clamp-1">{selectedIncident.map_pin_address}</p>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Location */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 uppercase">Location</label>
-                    <p className="mt-1 text-sm text-slate-700 flex items-center gap-1"><MapPin size={14} /><span>{selectedIncident.map_pin_address || 'Unknown'}</span></p>
-                    {selectedIncident.latitude && selectedIncident.longitude && (
-                      <div className="mt-2 h-32 rounded-lg border border-slate-200 overflow-hidden">
-                        <MapContainer center={[selectedIncident.latitude, selectedIncident.longitude]} zoom={14} style={{ height: '100%', width: '100%' }}>
-                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                          <Marker position={[selectedIncident.latitude, selectedIncident.longitude]} />
-                        </MapContainer>
+                    {/* Evidence Photos */}
+                    {selectedIncident.evidence?.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                          <ExternalLink size={14} className="text-emerald-400" /> Photographic Evidence
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedIncident.evidence.map((photo, idx) => (
+                            <motion.div 
+                              key={idx} 
+                              whileHover={{ scale: 1.02 }}
+                              onClick={() => setFullscreenPhoto(photo.file_path)} 
+                              className="aspect-[4/3] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm group"
+                            >
+                              <img src={photo.file_path} alt="Evidence" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Reporter */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 uppercase">Reporter</label>
-                    <p className="mt-1 text-sm text-slate-700">{selectedIncident.reporter?.name}</p>
-                    {selectedIncident.reporter?.contact_number && (<p className="text-xs text-slate-500">{selectedIncident.reporter.contact_number}</p>)}
-                  </div>
-
-                  {/* Assigned Units */}
-                  {selectedIncident.assignments && selectedIncident.assignments.length > 0 && (
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 uppercase">Assigned Unit(s)</label>
-                      <div className="mt-2 space-y-2">
-                        {selectedIncident.assignments.map((assignment, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                              <Car size={16} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-indigo-900">{assignment.unit?.unit_name || 'Unknown Unit'}</p>
-                              <p className="text-xs font-medium text-indigo-700 capitalize">Status: {assignment.status.toLowerCase()}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Task K: Manual Unit Assignment Dropdown */}
+                  {/* Assignment Controls if canVerify */}
                   {canVerify && !editMode && (
-                    <div className="pt-4 border-t border-slate-100">
-                      <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Manual Unit Assignment (Optional)</label>
-                      <p className="text-[10px] text-slate-400 mb-2">If left empty, the system will auto-assign using Smart Proximity.</p>
-                      <div className="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
+                    <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manual Dispatch override</p>
+                         <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">Optional</span>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {responseUnits.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic">No units available</p>
+                          <p className="text-xs text-slate-400 italic py-4 text-center">Scanning for available units...</p>
                         ) : (
-                          responseUnits.map(unit => (
-                            <label key={unit.unit_id} className="flex items-center gap-2 p-1.5 hover:bg-white rounded transition-colors cursor-pointer group">
-                              <input 
-                                type="checkbox" 
-                                checked={selectedUnitIds.includes(unit.unit_id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) setSelectedUnitIds([...selectedUnitIds, unit.unit_id]);
-                                  else setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.unit_id));
-                                }}
-                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                              />
-                              <div className="flex-1">
-                                <p className="text-xs font-bold text-slate-700 group-hover:text-indigo-600">{unit.unit_name}</p>
-                                <p className="text-[10px] text-slate-400 uppercase">{unit.unit_type} • {unit.availability_status}</p>
-                              </div>
-                            </label>
-                          ))
+                          responseUnits.map(unit => {
+                            const isSelected = selectedUnitIds.includes(unit.unit_id);
+                            return (
+                               <label key={unit.unit_id} className={`flex items-center gap-4 p-4 rounded-3xl border-2 transition-all cursor-pointer group
+                                  ${isSelected 
+                                    ? 'bg-indigo-600 border-indigo-600 text-white' 
+                                    : 'bg-slate-50 dark:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700'}`}>
+                                  <input type="checkbox" checked={isSelected} className="hidden" 
+                                    onChange={(e) => {
+                                      if (e.target.checked) setSelectedUnitIds([...selectedUnitIds, unit.unit_id]);
+                                      else setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.unit_id));
+                                    }} 
+                                  />
+                                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors
+                                    ${isSelected ? 'bg-white/20' : 'bg-white dark:bg-slate-700 text-slate-600'}`}>
+                                    <Car size={18} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className={`text-xs font-black ${isSelected ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{unit.unit_name}</p>
+                                    <p className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>{unit.unit_type} • {unit.availability_status}</p>
+                                  </div>
+                                  {isSelected && <CheckCircle size={18} />}
+                               </label>
+                            );
+                          })
                         )}
                       </div>
                     </div>
                   )}
-                    </>
+
+                  {/* Assigned Units List (For already verified) */}
+                  {selectedIncident.assignments?.length > 0 && (
+                    <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Dispatches</p>
+                      <div className="space-y-2">
+                        {selectedIncident.assignments.map((asgn, idx) => (
+                          <div key={idx} className="flex items-center gap-4 p-4 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 rounded-3xl">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
+                              <Car size={18} />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{asgn.unit?.unit_name}</p>
+                              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none mt-1">{asgn.status}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Action Buttons — only for REPORTED status */}
-                {canVerify && (
-                  <div className="border-t border-slate-200 p-4 space-y-2">
-                    {!editMode ? (
-                      <>
-                        <button onClick={handleApprove} disabled={submitting} className="w-full py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                          {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />} Approve & Dispatch
-                        </button>
-                        <button onClick={() => setActionModal({ open: true, action: 'reject', message: '' })} className="w-full py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
-                          <XCircle size={16} /> Reject
-                        </button>
-                        <button onClick={() => setActionModal({ open: true, action: 'request_info', message: '' })} className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                          <MessageSquare size={16} /> Request Info
-                        </button>
-                        <button onClick={() => setEditMode(true)} className="w-full py-2 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 transition-colors flex items-center justify-center gap-2">
-                          <Edit2 size={16} /> Edit Details
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={handleApprove} disabled={submitting} className="w-full py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                          {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />} Apply & Dispatch
-                        </button>
-                        <button onClick={() => setEditMode(false)} className="w-full py-2 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 transition-colors">Cancel Edit</button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Read-only label for non-REPORTED */}
-                {!canVerify && (
-                  <div className="border-t border-slate-200 p-4">
-                    <p className="text-xs text-slate-500 text-center font-medium">This incident has already been processed</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
-                <p className="text-slate-500">Select an incident to view details</p>
-              </div>
+                {/* Foot Action Area */}
+                <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                  {canVerify ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {!editMode ? (
+                        <>
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleApprove} disabled={submitting} 
+                            className="col-span-2 py-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white font-black uppercase tracking-widest text-xs rounded-3xl shadow-xl shadow-indigo-500/30 disabled:opacity-50 flex items-center justify-center gap-3">
+                            {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />} Verify & Initiate Response
+                          </motion.button>
+                          <button onClick={() => setActionModal({ open: true, action: 'reject', message: '' })} className="py-3 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-red-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
+                            <XCircle size={16} /> Reject
+                          </button>
+                           <button onClick={() => setEditMode(true)} className="py-3 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                            <Edit2 size={16} /> Modify
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={handleApprove} disabled={submitting} className="flex-1 py-4 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg">Save & Approve</button>
+                          <button onClick={() => setEditMode(false)} className="flex-1 py-4 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black text-xs uppercase tracking-widest rounded-2xl">Cancel</button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-2 px-4 rounded-2xl bg-slate-200 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Response Strategy Finalized
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Action Modal */}
-      {actionModal.open && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-            <h3 className="font-bold text-lg text-slate-900 mb-4">
-              {actionModal.action === 'reject' ? 'Reject Incident' : 'Request More Information'}
-            </h3>
-            <textarea value={actionModal.message} onChange={(e) => setActionModal({ ...actionModal, message: e.target.value })}
-              placeholder={actionModal.action === 'reject' ? 'Optional: Reason for rejection...' : 'What additional information do you need?'}
-              maxLength={500} rows="4" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-4 resize-none" />
-            <div className="flex gap-3">
-              <button onClick={() => setActionModal({ open: false, action: null, message: '' })} className="flex-1 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300">Cancel</button>
-              <button onClick={actionModal.action === 'reject' ? handleReject : handleRequestInfo} disabled={submitting}
-                className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                {submitting ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Fullscreen Photo Modal */}
       {fullscreenPhoto && (
-        <div onClick={() => setFullscreenPhoto(null)} className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-[90vh]">
-            <img src={fullscreenPhoto} alt="Fullscreen evidence" className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
-            <button onClick={() => setFullscreenPhoto(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all"><X size={24} /></button>
-          </div>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={() => setFullscreenPhoto(null)} 
+          className="fixed inset-0 bg-slate-950/95 flex items-center justify-center z-[2000] p-6 backdrop-blur-xl"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative max-w-5xl max-h-screen"
+          >
+            <img src={fullscreenPhoto} alt="Evidence" className="w-full h-full object-contain rounded-3xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+            <button onClick={() => setFullscreenPhoto(null)} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-all flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+              Close <X size={24} />
+            </button>
+          </motion.div>
+        </motion.div>
       )}
+
+      {/* Verification Modals Wrapper */}
+      <AnimatePresence>
+        {actionModal.open && (
+           <div className="fixed inset-0 z-[1500] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setActionModal({ open: false, action: null, message: '' })} 
+              />
+              <motion.div 
+                initial={{ opacity: 0, y: 100, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 overflow-hidden"
+              >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 
+                    ${actionModal.action === 'reject' ? 'bg-red-50 dark:bg-red-500/10 text-red-600' : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600'}`}>
+                    {actionModal.action === 'reject' ? <XCircle size={32} /> : <MessageSquare size={32} />}
+                  </div>
+                  <h3 className="text-xl font-black tracking-tight mb-2">
+                    {actionModal.action === 'reject' ? 'Confirm Rejection' : 'Intelligence Request'}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-6 leading-relaxed">
+                    {actionModal.action === 'reject' 
+                      ? 'Are you certain this report is invalid or a false alarm? This action is tracked in audit logs.' 
+                      : 'Request additional tactical data from the reporter to clarify the situation.'}
+                  </p>
+                  <textarea 
+                    autoFocus
+                    value={actionModal.message} 
+                    onChange={(e) => setActionModal({ ...actionModal, message: e.target.value })}
+                    placeholder="Provide context or instructions..." 
+                    rows="4" 
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-5 text-sm font-medium focus:ring-4 focus:ring-indigo-500/10 mb-6 transition-all resize-none outline-none" 
+                  />
+                  <div className="flex gap-3">
+                    <button onClick={() => setActionModal({ open: false, action: null, message: '' })} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl">Cancel</button>
+                    <button onClick={actionModal.action === 'reject' ? handleReject : handleRequestInfo} disabled={submitting}
+                      className={`flex-1 py-4 font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 ${actionModal.action === 'reject' ? 'bg-red-600 text-white shadow-red-500/20' : 'bg-indigo-600 text-white shadow-indigo-500/20'}`}>
+                      {submitting ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} 
+                      {actionModal.action === 'reject' ? 'Confirm Reject' : 'Send Request'}
+                    </button>
+                  </div>
+              </motion.div>
+           </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -9,67 +9,155 @@
   font-size: 14px;
   line-height: 1.6;
 
+  /* Brand Colors */
   --color-primary: #f97316;
   --color-primary-dark: #ea580c;
   --color-success: #22c55e;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
   --color-info: #3b82f6;
-  --color-purple: #8b5cf6;
 
-  --color-page-bg: #f1f5f9;
+  /* Light Theme */
+  --color-page-bg: #f8fafc;
   --color-card-bg: #ffffff;
   --color-border: #e2e8f0;
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
+  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+.dark {
+  /* Dark Theme */
+  --color-page-bg: #0f172a;
+  --color-card-bg: #1e293b;
+  --color-border: #334155;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark Mode Blending Overrides - Ensures system-wide compatibility */
+.dark .bg-white,
+.dark .bg-\[#F8FAFC\],
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-200,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-200 {
+  background-color: var(--color-card-bg) !important;
+}
+
+/* Handle accent backgrounds and opacity layers in dark mode */
+.dark .bg-slate-50\/50,
+.dark .bg-slate-100\/50,
+.dark .bg-white\/50 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+.dark .bg-orange-50, .dark .bg-amber-50, .dark .bg-rose-50, .dark .bg-red-50, .dark .bg-emerald-50, .dark .bg-green-50, .dark .bg-blue-50, .dark .bg-indigo-50, .dark .bg-purple-50 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-slate-950,
+.dark .text-gray-800,
+.dark .text-gray-900,
+.dark .text-black {
+  color: var(--color-text-primary) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .text-slate-400,
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-400 {
+  color: var(--color-text-secondary) !important;
+}
+
+.dark .border-slate-200,
+.dark .border-slate-100 {
+  border-color: var(--color-border) !important;
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Global Form Blending */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--color-page-bg) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+/* Scrollbar dark theme */
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
+html,
 body {
-  margin: 0;
-  min-height: 100vh;
-  background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 38%), var(--color-page-bg);
+  background-color: var(--color-page-bg);
   color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
+  background-color: var(--color-page-bg);
 }
 
+/* Glassmorphism Class */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Card UI Enhancement */
 .card-ui {
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 150ms ease;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card-ui:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Global Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  @apply bg-reporter-bg text-white font-sans;
-}
-
-#root {
-  min-height: 100vh;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* Custom Scrollbar */
@@ -78,27 +166,40 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-reporter-bg;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-reporter-border rounded-full;
+  background: var(--color-border);
+  border-radius: 20px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-brand-primary;
+  background: var(--color-text-muted);
 }
 
-/* Leaflet Map Fixes for Dark Theme */
+/* Animations */
+@keyframes pulse-orange {
+  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+}
+
+.pulse-primary {
+  animation: pulse-orange 2s infinite;
+}
+
+/* Leaflet Container Styles */
+
 .leaflet-container {
-  background: #1E293B !important;
-  font-family: inherit;
+  border-radius: 12px;
+  z-index: 10;
 }
 
-.leaflet-popup-content-wrapper {
-  @apply bg-reporter-card text-white;
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-.leaflet-popup-tip {
-  @apply bg-reporter-card;
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

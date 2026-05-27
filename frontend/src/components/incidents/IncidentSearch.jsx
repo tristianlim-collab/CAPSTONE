@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Filter, X, Calendar, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Status' },
@@ -14,18 +15,11 @@ const STATUS_OPTIONS = [
 
 const SEVERITY_OPTIONS = [
   { value: '', label: 'All Severity' },
-  { value: 'LOW', label: 'Low', color: 'bg-green-100 text-green-700' },
-  { value: 'HIGH', label: 'High', color: 'bg-orange-100 text-orange-700' },
-  { value: 'CRITICAL', label: 'Critical', color: 'bg-red-100 text-red-700' },
+  { value: 'LOW', label: 'Low' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'CRITICAL', label: 'Critical' },
 ];
 
-/**
- * IncidentSearch - Reusable search & filter bar for incident lists
- * @param {Function} onFiltersChange - Called with { search, status, severity, type_id, from_date, to_date }
- * @param {Array} incidentTypes - Array of incident type objects for the type filter dropdown
- * @param {boolean} showStatusFilter - Whether to show the status filter (default: true)
- * @param {boolean} compact - Whether to use compact layout (default: false)
- */
 export default function IncidentSearch({ onFiltersChange, incidentTypes = [], responseUnits = [], showStatusFilter = true, compact = false }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -47,23 +41,20 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], re
       to_date: overrides.to_date ?? toDate,
       unit_id: overrides.unit_id ?? unitId,
     };
-    // Remove empty values
     const cleaned = Object.fromEntries(
       Object.entries(filters).filter(([_, v]) => v !== '' && v != null)
     );
     onFiltersChange?.(cleaned);
-  }, [search, status, severity, typeId, fromDate, toDate, onFiltersChange]);
+  }, [search, status, severity, typeId, fromDate, toDate, unitId, onFiltersChange]);
 
-  // Debounced search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       emitFilters({ search });
-    }, 300);
+    }, 400);
     return () => clearTimeout(debounceRef.current);
-  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search]);
 
-  // Immediate filters (dropdowns)
   const handleStatusChange = (val) => { setStatus(val); emitFilters({ status: val }); };
   const handleSeverityChange = (val) => { setSeverity(val); emitFilters({ severity: val }); };
   const handleTypeChange = (val) => { setTypeId(val); emitFilters({ type_id: val }); };
@@ -74,160 +65,153 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], re
   const hasActiveFilters = status || severity || typeId || fromDate || toDate || search || unitId;
 
   const handleClearAll = () => {
-    setSearch('');
-    setStatus('');
-    setSeverity('');
-    setTypeId('');
-    setFromDate('');
-    setToDate('');
-    setUnitId('');
+    setSearch(''); setStatus(''); setSeverity(''); setTypeId('');
+    setFromDate(''); setToDate(''); setUnitId('');
     onFiltersChange?.({});
   };
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 shadow-sm ${compact ? 'p-3' : 'p-4'}`}>
+    <div className={`bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm transition-all ${compact ? 'p-3' : 'p-4'}`}>
       {/* Search Bar Row */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+      <div className="flex flex-col lg:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full lg:w-auto">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={18} />
           <input
-            id="incident-search-input"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by code, description, reporter, or address..."
-            className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-700 placeholder:text-slate-400"
+            placeholder="Search tactical records..."
+            className="w-full pl-11 pr-10 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
           />
           {search && (
             <button
               onClick={() => { setSearch(''); emitFilters({ search: '' }); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 transition-colors"
             >
-              <X size={14} />
+              <X size={12} />
             </button>
           )}
         </div>
 
-        {/* Quick Filters */}
-        {showStatusFilter && (
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          {showStatusFilter && (
+            <select
+              value={status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="flex-1 lg:flex-none px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer"
+            >
+              {STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          )}
+
           <select
-            id="incident-status-filter"
-            value={status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
+            value={severity}
+            onChange={(e) => handleSeverityChange(e.target.value)}
+            className="flex-1 lg:flex-none px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer"
           >
-            {STATUS_OPTIONS.map(opt => (
+            {SEVERITY_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-        )}
 
-        <select
-          id="incident-severity-filter"
-          value={severity}
-          onChange={(e) => handleSeverityChange(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
-        >
-          {SEVERITY_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-
-        {/* Advanced Toggle */}
-        <button
-          id="incident-advanced-filter-toggle"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all border ${
-            showAdvanced ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-200'
-          }`}
-        >
-          <Filter size={14} />
-          <span className="hidden sm:inline">More</span>
-          <ChevronDown size={12} className={`transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* Clear all */}
-        {hasActiveFilters && (
           <button
-            id="incident-clear-filters"
-            onClick={handleClearAll}
-            className="flex items-center gap-1 px-3 py-2.5 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-all"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.1em] transition-all border shrink-0
+              ${showAdvanced 
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20' 
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-indigo-300'
+              }`}
           >
-            <X size={14} />
-            <span className="hidden sm:inline">Clear</span>
+            <Filter size={16} />
+            <ChevronDown size={14} className={`transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
           </button>
-        )}
+
+          {hasActiveFilters && (
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={handleClearAll}
+              className="flex items-center justify-center w-11 h-11 rounded-2xl text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 hover:bg-red-100 transition-all shrink-0"
+            >
+              <X size={18} />
+            </motion.button>
+          )}
+        </div>
       </div>
 
       {/* Advanced Filters */}
-      {showAdvanced && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-3">
-          {/* Type Filter */}
-          {incidentTypes.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Type</label>
-              <select
-                id="incident-type-filter"
-                value={typeId}
-                onChange={(e) => handleTypeChange(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Types</option>
-                {incidentTypes.map(type => (
-                  <option key={type.type_id} value={type.type_id}>{type.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+      <AnimatePresence>
+        {showAdvanced && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-4">
+              {incidentTypes.length > 0 && (
+                <div className="space-y-1.5 flex-1 min-w-[150px]">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-3">Incident Category</label>
+                  <select
+                    value={typeId}
+                    onChange={(e) => handleTypeChange(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
+                    <option value="">All Categories</option>
+                    {incidentTypes.map(type => (
+                      <option key={type.type_id} value={type.type_id}>{type.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-          {/* Unit Filter */}
-          {responseUnits.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Unit</label>
-              <select
-                id="incident-unit-filter"
-                value={unitId}
-                onChange={(e) => handleUnitChange(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Units</option>
-                {responseUnits.map(unit => (
-                  <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+              {responseUnits.length > 0 && (
+                <div className="space-y-1.5 flex-1 min-w-[150px]">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-3">Response Unit</label>
+                  <select
+                    value={unitId}
+                    onChange={(e) => handleUnitChange(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
+                    <option value="">All Units</option>
+                    {responseUnits.map(unit => (
+                      <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-          {/* Date Range */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">From</label>
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input
-                id="incident-from-date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => handleFromDate(e.target.value)}
-                className="pl-7 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-              />
-            </div>
-          </div>
+              <div className="space-y-1.5 min-w-[140px]">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-3">From Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => handleFromDate(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
+                  />
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">To</label>
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input
-                id="incident-to-date"
-                type="date"
-                value={toDate}
-                onChange={(e) => handleToDate(e.target.value)}
-                className="pl-7 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-              />
+              <div className="space-y-1.5 min-w-[140px]">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-3">To Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => handleToDate(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

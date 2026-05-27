@@ -2,6 +2,7 @@ import forms from "@tailwindcss/forms";
 
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   safelist: [
     { pattern: /bg-(orange|rose|blue|indigo|emerald|yellow|purple|slate)-(50|100|500|600)/ },
