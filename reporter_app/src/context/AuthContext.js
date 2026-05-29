@@ -8,24 +8,27 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState({
+    user_id: 'guest-id',
+    name: 'Citizen',
+    email: 'guest@gaoirs.com',
+    role: 'REPORTER'
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Silent background check if token exists, but don't block
     const initAuth = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
         if (token) {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const res = await authAPI.getMe();
-          setUser(res.data);
+          const res = await authAPI.getMe().catch(() => null);
+          if (res?.data) setUser(res.data);
         }
       } catch (error) {
-        console.error('Auth init failed', error);
-        await AsyncStorage.removeItem('token');
-        delete api.defaults.headers.common['Authorization'];
+        console.warn('Auth init silent failed');
       }
-      setLoading(false);
     };
     initAuth();
   }, []);
@@ -39,19 +42,6 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     }
     setUser(data.user);
-
-    // Register push notifications and send token to backend
-    try {
-      const pushToken = await pushNotificationService.registerForPushNotifications();
-      if (pushToken) {
-        await api.patch('/auth/fcm-token', { fcm_token: pushToken }).catch(err =>
-          console.warn('[Auth] FCM token update failed:', err.message)
-        );
-      }
-    } catch (err) {
-      console.warn('[Auth] Push registration failed (non-fatal):', err.message);
-    }
-
     return data.user;
   };
 
@@ -64,35 +54,19 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     }
     setUser(data.user);
-
-    // Register push notifications and send token to backend
-    try {
-      const pushToken = await pushNotificationService.registerForPushNotifications();
-      if (pushToken) {
-        await api.patch('/auth/fcm-token', { fcm_token: pushToken }).catch(err =>
-          console.warn('[Auth] FCM token update failed:', err.message)
-        );
-      }
-    } catch (err) {
-      console.warn('[Auth] Push registration failed (non-fatal):', err.message);
-    }
-
     return data.user;
   };
 
   const logout = async () => {
-    // Clear push notification token from backend
-    try {
-      await api.patch('/auth/fcm-token', { fcm_token: null }).catch(() => {});
-      pushNotificationService.stopListening();
-      await pushNotificationService.clearToken();
-    } catch (err) {
-      console.warn('[Auth] Push cleanup failed (non-fatal):', err.message);
-    }
-
     await AsyncStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
-    setUser(null);
+    // Keep user as guest instead of null to avoid redirecting back to login
+    setUser({
+      user_id: 'guest-id',
+      name: 'Citizen',
+      email: 'guest@gaoirs.com',
+      role: 'REPORTER'
+    });
   };
 
   const checkAuth = useCallback(async () => {
@@ -105,7 +79,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const hasRole = (role) => user?.role === role;
-  const isAuthenticated = !!user;
+  const isAuthenticated = true; // Always true to bypass login
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated, hasRole, checkAuth }}>

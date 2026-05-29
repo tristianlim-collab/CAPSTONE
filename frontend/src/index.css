@@ -24,7 +24,7 @@
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
-  
+
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.2);
 }
@@ -61,7 +61,15 @@
   background-color: rgba(15, 23, 42, 0.5) !important;
 }
 
-.dark .bg-orange-50, .dark .bg-amber-50, .dark .bg-rose-50, .dark .bg-red-50, .dark .bg-emerald-50, .dark .bg-green-50, .dark .bg-blue-50, .dark .bg-indigo-50, .dark .bg-purple-50 {
+.dark .bg-orange-50,
+.dark .bg-amber-50,
+.dark .bg-rose-50,
+.dark .bg-red-50,
+.dark .bg-emerald-50,
+.dark .bg-green-50,
+.dark .bg-blue-50,
+.dark .bg-indigo-50,
+.dark .bg-purple-50 {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
@@ -180,9 +188,17 @@ body {
 
 /* Animations */
 @keyframes pulse-orange {
-  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
 }
 
 .pulse-primary {
@@ -199,6 +215,7 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

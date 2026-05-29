@@ -44,9 +44,22 @@ const STATIC_LEAFLET_HTML = `
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body { padding: 0; margin: 0; background-color: #f1f5f9; }
+    body { padding: 0; margin: 0; background-color: #000; }
     #map { height: 100vh; width: 100vw; }
-    /* Hide leaflet attribution to save space */
+    .pulse-marker {
+      background: #3B82F6;
+      border-radius: 50%;
+      height: 14px;
+      width: 14px;
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+      animation: pulse 1.5s infinite;
+      border: 3px solid white;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
     .leaflet-control-attribution { display: none; }
   </style>
 </head>
@@ -54,33 +67,43 @@ const STATIC_LEAFLET_HTML = `
   <div id="map"></div>
   <script>
     var map = L.map('map', { 
-      zoomControl: true,
-      zoomAnimation: true,
-      markerZoomAnimation: true
-    }).setView([10.0, 122.9], 13);
+      zoomControl: false,
+      zoomAnimation: true
+    }).setView([10.74, 122.96], 13);
     
     L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', {
-      maxZoom: 20
+      maxZoom: 20,
+      attribution: '&copy; Google'
     }).addTo(map);
     
     var marker = null;
+    var accCircle = null;
     
-    window.updateMapLocation = function(lat, lng) {
+    window.updateMapLocation = function(lat, lng, acc) {
       if (!marker) {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        var pulseIcon = L.divIcon({ className: 'pulse-marker', iconSize: [14, 14], iconAnchor: [7, 7] });
+        marker = L.marker([lat, lng], { icon: pulseIcon, draggable: true }).addTo(map);
+        if (acc) accCircle = L.circle([lat, lng], { radius: acc, color: '#3B82F6', fillOpacity: 0.1, weight: 1 }).addTo(map);
+        
         marker.on('dragend', function(e) {
           var pos = marker.getLatLng();
+          if (accCircle) accCircle.setLatLng(pos);
           window.ReactNativeWebView.postMessage(JSON.stringify({ lat: pos.lat, lng: pos.lng }));
         });
       } else {
         marker.setLatLng([lat, lng]);
+        if (accCircle) {
+           accCircle.setLatLng([lat, lng]);
+           if (acc) accCircle.setRadius(acc);
+        }
       }
-      map.setView([lat, lng], 16, { animate: true });
+      map.setView([lat, lng], 17, { animate: true });
     };
 
     map.on('click', function(e) {
       if (marker) {
         marker.setLatLng(e.latlng);
+        if (accCircle) accCircle.setLatLng(e.latlng);
         window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
       }
     });
@@ -125,7 +148,7 @@ export default function IncidentReportScreen({ navigation }) {
         setGeoLoading(false);
         reverseGeocode(coords);
         setTimeout(() => {
-          webViewRef.current?.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}); true;`);
+          webViewRef.current?.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}, ${loc.coords.accuracy || 0}); true;`);
         }, 500); // Give WebView time to load
       } catch (e) {
         console.warn('Location failed:', e);
@@ -153,24 +176,50 @@ export default function IncidentReportScreen({ navigation }) {
       );
       const data = await resp.json();
 
-      if (data?.display_name) {
-        setLocationAddress(data.display_name);
-      } else if (data?.address) {
+      if (data?.address) {
         const addr = data.address;
-        const barangay = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet || '';
+
+        // Local address components
+        const road = addr.road || addr.street || '';
+        const village = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet || '';
         const city = addr.city || addr.town || addr.municipality || '';
-        const province = addr.county || addr.state || addr.province || '';
+        const province = addr.province || addr.state || addr.county || '';
 
         const parts = [];
-        if (barangay) parts.push(barangay.toLowerCase().includes('barangay') ? barangay : `Brgy. ${barangay}`);
-        if (city) parts.push(city);
-        if (province && province !== city) parts.push(province);
+
+        // 1. Street Name
+        if (road) parts.push(road);
+
+        // 2. Barangay (Village) - avoid duplicates
+        if (village && !road.toLowerCase().includes(village.toLowerCase())) {
+          parts.push(village.toLowerCase().includes('barangay') ? village : `Brgy. ${village}`);
+        }
+
+        // 3. City/Town
+        if (city && !village.toLowerCase().includes(city.toLowerCase())) {
+          parts.push(city);
+        }
+
+        // 4. Province
+        if (province && province !== city) {
+          parts.push(province);
+        }
 
         if (parts.length > 0) {
-          setLocationAddress(parts.join(', '));
+          // Filter out redundant names like "McKinley Baybay" if it's not the primary village/road
+          let cleanParts = parts.filter((v, i, a) => a.indexOf(v) === i);
+
+          // Fix for specific user report about McKinley Baybay
+          cleanParts = cleanParts.filter(p => !p.toLowerCase().includes('mckinley baybay'));
+
+          setLocationAddress(cleanParts.join(', '));
+        } else if (data.display_name) {
+          setLocationAddress(data.display_name.split(',').slice(0, 4).join(','));
         } else {
           setLocationAddress(`${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
         }
+      } else if (data?.display_name) {
+        setLocationAddress(data.display_name.split(',').slice(0, 4).join(','));
       } else {
         setLocationAddress(`${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
       }
@@ -187,7 +236,7 @@ export default function IncidentReportScreen({ navigation }) {
       const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
       setLocation(coords);
       reverseGeocode(coords);
-      webViewRef.current?.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}); true;`);
+      webViewRef.current?.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}, ${loc.coords.accuracy || 0}); true;`);
     } catch (e) {
       Alert.alert('Location Error', 'Could not detect location.');
     } finally { setGeoLoading(false); }
@@ -355,38 +404,36 @@ export default function IncidentReportScreen({ navigation }) {
           </View>
 
           {/* Mini Map */}
-          <View style={styles.mapContainerOuter}>
-            <View style={styles.mapContainer}>
-              <WebView
-                ref={webViewRef}
-                source={{ html: STATIC_LEAFLET_HTML }}
-                style={styles.mapView}
-                scrollEnabled={true}
-                nestedScrollEnabled={true}
-                onMessage={(event) => {
-                  try {
-                    const coords = JSON.parse(event.nativeEvent.data);
-                    setLocation(coords);
-                    reverseGeocode(coords);
-                  } catch (e) { }
-                }}
-              />
-              {geoLoading && !location && (
-                <View style={[StyleSheet.absoluteFill, styles.mapPlaceholder]}>
-                  <ActivityIndicator size="large" color="#3B82F6" />
-                  <Text style={{ marginTop: 8, color: '#475569', fontWeight: '500', fontSize: 12 }}>Acquiring GPS...</Text>
-                </View>
-              )}
-              {location && (
-                <TouchableOpacity
-                  style={styles.floatingNavBtn}
-                  onPress={handleRefreshLocation}
-                  activeOpacity={0.8}
-                >
-                  <Navigation2 size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
-            </View>
+          <View style={styles.mapCard}>
+            <WebView
+              ref={webViewRef}
+              source={{ html: STATIC_LEAFLET_HTML }}
+              style={styles.mapView}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+              onMessage={(event) => {
+                try {
+                  const coords = JSON.parse(event.nativeEvent.data);
+                  setLocation(coords);
+                  reverseGeocode(coords);
+                } catch (e) { }
+              }}
+            />
+            {geoLoading && !location && (
+              <View style={[StyleSheet.absoluteFill, styles.mapPlaceholder]}>
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text style={{ marginTop: 8, color: '#475569', fontWeight: '500', fontSize: 12 }}>Acquiring GPS...</Text>
+              </View>
+            )}
+            {location && (
+              <TouchableOpacity
+                style={styles.floatingNavBtn}
+                onPress={handleRefreshLocation}
+                activeOpacity={0.8}
+              >
+                <Navigation2 size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Location Status */}
@@ -540,8 +587,7 @@ const styles = StyleSheet.create({
   photoCount: { fontSize: 12, color: '#94A3B8', marginTop: 8 },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: '#F0FDF4' },
   refreshText: { fontSize: 12, fontWeight: '700', color: '#16A34A' },
-  mapContainerOuter: { backgroundColor: '#FFFFFF', padding: 8, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12 },
-  mapContainer: { width: '100%', height: 350, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' },
+  mapCard: { width: '100%', height: 350, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
   mapView: { width: '100%', height: '100%', backgroundColor: 'transparent' },
   mapPlaceholder: { backgroundColor: 'rgba(241, 245, 249, 0.9)', alignItems: 'center', justifyContent: 'center' },
   floatingNavBtn: { position: 'absolute', bottom: 16, right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6 },

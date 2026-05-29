@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, StatusBar, Dimensions
 } from 'react-native';
+import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -33,7 +34,8 @@ export default function ReporterHomeScreen({ navigation }) {
     const fetchIncidents = async () => {
       try {
         const res = await incidentAPI.getAll({ limit: 50 });
-        setIncidents(res.data?.data || []);
+        const list = res.data?.data || [];
+        setIncidents(list);
       } catch (err) {
         console.error('Failed to fetch incidents:', err);
       } finally {
@@ -44,12 +46,21 @@ export default function ReporterHomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+    })();
+  }, []);
+
+  useEffect(() => {
     const unsub1 = on('incident_status_updated', (data) => {
-      setIncidents(prev => prev.map(inc =>
-        inc.incident_id === data.incident_id
-          ? { ...inc, status: data.status, ...(data.incident || {}) }
-          : inc
-      ));
+      setIncidents(prev => {
+        const newList = prev.map(inc =>
+          inc.incident_id === data.incident_id
+            ? { ...inc, status: data.status, ...(data.incident || {}) }
+            : inc
+        );
+        return newList;
+      });
     });
     const unsub2 = on('incident_updated', (data) => {
       setIncidents(prev => prev.map(inc =>
@@ -192,6 +203,7 @@ export default function ReporterHomeScreen({ navigation }) {
             )}
           </View>
         </View>
+
 
         {/* Recent Activity Header */}
         <View style={styles.sectionHeader}>

@@ -101,7 +101,7 @@ function AppStack() {
 }
 
 export default function AppNavigator() {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -111,7 +111,7 @@ export default function AppNavigator() {
     );
   }
 
-  return isAuthenticated ? <AppStack /> : <AuthStack />;
+  return <AppStack />;
 }
 
 const styles = StyleSheet.create({

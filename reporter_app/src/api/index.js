@@ -23,8 +23,9 @@ const getBackendIp = () => {
     return debuggerHost.split(':')[0];
   }
 
-  // 4. Fallback (You can change this manually if auto-detect fails completely)
-  return '192.168.67.129';
+  // 4. Fallback (Current machine IP: 192.168.245.129)
+  // For Android Emulator, you can also try '10.0.2.2' if this fails
+  return '192.168.245.129';
 };
 
 const backendIp = getBackendIp();
