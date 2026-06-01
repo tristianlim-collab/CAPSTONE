@@ -44,7 +44,7 @@ const ICONS = {
 const createUnitIcon = (unit) => {
   const status = unit.availability_status;
   const color = status === 'AVAILABLE' ? '#22c55e' : status === 'BUSY' ? '#f59e0b' : '#94a3b8';
-  
+
   let iconContent = '🛡️';
   if (unit.unit_type === 'FIRE') iconContent = '🚒';
   else if (unit.unit_type === 'MEDICAL') iconContent = '🚑';
@@ -109,10 +109,10 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
 
     if (previousLatestId.current !== latestId) {
-      map.flyTo([lat, lng], 16, { 
-        duration: 2.0, 
+      map.flyTo([lat, lng], 16, {
+        duration: 2.0,
         easeLinearity: 0.25,
-        noMoveStart: true 
+        noMoveStart: true
       });
       previousLatestId.current = latestId;
       toast('🚨 New incident! Auto-zooming to location...', {
@@ -272,7 +272,7 @@ const ResponseMap = () => {
     e.stopPropagation();
     setRouteLoading(true);
     let unitLat, unitLng, unitName = 'Response Unit';
-    
+
     const assignedUnit = incident.assignments && incident.assignments.length > 0 ? incident.assignments[0]?.unit : null;
     if (assignedUnit?.latitude && assignedUnit?.longitude) {
       unitLat = assignedUnit.latitude;
@@ -290,13 +290,13 @@ const ResponseMap = () => {
         unitName = myUnit.unit_name || unitName;
       }
     }
-    
+
     if (!unitLat || !unitLng) {
       toast.error("Could not determine your current location for routing.");
       setRouteLoading(false);
       return;
     }
-    
+
     const route = await fetchRouteFromOSRM(
       unitLat, unitLng,
       Number(incident.latitude), Number(incident.longitude)
@@ -391,14 +391,14 @@ const ResponseMap = () => {
     });
 
     // Listen for verified incidents (admin approved)
+    // IMPORTANT: always prepend to position [0] so AutoZoomToLatestIncident detects the new incident
     const unsub5 = on('incident_verified', (data) => {
       if (data.incident?.latitude && data.incident?.longitude) {
         setIncidents(prev => {
-          const existing = prev.find(i => i.incident_id === data.incident.incident_id);
-          if (existing) {
-            return prev.map(inc => inc.incident_id === data.incident.incident_id ? data.incident : inc);
-          }
-          return [data.incident, ...prev];
+          // Remove any existing entry, then always prepend the verified incident to the front.
+          // This ensures incidents[0] changes, which triggers AutoZoomToLatestIncident.
+          const others = prev.filter(i => i.incident_id !== data.incident.incident_id);
+          return [data.incident, ...others];
         });
       }
     });
@@ -407,7 +407,7 @@ const ResponseMap = () => {
     const unsub6 = on('unit_dispatch_with_directions', async (data) => {
       console.log('[ResponseMap] Received dispatch directions:', data);
       setRouteLoading(true);
-      
+
       // Show toast notification
       toast(
         `🚨 Dispatched to ${data.incident_code}!\n${data.incident_type || 'Incident'} • ${data.severity || 'HIGH'} severity`,
@@ -494,22 +494,22 @@ const ResponseMap = () => {
 
           // Fallback: use user object's unit coordinates, or fetch active positions
           if (!unitLat || !unitLng) {
-             if (user?.unit?.latitude && user?.unit?.longitude) {
-               unitLat = user.unit.latitude;
-               unitLng = user.unit.longitude;
-             } else {
-               try {
-                 const positionsRes = await api.get('/response-units/positions/active');
-                 // Try to find the user's linked unit, otherwise just grab the first available unit on the map
-                 const myUnit = positionsRes.data.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || positionsRes.data[0];
-                 if (myUnit) {
-                   unitLat = Number(myUnit.latitude);
-                   unitLng = Number(myUnit.longitude);
-                 }
-               } catch (e) {
-                 console.error('Failed to fetch unit locations fallback', e);
-               }
-             }
+            if (user?.unit?.latitude && user?.unit?.longitude) {
+              unitLat = user.unit.latitude;
+              unitLng = user.unit.longitude;
+            } else {
+              try {
+                const positionsRes = await api.get('/response-units/positions/active');
+                // Try to find the user's linked unit, otherwise just grab the first available unit on the map
+                const myUnit = positionsRes.data.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || positionsRes.data[0];
+                if (myUnit) {
+                  unitLat = Number(myUnit.latitude);
+                  unitLng = Number(myUnit.longitude);
+                }
+              } catch (e) {
+                console.error('Failed to fetch unit locations fallback', e);
+              }
+            }
           }
 
           if (unitLat && unitLng) {
@@ -638,7 +638,7 @@ const ResponseMap = () => {
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-slate-50">
       <div className="max-w-7xl mx-auto flex flex-col h-full gap-6">
-        
+
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative z-[400]">
           <div>
@@ -677,7 +677,7 @@ const ResponseMap = () => {
             </button>
           </div>
         </div>
-      
+
         <div className="flex-1 relative z-0 h-[700px] sm:h-[calc(100vh-12rem)] min-h-[600px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           {loading && (
             <div className="absolute inset-0 bg-white/60 z-[500] flex flex-col items-center justify-center backdrop-blur-sm">
@@ -697,7 +697,8 @@ const ResponseMap = () => {
                 url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
                 maxZoom={20}
               />
-              <AutoZoomToLatestIncident incidents={incidents} enabled={!activeRoute} />
+              {/* Always enabled — a new verified incident should zoom even if a route is active */}
+              <AutoZoomToLatestIncident incidents={incidents} enabled={true} />
               {activeRoute && <FlyToRouteBounds routeCoords={activeRoute.coords} />}
               <FlyToSelectedIncident selectedIncident={incidents.find(i => i.incident_id === selectedIncidentId)} />
 
@@ -715,188 +716,187 @@ const ResponseMap = () => {
                   }}
                 />
               )}
-            
-            {incidents.map((incident) => (
-              <Marker
-                key={incident.incident_id}
-                position={[incident.latitude, incident.longitude]}
-                icon={ICONS[incident.status] || ICONS.REPORTED}
-                eventHandlers={{
-                  click: () => setSelectedIncidentId(incident.incident_id)
-                }}
-              >
-                <Popup className="incident-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
-                  <div className="p-4 min-w-[240px] max-w-[300px] bg-white max-h-[500px] overflow-y-auto">
-                    <div className="flex items-start justify-between mb-3 border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="font-bold text-slate-800 text-sm block">{incident.incident_code}</span>
-                        <span className="text-xs text-slate-400 block mt-0.5">{incident.incident_type?.name || 'Unknown Type'}</span>
-                      </div>
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full text-white ${getStatusColor(incident.status)} shadow-sm`}>
-                        {incident.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-3 line-clamp-2 leading-relaxed">{incident.description}</p>
 
-                    {/* Evidence Gallery - Top Priority */}
-                    <EvidenceGallery evidence={incident.evidence} />
-
-                    <div className="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 mt-3">
-                      <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                        <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
-                        <span>{incident.severity || 'Normal'} Severity</span>
+              {incidents.map((incident) => (
+                <Marker
+                  key={incident.incident_id}
+                  position={[incident.latitude, incident.longitude]}
+                  icon={ICONS[incident.status] || ICONS.REPORTED}
+                  eventHandlers={{
+                    click: () => setSelectedIncidentId(incident.incident_id)
+                  }}
+                >
+                  <Popup className="incident-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
+                    <div className="p-4 min-w-[240px] max-w-[300px] bg-white max-h-[500px] overflow-y-auto">
+                      <div className="flex items-start justify-between mb-3 border-b border-slate-100 pb-3">
+                        <div>
+                          <span className="font-bold text-slate-800 text-sm block">{incident.incident_code}</span>
+                          <span className="text-xs text-slate-400 block mt-0.5">{incident.incident_type?.name || 'Unknown Type'}</span>
+                        </div>
+                        <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full text-white ${getStatusColor(incident.status)} shadow-sm`}>
+                          {incident.status}
+                        </span>
                       </div>
-                      {incident.barangay && (
+                      <p className="text-sm text-slate-600 mb-3 line-clamp-2 leading-relaxed">{incident.description}</p>
+
+                      {/* Evidence Gallery - Top Priority */}
+                      <EvidenceGallery evidence={incident.evidence} />
+
+                      <div className="flex flex-col gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 mt-3">
                         <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                          <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          <span>{incident.barangay.barangay_name || 'Unknown Barangay'}</span>
+                          <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                          <span>{incident.severity || 'Normal'} Severity</span>
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                        <User className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                        <span>{incident.reporter?.name || 'Anonymous Reporter'}</span>
-                      </div>
-                      {incident.reporter?.contact_number && (
+                        {incident.barangay && (
+                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                            <span>{incident.barangay.barangay_name || 'Unknown Barangay'}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                          <span>📞 {incident.reporter.contact_number}</span>
+                          <User className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          <span>{incident.reporter?.name || 'Anonymous Reporter'}</span>
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                        <Clock className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                        <span>{new Date(incident.reported_at).toLocaleString()}</span>
-                      </div>
-                      {incident.map_pin_address && (
+                        {incident.reporter?.contact_number && (
+                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <span>📞 {incident.reporter.contact_number}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                          <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          <span className="truncate">
-                            {incident.map_pin_address}
-                          </span>
+                          <Clock className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          <span>{new Date(incident.reported_at).toLocaleString()}</span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-4 flex flex-col gap-2">
-                      <button
-                        onClick={(e) => handleGetDirections(e, incident)}
-                        disabled={routeLoading}
-                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
-                      >
-                        {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
-                        Get Directions
-                      </button>
-
-                      {(incident.status === 'VERIFIED' || incident.status === 'RESPONDING') && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
-                            className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
-                          >
-                            <PlusCircle size={14} /> Backup
-                          </button>
-                          <button
-                            onClick={async (e) => { 
-                              e.stopPropagation(); 
-                              await handleUpdateStatus(incident.incident_id, 'ON_SCENE');
-                              setSelectedIncidentForAction(incident); 
-                              setShowReportModal(true);
-                            }}
-                            disabled={updatingId === incident.incident_id}
-                            className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
-                          >
-                            {updatingId === incident.incident_id ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
-                            Arrive
-                          </button>
-                        </div>
-                      )}
-
-                      {incident.status === 'ON_SCENE' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(incident.incident_id, 'FALSE_ALARM'); }}
-                            disabled={updatingId === incident.incident_id}
-                            className="flex items-center justify-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
-                          >
-                            False Alarm
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowReportModal(true); }}
-                            className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
-                          >
-                            <CheckCircle2 size={14} /> Resolve
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {units.map((unit) => (
-              <Marker
-                key={unit.unit_id}
-                position={[unit.latitude, unit.longitude]}
-                icon={createUnitIcon(unit)}
-              >
-                <Popup className="unit-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
-                  <div className="p-3 min-w-[200px] bg-white">
-                    <div className="flex items-start justify-between mb-2 border-b border-slate-100 pb-2">
-                      <div>
-                        <span className="font-bold text-slate-800 text-sm block">{unit.unit_name}</span>
-                        <span className="text-xs text-slate-400 block mt-0.5">{unit.unit_type}</span>
+                        {incident.map_pin_address && (
+                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                            <span className="truncate">
+                              {incident.map_pin_address}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${
-                        unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
-                      } shadow-sm`}>
-                        {unit.availability_status}
-                      </span>
+
+                      {/* Action Buttons */}
+                      <div className="mt-4 flex flex-col gap-2">
+                        <button
+                          onClick={(e) => handleGetDirections(e, incident)}
+                          disabled={routeLoading}
+                          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
+                        >
+                          {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
+                          Get Directions
+                        </button>
+
+                        {(incident.status === 'VERIFIED' || incident.status === 'RESPONDING') && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
+                              className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
+                            >
+                              <PlusCircle size={14} /> Backup
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await handleUpdateStatus(incident.incident_id, 'ON_SCENE');
+                                setSelectedIncidentForAction(incident);
+                                setShowReportModal(true);
+                              }}
+                              disabled={updatingId === incident.incident_id}
+                              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                            >
+                              {updatingId === incident.incident_id ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                              Arrive
+                            </button>
+                          </div>
+                        )}
+
+                        {incident.status === 'ON_SCENE' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(incident.incident_id, 'FALSE_ALARM'); }}
+                              disabled={updatingId === incident.incident_id}
+                              className="flex items-center justify-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                            >
+                              False Alarm
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowReportModal(true); }}
+                              className="flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
+                            >
+                              <CheckCircle2 size={14} /> Resolve
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-600">
-                      <span className="block">📍 {unit.latitude.toFixed(4)}, {unit.longitude.toFixed(4)}</span>
+                  </Popup>
+                </Marker>
+              ))}
+
+              {units.map((unit) => (
+                <Marker
+                  key={unit.unit_id}
+                  position={[unit.latitude, unit.longitude]}
+                  icon={createUnitIcon(unit)}
+                >
+                  <Popup className="unit-popup !p-0 overflow-hidden rounded-xl border-none shadow-lg">
+                    <div className="p-3 min-w-[200px] bg-white">
+                      <div className="flex items-start justify-between mb-2 border-b border-slate-100 pb-2">
+                        <div>
+                          <span className="font-bold text-slate-800 text-sm block">{unit.unit_name}</span>
+                          <span className="text-xs text-slate-400 block mt-0.5">{unit.unit_type}</span>
+                        </div>
+                        <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
+                          } shadow-sm`}>
+                          {unit.availability_status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-600">
+                        <span className="block">📍 {unit.latitude.toFixed(4)}, {unit.longitude.toFixed(4)}</span>
+                      </div>
                     </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
 
-           {/* Active Route Info Bar */}
-           {activeRoute && (
-             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-500 text-white p-4 z-[400] flex items-center justify-between shadow-lg">
-               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                   <Navigation className="w-5 h-5 text-white" />
-                 </div>
-                 <div>
-                   <p className="font-bold text-sm">Route to {activeRoute.incident_code}</p>
-                   <p className="text-xs text-blue-100">
-                     {activeRoute.unit_name}
-                     {activeRoute.distance && ` • ${(activeRoute.distance / 1000).toFixed(1)} km`}
-                     {activeRoute.duration && ` • ~${Math.ceil(activeRoute.duration / 60)} min`}
-                   </p>
-                 </div>
-               </div>
-               <div className="flex items-center gap-2">
-                 <a
-                   href={`https://www.google.com/maps/dir/?api=1&origin=${activeRoute.unit_lat},${activeRoute.unit_lng}&destination=${activeRoute.incident_lat},${activeRoute.incident_lng}&travelmode=driving`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   className="px-3 py-1.5 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
-                 >
-                   Open Google Maps
-                 </a>
-                 <button
-                   onClick={() => setActiveRoute(null)}
-                   className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-                 >
-                   <X size={16} />
-                 </button>
-               </div>
-             </div>
-           )}
-         </div>
+          {/* Active Route Info Bar */}
+          {activeRoute && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-500 text-white p-4 z-[400] flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Navigation className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Route to {activeRoute.incident_code}</p>
+                  <p className="text-xs text-blue-100">
+                    {activeRoute.unit_name}
+                    {activeRoute.distance && ` • ${(activeRoute.distance / 1000).toFixed(1)} km`}
+                    {activeRoute.duration && ` • ~${Math.ceil(activeRoute.duration / 60)} min`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&origin=${activeRoute.unit_lat},${activeRoute.unit_lng}&destination=${activeRoute.incident_lat},${activeRoute.incident_lng}&travelmode=driving`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors"
+                >
+                  Open Google Maps
+                </a>
+                <button
+                  onClick={() => setActiveRoute(null)}
+                  className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Modals */}
         {showBackupModal && (

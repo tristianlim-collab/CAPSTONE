@@ -119,7 +119,10 @@ const Analytics = () => {
             Retrain Models
           </button>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors shadow-sm text-sm active:scale-95">
+          <button 
+            onClick={() => toast.info('Custom date filtering is available in the detailed Reports module.')}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors shadow-sm text-sm active:scale-95"
+          >
             <Calendar size={16} />
             This Month
           </button>

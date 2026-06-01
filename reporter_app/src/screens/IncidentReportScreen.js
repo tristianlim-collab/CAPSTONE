@@ -20,7 +20,7 @@ const EMERGENCY_TYPES = [
   { id: 'Fire', name: 'Fire', Icon: Flame, color: Colors.orange, bg: Colors.orangeLight },
   { id: 'Medical Emergency', name: 'Medical Emergency', Icon: Stethoscope, color: '#E11D48', bg: '#FFF1F2' },
   { id: 'Accident', name: 'Accident', Icon: Car, color: Colors.primaryDark, bg: Colors.primaryFaint },
-  { id: 'Crime-Related', name: 'Crime-Related', Icon: AlertTriangle, color: '#D97706', bg: Colors.amberLight },
+  { id: 'Crime', name: 'Crime-Related', Icon: AlertTriangle, color: '#D97706', bg: Colors.amberLight },
   { id: 'Other', name: 'Other', Icon: FileText, color: Colors.slate600, bg: Colors.slate100 },
 ];
 

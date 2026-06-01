@@ -57,8 +57,8 @@ const AdminLayout = () => {
       <motion.aside
         initial={false}
         animate={{ 
-          width: sidebarOpen ? 0 : 288,
-          x: sidebarOpen ? -288 : 0,
+          width: sidebarOpen ? 288 : 0,
+          x: sidebarOpen ? 0 : -288,
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden`}
@@ -146,7 +146,7 @@ const AdminLayout = () => {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              {sidebarOpen ? <ChevronsRight size={22} /> : <ChevronsLeft size={22} />}
+              {sidebarOpen ? <ChevronsLeft size={22} /> : <ChevronsRight size={22} />}
             </button>
             <div>
               <motion.h1 

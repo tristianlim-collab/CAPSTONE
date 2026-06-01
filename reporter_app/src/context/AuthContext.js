@@ -7,6 +7,10 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+// Default reporter credentials (created by seed.js)
+const DEFAULT_REPORTER_EMAIL = 'reporter@gaoirs.com';
+const DEFAULT_REPORTER_PASSWORD = 'Reporter@2026';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
     user_id: 'guest-id',
@@ -17,17 +21,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Silent background check if token exists, but don't block
     const initAuth = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
         if (token) {
+          // Token exists — verify it's still valid
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const res = await authAPI.getMe().catch(() => null);
-          if (res?.data) setUser(res.data);
+          if (res?.data) {
+            setUser(res.data);
+            return; // Done — token is valid
+          }
+        }
+
+        // No token or expired — auto-login as default reporter
+        console.log('[Auth] No valid token, auto-logging in as default reporter...');
+        const loginRes = await authAPI.login(DEFAULT_REPORTER_EMAIL, DEFAULT_REPORTER_PASSWORD);
+        const data = loginRes.data;
+        if (data?.token) {
+          await AsyncStorage.setItem('token', data.token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+          setUser(data.user);
+          console.log('[Auth] Auto-login successful:', data.user?.name);
         }
       } catch (error) {
-        console.warn('Auth init silent failed');
+        console.warn('[Auth] Auto-login failed:', error.message);
+        // Keep guest user as fallback
       }
     };
     initAuth();
@@ -79,7 +98,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const hasRole = (role) => user?.role === role;
-  const isAuthenticated = true; // Always true to bypass login
+  const isAuthenticated = true; // Always true to bypass login screen
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated, hasRole, checkAuth }}>

@@ -10,7 +10,7 @@ const SystemSettings = () => {
   const [configs, setConfigs] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Show/Hide password toggle
   const [showSecrets, setShowSecrets] = useState({});
 
@@ -81,7 +81,6 @@ const SystemSettings = () => {
     { id: 'roles', label: 'Roles & Permissions', icon: <ShieldCheck size={18} /> },
     { id: 'notifications', label: 'Notification Rules', icon: <Bell size={18} /> },
     { id: 'mail', label: 'SMTP Server', icon: <Mail size={18} /> },
-    { id: 'secrets', label: 'API Keys', icon: <Key size={18} /> },
   ]), []);
 
   const renderToggle = (key, label, description) => (
@@ -107,7 +106,7 @@ const SystemSettings = () => {
           </h2>
           <p className="text-sm text-slate-500 mt-1">Configure system settings, roles, notifications, and environment hooks.</p>
         </div>
-        <button 
+        <button
           onClick={handleSaveConfigs}
           disabled={isSaving || isLoading}
           className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition-all shadow-sm shadow-indigo-600/20 active:scale-95"
@@ -129,8 +128,8 @@ const SystemSettings = () => {
                 type="button"
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-left transition-colors text-sm ${isActive
-                    ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100'
-                    : 'bg-transparent text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100'
+                  : 'bg-transparent text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200'
                   }`}
               >
                 <div className={isActive ? 'text-indigo-600' : 'text-slate-400'}>{item.icon}</div>
@@ -201,7 +200,10 @@ const SystemSettings = () => {
                     </h3>
                     <p className="text-sm text-slate-500">Control access levels across the system modules.</p>
                   </div>
-                  <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition-all shadow-sm active:scale-95">
+                  <button
+                    onClick={() => toast.info('Advanced role creation is locked for system stability. Use the User Management module to assign fixed roles.')}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition-all shadow-sm active:scale-95"
+                  >
                     New Role
                   </button>
                 </div>
@@ -310,7 +312,7 @@ const SystemSettings = () => {
                 <p className="text-sm text-slate-500">Configure outgoing mail server for alerts and notifications.</p>
               </div>
               {isLoading ? (
-                 <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
@@ -331,7 +333,7 @@ const SystemSettings = () => {
                     <label className="block text-sm font-bold text-slate-700">SMTP Password</label>
                     <div className="relative">
                       <input type={showSecrets['SMTP_PASS'] ? 'text' : 'password'} value={configs.SMTP_PASS?.value === '********' ? '********' : (configs.SMTP_PASS?.value || configs.SMTP_PASS || '')} onChange={(e) => handleConfigChange('SMTP_PASS', e.target.value, true)} placeholder="••••••••" className="w-full px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                      <button type="button" onClick={() => setShowSecrets(p => ({...p, SMTP_PASS: !p.SMTP_PASS}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
+                      <button type="button" onClick={() => setShowSecrets(p => ({ ...p, SMTP_PASS: !p.SMTP_PASS }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
                         {showSecrets['SMTP_PASS'] ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
@@ -346,43 +348,7 @@ const SystemSettings = () => {
             </>
           )}
 
-          {/* ─── API Keys / Secrets Tab ─── */}
-          {activeTab === 'secrets' && (
-            <>
-              <div className="mb-6 pb-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-2">
-                  <Key size={20} className="text-indigo-600" />
-                  API Keys & Secrets
-                </h3>
-                <p className="text-sm text-slate-500">Manage third-party service credentials (e.g. Twilio for SMS).</p>
-              </div>
-              {isLoading ? (
-                 <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
-              ) : (
-                <div className="space-y-6">
-                  <h4 className="font-bold text-slate-700 pb-2 border-b border-slate-100">Twilio SMS Configuration</h4>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">Account SID</label>
-                    <input type="text" value={configs.TWILIO_SID?.value || configs.TWILIO_SID || ''} onChange={(e) => handleConfigChange('TWILIO_SID', e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxx" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
-                  </div>
-                  <div className="space-y-3 relative">
-                    <label className="block text-sm font-bold text-slate-700">Auth Token</label>
-                    <div className="relative">
-                      <input type={showSecrets['TWILIO_TOKEN'] ? 'text' : 'password'} value={configs.TWILIO_TOKEN?.value === '********' ? '********' : (configs.TWILIO_TOKEN?.value || configs.TWILIO_TOKEN || '')} onChange={(e) => handleConfigChange('TWILIO_TOKEN', e.target.value, true)} placeholder="••••••••" className="w-full px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
-                      <button type="button" onClick={() => setShowSecrets(p => ({...p, TWILIO_TOKEN: !p.TWILIO_TOKEN}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                        {showSecrets['TWILIO_TOKEN'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">This value is encrypted at rest. Enter a new token to change it.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">Sender Phone Number</label>
-                    <input type="text" value={configs.TWILIO_PHONE?.value || configs.TWILIO_PHONE || ''} onChange={(e) => handleConfigChange('TWILIO_PHONE', e.target.value)} placeholder="+1234567890" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white font-mono" />
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+
 
           {/* ─── Placeholder for other tabs ─── */}
           {!['general', 'roles', 'notifications', 'mail', 'secrets'].includes(activeTab) && (
