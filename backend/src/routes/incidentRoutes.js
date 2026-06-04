@@ -1,19 +1,23 @@
 import express from 'express';
 const router = express.Router();
 import * as controller from '../controllers/incidentController.js';
-import { authenticate, authorize } from '../middleware/auth.js'; // Mock assumption
+import { authenticate, authorize, optionalAuthenticate } from '../middleware/auth.js'; 
 
-router.use(authenticate);
-router.post('/', controller.createIncident);
-router.get('/', controller.getIncidents);
-router.get('/heatmap', authorize('ADMIN'), controller.getHeatmap);
-router.get('/analytics/hotspots', authorize('ADMIN'), controller.getIncidentHotspots);
-router.get('/:id', controller.getIncidentById);
-router.patch('/:id/status', authorize('ADMIN', 'RESPONSE_UNIT'), controller.updateIncidentStatus);
-router.post('/:id/backup', authorize('ADMIN', 'RESPONSE_UNIT'), controller.requestBackup);
-router.post('/:id/verify', authorize('ADMIN'), controller.verifyIncident);
-router.patch('/:id/edit', authorize('ADMIN'), controller.editIncident);
-router.patch('/:id/priority', authorize('ADMIN'), controller.updateIncidentPriority);
-router.post('/:id/escalate', authorize('ADMIN', 'RESPONSE_UNIT'), controller.escalateIncident);
+// Public: Submission of emergency reports with optional auth to track reporter
+router.post('/', optionalAuthenticate, controller.createIncident);
+
+// Public: Read-only access for anonymous users (reporter app, public map)
+router.get('/', optionalAuthenticate, controller.getIncidents);
+router.get('/:id', optionalAuthenticate, controller.getIncidentById);
+
+// Protected: All mutation/management routes require auth
+router.get('/heatmap', authenticate, authorize('ADMIN'), controller.getHeatmap);
+router.get('/analytics/hotspots', authenticate, authorize('ADMIN'), controller.getIncidentHotspots);
+router.patch('/:id/status', authenticate, authorize('ADMIN', 'RESPONSE_UNIT'), controller.updateIncidentStatus);
+router.post('/:id/backup', authenticate, authorize('ADMIN', 'RESPONSE_UNIT'), controller.requestBackup);
+router.post('/:id/verify', authenticate, authorize('ADMIN'), controller.verifyIncident);
+router.patch('/:id/edit', authenticate, authorize('ADMIN'), controller.editIncident);
+router.patch('/:id/priority', authenticate, authorize('ADMIN'), controller.updateIncidentPriority);
+router.post('/:id/escalate', authenticate, authorize('ADMIN', 'RESPONSE_UNIT'), controller.escalateIncident);
 
 export default router;

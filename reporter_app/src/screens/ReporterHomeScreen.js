@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, StatusBar, Dimensions
+  ActivityIndicator, StatusBar, Dimensions, Alert
 } from 'react-native';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Home, FileText, User, Bell, ChevronRight,
+  Home, FileText, ChevronRight,
   MapPin, Clock, AlertTriangle, ShieldCheck,
   Flame, Activity, Stethoscope, Car
 } from 'lucide-react-native';
@@ -76,20 +76,30 @@ export default function ReporterHomeScreen({ navigation }) {
     const unsub4 = on('incident_deleted', (data) => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    const unsub5 = on('incident_resolved', (data) => {
+      Alert.alert(
+        'Incident Resolved ✅',
+        data.message || `Your reported incident #${data.incident_code} has been resolved by the response team.`,
+        [{ text: 'OK' }]
+      );
+      // Refresh list
+      setIncidents(prev => prev.map(inc => 
+        inc.incident_id === data.incident_id ? { ...inc, status: 'RESOLVED' } : inc
+      ));
+    });
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, [on]);
 
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
 
   const totalReports = incidents.length;
   const activeCount = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING'].includes(i.status)).length;
   const recentIncidents = incidents.slice(0, 5);
 
   const getTimeAgo = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    if (!dateStr) return 'Recently';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Recently';
+    const diff = Date.now() - date.getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins} min${mins > 1 ? 's' : ''} ago`;
@@ -111,7 +121,8 @@ export default function ReporterHomeScreen({ navigation }) {
   };
 
   const getTypeIcon = (incident) => {
-    const typeName = (incident.incident_type?.name || '').toUpperCase();
+    if (!incident) return FileText;
+    const typeName = (incident.incident_type?.name || incident.type?.name || '').toUpperCase();
     for (const [key, Icon] of Object.entries(TYPE_ICONS)) {
       if (typeName.includes(key)) return Icon;
     }
@@ -142,18 +153,6 @@ export default function ReporterHomeScreen({ navigation }) {
           <View>
             <Text style={styles.greetingText}>{getGreeting()},</Text>
             <Text style={styles.userName}>{user?.name || 'Citizen'} 👋</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.bellBtn}>
-              <Bell size={20} color={Colors.slate600} />
-              {activeCount > 0 && <View style={styles.bellDot} />}
-            </TouchableOpacity>
-            <LinearGradient
-              colors={[Colors.primary, Colors.indigo]}
-              style={styles.avatarCircle}
-            >
-              <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
-            </LinearGradient>
           </View>
         </View>
 
@@ -231,9 +230,11 @@ export default function ReporterHomeScreen({ navigation }) {
             const badge = getStatusBadge(incident.status);
             const isResolved = incident.status === 'RESOLVED' || incident.status === 'CLOSED';
             return (
-              <View
+              <TouchableOpacity
                 key={incident.incident_id}
-                style={[styles.incidentCard, isResolved && { opacity: 0.65 }]}
+                onPress={() => navigation.navigate('ReportDetails', { incident })}
+                activeOpacity={0.7}
+                style={[styles.incidentCard, isResolved && { opacity: 0.85 }]}
               >
                 <View style={[
                   styles.incidentIcon,
@@ -264,7 +265,7 @@ export default function ReporterHomeScreen({ navigation }) {
                     </View>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -314,50 +315,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xxl,
     fontWeight: '800',
     letterSpacing: -0.5,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  bellBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#EF4444',
-    borderWidth: 2,
-    borderColor: Colors.slate800,
-  },
-  avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 0,
-  },
-  avatarText: {
-    color: Colors.white,
-    fontSize: FontSizes.md,
-    fontWeight: '700',
   },
   emergencyBtn: {
     borderRadius: BorderRadius.xxxl,

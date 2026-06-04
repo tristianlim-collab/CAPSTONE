@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { SOCKET_URL } from '../api';
@@ -11,15 +11,7 @@ export const SocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      setConnected(false);
-      return;
-    }
-
+    // Always connect, even if not authenticated (for guests)
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
     });
@@ -30,11 +22,13 @@ export const SocketProvider = ({ children }) => {
       setConnected(true);
       console.log('[Socket] Connected:', socket.id);
 
-      if (user?.role === 'REPORTER') {
+      // If logged in, join personal room
+      if (isAuthenticated && user?.role === 'REPORTER') {
         const userId = user?.user_id || user?.id;
-        if (userId) {
-          socket.emit('join_reporter', userId);
-        }
+        if (userId) socket.emit('join_reporter', userId);
+      } else {
+        // Guest user - join public room for global updates
+        socket.emit('join_room', 'public');
       }
     });
 
@@ -49,17 +43,22 @@ export const SocketProvider = ({ children }) => {
     };
   }, [isAuthenticated, user]);
 
-  const on = (eventName, callback) => {
-    if (!socketRef.current) {
-      return () => {};
+  const on = useCallback((eventName, callback) => {
+    if (socketRef.current) {
+      socketRef.current.on(eventName, callback);
     }
-    socketRef.current.on(eventName, callback);
-    return () => socketRef.current?.off(eventName, callback);
-  };
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off(eventName, callback);
+      }
+    };
+  }, [connected]);
 
-  const emit = (eventName, payload) => {
-    socketRef.current?.emit(eventName, payload);
-  };
+  const emit = useCallback((eventName, payload) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(eventName, payload);
+    }
+  }, [connected]);
 
   const value = useMemo(
     () => ({
@@ -68,7 +67,7 @@ export const SocketProvider = ({ children }) => {
       on,
       emit,
     }),
-    [connected]
+    [connected, on, emit]
   );
 
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;

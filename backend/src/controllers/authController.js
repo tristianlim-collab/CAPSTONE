@@ -28,8 +28,8 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     
-    // Force all newly registered accounts via the public form to be Reporters
-    const userRole = 'REPORTER';
+    // Check if a role is provided and valid, otherwise default to RESPONSE_UNIT
+    const userRole = (role && ['RESPONSE_UNIT', 'ADMIN'].includes(role)) ? role : 'RESPONSE_UNIT';
 
     const user = await prisma.user.create({
       data: {
@@ -87,9 +87,22 @@ export const login = async (req, res) => {
       }).catch(err => console.error('FCM token update error:', err.message));
     }
 
+    // Fetch full user with unit details for the response
+    const fullUser = await prisma.user.findUnique({
+      where: { user_id: user.user_id },
+      include: { unit: true }
+    });
+
     res.json({
       token,
-      user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
+      user: { 
+        id: fullUser.user_id, 
+        name: fullUser.name, 
+        email: fullUser.email, 
+        role: fullUser.role,
+        unit_id: fullUser.unit_id,
+        unit: fullUser.unit 
+      }
     });
   } catch (error) {
     console.error(error);
@@ -142,9 +155,22 @@ export const googleLogin = async (req, res) => {
       { expiresIn: config.jwt.expiresIn }
     );
 
+    // Fetch full user with unit details for the response
+    const fullUser = await prisma.user.findUnique({
+      where: { user_id: user.user_id },
+      include: { unit: true }
+    });
+
     res.json({
       token,
-      user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
+      user: { 
+        id: fullUser.user_id, 
+        name: fullUser.name, 
+        email: fullUser.email, 
+        role: fullUser.role,
+        unit_id: fullUser.unit_id,
+        unit: fullUser.unit 
+      }
     });
   } catch (error) {
     console.error('Google Sign-In Error:', error);

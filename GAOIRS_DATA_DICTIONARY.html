@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAOIRS - Data Dictionary (CORRECTED)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .table-section {
+            margin-bottom: 50px;
+            page-break-inside: avoid;
+        }
+
+        .table-title {
+            font-size: 1.3em;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .table-subtitle {
+            color: #999;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        thead {
+            background: #667eea;
+            color: white;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #667eea;
+        }
+
+        td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            font-size: 0.95em;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background: #f0f4ff;
+        }
+
+        .pk {
+            background: #d4edda;
+            font-weight: bold;
+            color: #155724;
+        }
+
+        .fk {
+            background: #cfe2ff;
+            font-weight: bold;
+            color: #084298;
+        }
+
+        .unique {
+            background: #fff3cd;
+            font-weight: bold;
+            color: #856404;
+        }
+
+        .nullable {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .enum-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #764ba2;
+        }
+
+        .enum-section h3 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .enum-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .enum-item {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .enum-item strong {
+            color: #764ba2;
+        }
+
+        .note {
+            background: #d1ecf1;
+            padding: 15px;
+            border-left: 4px solid #17a2b8;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .note strong {
+            color: #0c5460;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #667eea;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🗺️ GAOIRS Data Dictionary (CORRECTED)</h1>
+            <p>Geospatial Approach to Optimize Incident Response System</p>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #999;">Complete Database Schema Documentation | PostgreSQL + PostGIS | VERIFIED AGAINST PRISMA SCHEMA</p>
+        </div>
+
+        <!-- TABLE 1: USER -->
+        <div class="table-section">
+            <div class="table-title">Table 1. USER</div>
+            <div class="table-subtitle">Stores all system users (Admin, Response Units, Reporters) with authentication credentials and role-based access control.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>user_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique system identifier</td></tr>
+                    <tr><td>name</td><td>VARCHAR</td><td>-</td><td>-</td><td>Full name of user</td></tr>
+                    <tr class="unique"><td>email</td><td>VARCHAR</td><td>-</td><td>UNIQUE</td><td>Login credential (must be unique)</td></tr>
+                    <tr><td>password_hash</td><td>VARCHAR</td><td>-</td><td>-</td><td>Bcrypt hashed password</td></tr>
+                    <tr><td>contact_number</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Phone for SMS notifications</td></tr>
+                    <tr><td>role</td><td>ENUM</td><td>-</td><td>-</td><td>ADMIN | RESPONSE_UNIT | REPORTER</td></tr>
+                    <tr><td>is_active</td><td>BOOLEAN</td><td>-</td><td>-</td><td>Account active status (default: true)</td></tr>
+                    <tr><td>barangay_id</td><td>UUID</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> FK → BARANGAYS (assigned barangay)</td></tr>
+                    <tr><td>unit_id</td><td>UUID</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> FK → RESPONSE_UNIT (unit assignment)</td></tr>
+                    <tr><td>fcm_token</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Firebase Cloud Messaging token for push notifications</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Account creation (auto-set)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No updated_at field. Relationships handled via barangay_id and unit_id foreign keys.
+            </div>
+        </div>
+
+        <!-- TABLE 2: BARANGAYS -->
+        <div class="table-section">
+            <div class="table-title">Table 2. BARANGAYS</div>
+            <div class="table-subtitle">Geographic divisions with PostGIS boundary polygons for geospatial queries and jurisdiction mapping.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>barangay_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique barangay identifier</td></tr>
+                    <tr><td>name</td><td>VARCHAR</td><td>-</td><td>-</td><td>Barangay name (e.g., "Anabu II-A")</td></tr>
+                    <tr><td>municipality</td><td>VARCHAR</td><td>-</td><td>-</td><td>Municipality name (e.g., "Imus")</td></tr>
+                    <tr><td>city</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> City/Province name (e.g., "Cavite")</td></tr>
+                    <tr><td>boundary_geojson</td><td>JSON</td><td>-</td><td>-</td><td>PostGIS polygon boundary in GeoJSON format for spatial queries</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Record creation timestamp</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABLE 3: RESPONSE_UNIT -->
+        <div class="table-section">
+            <div class="table-title">Table 3. RESPONSE_UNIT</div>
+            <div class="table-subtitle">Emergency response teams (Fire, Police, Medical, DRRMO) with location tracking and availability status.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>unit_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique response unit ID</td></tr>
+                    <tr><td>unit_name</td><td>VARCHAR</td><td>-</td><td>-</td><td>Unit name (e.g., "Fire Station 1", "Police Precinct North")</td></tr>
+                    <tr><td>unit_type</td><td>ENUM</td><td>-</td><td>-</td><td>FIRE | POLICE | MEDICAL | BARANGAY | DRRMO</td></tr>
+                    <tr><td>contact_number</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Unit phone number</td></tr>
+                    <tr><td>latitude</td><td>FLOAT</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Current/base latitude for distance calculations</td></tr>
+                    <tr><td>longitude</td><td>FLOAT</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Current/base longitude for distance calculations</td></tr>
+                    <tr><td>barangay_id</td><td>UUID</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> FK → BARANGAYS (home barangay)</td></tr>
+                    <tr><td>availability_status</td><td>ENUM</td><td>-</td><td>-</td><td>AVAILABLE | BUSY | OFFLINE | ON_BREAK (default: AVAILABLE)</td></tr>
+                    <tr><td>last_updated</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Last location/status update (auto-updated)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No created_at. Uses @updatedAt for last_updated field.
+            </div>
+        </div>
+
+        <!-- TABLE 4: INCIDENT_TYPES -->
+        <div class="table-section">
+            <div class="table-title">Table 4. INCIDENT_TYPES</div>
+            <div class="table-subtitle">Reference table for incident classification with color codes and default unit assignments.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>type_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique incident type ID</td></tr>
+                    <tr><td>name</td><td>VARCHAR</td><td>-</td><td>-</td><td>Fire | Medical | Accident | Crime | Infrastructure</td></tr>
+                    <tr><td>color_code</td><td>VARCHAR</td><td>-</td><td>-</td><td>Hex color for UI display (e.g., "#FF6B6B", "#4ECDC4")</td></tr>
+                    <tr><td>icon_label</td><td>VARCHAR</td><td>-</td><td>-</td><td>Icon identifier for frontend (e.g., "fire-icon", "medical-icon")</td></tr>
+                    <tr><td>description</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Detailed description of incident type</td></tr>
+                    <tr><td>default_unit_type</td><td>ENUM</td><td>-</td><td>-</td><td>FIRE | POLICE | MEDICAL | DRRMO | BARANGAY (default: BARANGAY)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABLE 5: INCIDENT -->
+        <div class="table-section">
+            <div class="table-title">Table 5. INCIDENT</div>
+            <div class="table-subtitle">Core business entity storing all emergency incidents with location, type, status tracking, and evidence management.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>incident_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique incident identifier</td></tr>
+                    <tr class="unique"><td>incident_code</td><td>VARCHAR</td><td>-</td><td>UNIQUE</td><td>Human-readable code (e.g., "INC-20260602-00001")</td></tr>
+                    <tr class="fk"><td>reported_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>User who reported incident</td></tr>
+                    <tr class="fk"><td>incident_type_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT_TYPES</td><td>Classification of incident type</td></tr>
+                    <tr class="fk"><td>barangay_id</td><td>UUID</td><td>-</td><td>FK → BARANGAYS</td><td><span class="nullable">[NULLABLE]</span> Geographic location within barangay</td></tr>
+                    <tr><td>description</td><td>VARCHAR</td><td>-</td><td>-</td><td>Detailed incident description from reporter</td></tr>
+                    <tr><td>latitude</td><td>FLOAT</td><td>-</td><td>-</td><td>GPS latitude coordinate of incident location</td></tr>
+                    <tr><td>longitude</td><td>FLOAT</td><td>-</td><td>-</td><td>GPS longitude coordinate of incident location</td></tr>
+                    <tr><td>map_pin_address</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Human-readable address from geocoding</td></tr>
+                    <tr><td>reporter_name</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Name submitted by reporter (optional override)</td></tr>
+                    <tr><td>reporter_phone</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Phone submitted by reporter (optional override)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>-</td><td>-</td><td>REPORTED | VERIFIED | RESPONDING | ON_SCENE | RESOLVED | FALSE_ALARM | CLOSED (default: REPORTED)</td></tr>
+                    <tr><td>severity</td><td>ENUM</td><td>-</td><td>-</td><td>LOW | HIGH | CRITICAL (default: HIGH)</td></tr>
+                    <tr><td>priority</td><td>ENUM</td><td>-</td><td>-</td><td>LOW | MEDIUM | HIGH | CRITICAL (default: MEDIUM)</td></tr>
+                    <tr><td>reported_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Initial report timestamp</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Last status update timestamp (auto-updated)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> Added map_pin_address field from schema. Uses @updatedAt for auto-update.
+            </div>
+        </div>
+
+        <!-- TABLE 6: EVIDENCE -->
+        <div class="table-section">
+            <div class="table-title">Table 6. EVIDENCE</div>
+            <div class="table-subtitle">Photos and media files uploaded as evidence for incidents (stored via Cloudinary).</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>evidence_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique evidence file ID</td></tr>
+                    <tr class="fk"><td>incident_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT</td><td>Associated incident</td></tr>
+                    <tr class="fk"><td>uploaded_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>User who uploaded evidence (reporter or response unit)</td></tr>
+                    <tr><td>file_path</td><td>VARCHAR</td><td>-</td><td>-</td><td>Cloudinary URL or file path</td></tr>
+                    <tr><td>file_type</td><td>VARCHAR</td><td>-</td><td>-</td><td>MIME type (image/jpeg, image/png, video/mp4, etc.)</td></tr>
+                    <tr><td>uploaded_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Upload timestamp (auto-set)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABLE 7: INCIDENT_ASSIGNMENTS -->
+        <div class="table-section">
+            <div class="table-title">Table 7. INCIDENT_ASSIGNMENTS</div>
+            <div class="table-subtitle">Links incidents to response units with workflow tracking (dispatch → acknowledgment → arrival → resolution).</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>assignment_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique assignment ID</td></tr>
+                    <tr class="fk"><td>incident_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT</td><td>The incident being assigned</td></tr>
+                    <tr class="fk"><td>unit_id</td><td>UUID</td><td>-</td><td>FK → RESPONSE_UNIT</td><td>Response unit receiving assignment</td></tr>
+                    <tr class="fk"><td>assigned_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>Admin/dispatcher who assigned</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>-</td><td>-</td><td>PENDING | ACCEPTED | REJECTED | RESPONDING | ON_SCENE | RESOLVED (default: PENDING)</td></tr>
+                    <tr><td>assigned_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>When unit was assigned</td></tr>
+                    <tr><td>acknowledged_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> When unit acknowledged assignment</td></tr>
+                    <tr><td>arrived_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> When unit arrived at scene</td></tr>
+                    <tr><td>resolved_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> When unit completed response</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Last status update (auto-updated)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No created_at field. Uses @updatedAt for status updates.
+            </div>
+        </div>
+
+        <!-- TABLE 8: INCIDENT_STATUS_LOG -->
+        <div class="table-section">
+            <div class="table-title">Table 8. INCIDENT_STATUS_LOG</div>
+            <div class="table-subtitle">Immutable audit trail of all incident status changes with user attribution and timestamps.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>log_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique log entry ID</td></tr>
+                    <tr class="fk"><td>incident_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT</td><td>The incident being logged</td></tr>
+                    <tr class="fk"><td>changed_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>User who made the status change</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>-</td><td>-</td><td>REPORTED | VERIFIED | RESPONDING | ON_SCENE | RESOLVED | FALSE_ALARM | CLOSED</td></tr>
+                    <tr><td>remarks</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Remarks about status change</td></tr>
+                    <tr><td>changed_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>When status changed (auto-set)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No created_at field. Append-only immutable log for compliance.
+            </div>
+        </div>
+
+        <!-- TABLE 9: POST_INCIDENT_REPORTS -->
+        <div class="table-section">
+            <div class="table-title">Table 9. POST_INCIDENT_REPORTS</div>
+            <div class="table-subtitle">After-action reports submitted by response units with admin review, approval workflow, and photo evidence.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>report_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique report ID</td></tr>
+                    <tr class="fk"><td>incident_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT [UNIQUE]</td><td>One report per incident</td></tr>
+                    <tr class="fk"><td>submitted_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>Response unit leader who submitted report (role: RESPONSE_UNIT)</td></tr>
+                    <tr><td>response_time_minutes</td><td>INT</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Time from dispatch to arrival in minutes</td></tr>
+                    <tr><td>actions_taken</td><td>VARCHAR</td><td>-</td><td>-</td><td>Response actions description</td></tr>
+                    <tr><td>casualties</td><td>INT</td><td>-</td><td>-</td><td>Number of casualties (default: 0)</td></tr>
+                    <tr><td>damages_estimate</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Estimated damage (e.g., "₱500,000")</td></tr>
+                    <tr><td>remarks</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Additional remarks from responders</td></tr>
+                    <tr><td>photos</td><td>VARCHAR[]</td><td>-</td><td>-</td><td>Array of Cloudinary photo URLs (default: [])</td></tr>
+                    <tr><td>submitted_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Submission timestamp (auto-set)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>-</td><td>-</td><td>PENDING | UNDER_REVIEW | APPROVED | REJECTED (default: PENDING)</td></tr>
+                    <tr><td>admin_notes</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Admin feedback/approval comments</td></tr>
+                    <tr class="fk"><td>reviewed_by_id</td><td>UUID</td><td>-</td><td>FK → USER</td><td><span class="nullable">[NULLABLE]</span> Admin/supervisor who reviewed report</td></tr>
+                    <tr><td>reviewed_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> When report was reviewed/approved</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> Added photos field (String array). No created_at, only submitted_at.
+            </div>
+        </div>
+
+        <!-- TABLE 10: NOTIFICATIONS -->
+        <div class="table-section">
+            <div class="table-title">Table 10. NOTIFICATIONS</div>
+            <div class="table-subtitle">Multi-channel alert distribution (SMS, Email, Push, Dashboard) with delivery status tracking.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>notification_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique notification ID</td></tr>
+                    <tr class="fk"><td>incident_id</td><td>UUID</td><td>-</td><td>FK → INCIDENT</td><td>Associated incident</td></tr>
+                    <tr class="fk"><td>unit_id</td><td>UUID</td><td>-</td><td>FK → RESPONSE_UNIT</td><td><span class="nullable">[NULLABLE]</span> Target response unit</td></tr>
+                    <tr class="fk"><td>assigned_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td><span class="nullable">[NULLABLE]</span> Admin who triggered notification</td></tr>
+                    <tr><td>channel</td><td>ENUM</td><td>-</td><td>-</td><td>SMS | EMAIL | DASHBOARD | PUSH (Firebase)</td></tr>
+                    <tr><td>message_body</td><td>VARCHAR</td><td>-</td><td>-</td><td>Notification content/message</td></tr>
+                    <tr><td>delivery_status</td><td>ENUM</td><td>-</td><td>-</td><td>PENDING | SENT | DELIVERED | READ | FAILED (default: PENDING)</td></tr>
+                    <tr><td>sent_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>When notification was sent (auto-set)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No delivered_at or read_at fields in schema. Only delivery_status enum for tracking.
+            </div>
+        </div>
+
+        <!-- TABLE 11: GENERATED_REPORTS -->
+        <div class="table-section">
+            <div class="table-title">Table 11. GENERATED_REPORTS</div>
+            <div class="table-subtitle">PDF and Excel reports with customizable filters for analysis and compliance.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>report_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique report ID</td></tr>
+                    <tr class="fk"><td>generated_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td>Admin who generated report</td></tr>
+                    <tr><td>report_title</td><td>VARCHAR</td><td>-</td><td>-</td><td>User-defined report title</td></tr>
+                    <tr><td>report_type</td><td>ENUM</td><td>-</td><td>-</td><td>INCIDENT_SUMMARY | AREA_REPORT | RESPONSE_TIME | FULL_EXPORT</td></tr>
+                    <tr><td>file_format</td><td>ENUM</td><td>-</td><td>-</td><td>PDF | EXCEL | CSV</td></tr>
+                    <tr><td>filters_applied</td><td>JSON</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Applied filters as JSON (date range, incident type, status, etc.)</td></tr>
+                    <tr><td>file_path</td><td>VARCHAR</td><td>-</td><td>-</td><td>Storage location (Cloudinary URL or local path)</td></tr>
+                    <tr><td>generated_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>When report was generated (auto-set)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No created_at. Generated_at is the only timestamp.
+            </div>
+        </div>
+
+        <!-- TABLE 12: SYSTEM_AUDIT_LOGS -->
+        <div class="table-section">
+            <div class="table-title">Table 12. SYSTEM_AUDIT_LOGS</div>
+            <div class="table-subtitle">Immutable comprehensive audit trail of all system actions for compliance and security monitoring.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>log_id</td><td>UUID</td><td>-</td><td>Primary Key (PK)</td><td>Unique audit log ID</td></tr>
+                    <tr class="fk"><td>user_id</td><td>UUID</td><td>-</td><td>FK → USER</td><td>User who performed action</td></tr>
+                    <tr><td>action</td><td>VARCHAR</td><td>-</td><td>-</td><td>CREATE | UPDATE | DELETE | LOGIN | LOGOUT | EXPORT</td></tr>
+                    <tr><td>resource</td><td>VARCHAR</td><td>-</td><td>-</td><td>Resource type (Incident, User, ResponseUnit, Report, etc.)</td></tr>
+                    <tr><td>resource_id</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> ID of affected resource</td></tr>
+                    <tr><td>details</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> Action details (field changes, before/after values)</td></tr>
+                    <tr><td>ip_address</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> IP address of user performing action</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>When action occurred (auto-set)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABLE 13: SYSTEM_CONFIG -->
+        <div class="table-section">
+            <div class="table-title">Table 13. SYSTEM_CONFIG</div>
+            <div class="table-subtitle">Configuration key-value store with optional encryption for sensitive data like API keys.</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Field Type</th>
+                        <th>Length</th>
+                        <th>Key</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="pk"><td>config_key</td><td>VARCHAR</td><td>-</td><td>Primary Key (PK)</td><td>Config key (e.g., "max_incidents_per_day", "sms_rate_limit")</td></tr>
+                    <tr><td>config_value</td><td>VARCHAR</td><td>-</td><td>-</td><td>Stored as encrypted JSON string if is_encrypted=true</td></tr>
+                    <tr><td>description</td><td>VARCHAR</td><td>-</td><td>-</td><td><span class="nullable">[NULLABLE]</span> What this config controls</td></tr>
+                    <tr><td>is_encrypted</td><td>BOOLEAN</td><td>-</td><td>-</td><td>Whether value is encrypted (default: false)</td></tr>
+                    <tr class="fk"><td>updated_by</td><td>UUID</td><td>-</td><td>FK → USER</td><td><span class="nullable">[NULLABLE]</span> Admin who updated config</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>-</td><td>-</td><td>Last update timestamp (auto-updated)</td></tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>✓ VERIFIED:</strong> No created_at field. Uses @updatedAt for updates.
+            </div>
+        </div>
+
+        <!-- ENUMERATIONS -->
+        <div class="table-section">
+            <div class="table-title">Enumeration Values Reference</div>
+            <div class="table-subtitle">All enum types with their valid values.</div>
+
+            <div class="enum-section">
+                <h3>Role (USER.role)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>ADMIN</strong> - Full system access, incident management, approvals</div>
+                    <div class="enum-item"><strong>RESPONSE_UNIT</strong> - Receive assignments, submit reports, view incidents</div>
+                    <div class="enum-item"><strong>REPORTER</strong> - Create incidents, view own reports, limited access</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>UnitType</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>FIRE</strong> - Fire Department (BFP)</div>
+                    <div class="enum-item"><strong>POLICE</strong> - Police Force (PNP)</div>
+                    <div class="enum-item"><strong>MEDICAL</strong> - Ambulance/Medical Response</div>
+                    <div class="enum-item"><strong>DRRMO</strong> - Disaster Risk Reduction Management Office</div>
+                    <div class="enum-item"><strong>BARANGAY</strong> - Barangay Health/Public Order Unit</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>UnitStatus (RESPONSE_UNIT.availability_status)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>AVAILABLE</strong> - Ready to receive assignments</div>
+                    <div class="enum-item"><strong>BUSY</strong> - Currently responding (cannot accept new assignments)</div>
+                    <div class="enum-item"><strong>OFFLINE</strong> - Not operational (equipment maintenance)</div>
+                    <div class="enum-item"><strong>ON_BREAK</strong> - Personnel on break (available shortly)</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>IncidentStatus</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>REPORTED</strong> - Initial report received, pending verification</div>
+                    <div class="enum-item"><strong>VERIFIED</strong> - Admin confirmed incident legitimacy</div>
+                    <div class="enum-item"><strong>RESPONDING</strong> - Units en route to scene</div>
+                    <div class="enum-item"><strong>ON_SCENE</strong> - Units arrived and responding</div>
+                    <div class="enum-item"><strong>RESOLVED</strong> - Incident handled, units completing work</div>
+                    <div class="enum-item"><strong>FALSE_ALARM</strong> - No actual emergency, incident cancelled</div>
+                    <div class="enum-item"><strong>CLOSED</strong> - Incident complete, marked for archive</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>Severity & Priority (INCIDENT)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>Severity - LOW</strong> - Minor incident, limited immediate impact</div>
+                    <div class="enum-item"><strong>Severity - HIGH</strong> - Significant incident with multiple casualties/property damage</div>
+                    <div class="enum-item"><strong>Severity - CRITICAL</strong> - Life-threatening, major disaster, mass casualty</div>
+                    <div class="enum-item"><strong>Priority - LOW</strong> - Non-urgent, can wait for availability</div>
+                    <div class="enum-item"><strong>Priority - MEDIUM</strong> - Standard priority dispatch</div>
+                    <div class="enum-item"><strong>Priority - HIGH</strong> - Urgent, dispatch nearest unit immediately</div>
+                    <div class="enum-item"><strong>Priority - CRITICAL</strong> - Life-threatening, all available units dispatch</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>AssignmentStatus (INCIDENT_ASSIGNMENTS)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>PENDING</strong> - Awaiting unit acknowledgment</div>
+                    <div class="enum-item"><strong>ACCEPTED</strong> - Unit accepted, preparing to respond</div>
+                    <div class="enum-item"><strong>REJECTED</strong> - Unit rejected (unavailable, etc.)</div>
+                    <div class="enum-item"><strong>RESPONDING</strong> - Unit en route to incident</div>
+                    <div class="enum-item"><strong>ON_SCENE</strong> - Unit arrived and actively responding</div>
+                    <div class="enum-item"><strong>RESOLVED</strong> - Unit completed response actions</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>AlertChannel (NOTIFICATIONS)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>SMS</strong> - Text message via Twilio</div>
+                    <div class="enum-item"><strong>EMAIL</strong> - Email via Nodemailer SMTP</div>
+                    <div class="enum-item"><strong>DASHBOARD</strong> - In-app notification in web/mobile UI</div>
+                    <div class="enum-item"><strong>PUSH</strong> - Push notification via Firebase Cloud Messaging</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>DeliveryStatus (NOTIFICATIONS)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>PENDING</strong> - Queued for sending</div>
+                    <div class="enum-item"><strong>SENT</strong> - Successfully sent to recipient</div>
+                    <div class="enum-item"><strong>DELIVERED</strong> - Confirmed received by recipient</div>
+                    <div class="enum-item"><strong>READ</strong> - Recipient opened and read notification</div>
+                    <div class="enum-item"><strong>FAILED</strong> - Delivery failed (invalid number, network error)</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>ReportStatus (POST_INCIDENT_REPORTS)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>PENDING</strong> - Submitted, awaiting admin review</div>
+                    <div class="enum-item"><strong>UNDER_REVIEW</strong> - Admin is currently reviewing</div>
+                    <div class="enum-item"><strong>APPROVED</strong> - Admin approved, marked as official record</div>
+                    <div class="enum-item"><strong>REJECTED</strong> - Admin rejected due to inaccuracies/issues</div>
+                </div>
+            </div>
+
+            <div class="enum-section">
+                <h3>ReportType & FileFormat (GENERATED_REPORTS)</h3>
+                <div class="enum-grid">
+                    <div class="enum-item"><strong>INCIDENT_SUMMARY</strong> - Summary statistics of incidents in period</div>
+                    <div class="enum-item"><strong>AREA_REPORT</strong> - Incidents grouped by barangay/geographic area</div>
+                    <div class="enum-item"><strong>RESPONSE_TIME</strong> - Response time metrics and KPIs</div>
+                    <div class="enum-item"><strong>FULL_EXPORT</strong> - Complete incident data export with all details</div>
+                    <div class="enum-item"><strong>PDF</strong> - Adobe PDF format (charts, summaries, professional layout)</div>
+                    <div class="enum-item"><strong>EXCEL</strong> - Microsoft Excel spreadsheet (detailed data, formulas)</div>
+                    <div class="enum-item"><strong>CSV</strong> - Comma-separated values (raw data export)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p><strong>✓ GAOIRS Data Dictionary (CORRECTED & VERIFIED)</strong> | PostgreSQL 14+ with PostGIS | Generated June 2, 2026</p>
+            <p style="margin-top: 10px;">This dictionary has been verified against the actual Prisma schema. Field types, relationships, and constraints are accurate.</p>
+        </div>
+    </div>
+</body>
+</html>

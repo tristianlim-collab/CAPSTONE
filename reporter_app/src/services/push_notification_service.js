@@ -137,12 +137,12 @@ class PushNotificationService {
    * Call when the app unmounts or user logs out.
    */
   stopListening() {
-    if (this._notificationListener) {
-      Notifications.removeNotificationSubscription(this._notificationListener);
+    if (this._notificationListener && typeof this._notificationListener.remove === 'function') {
+      this._notificationListener.remove();
       this._notificationListener = null;
     }
-    if (this._responseListener) {
-      Notifications.removeNotificationSubscription(this._responseListener);
+    if (this._responseListener && typeof this._responseListener.remove === 'function') {
+      this._responseListener.remove();
       this._responseListener = null;
     }
   }

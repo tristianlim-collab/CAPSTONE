@@ -48,11 +48,11 @@ export const createIncident = async (req, res) => {
     const incident = await prisma.incident.create({
       data: {
         incident_code,
-        reported_by: req.user.id,
+        ...(req.user?.id ? { reported_by: req.user.id } : {}),
         incident_type_id,
         description,
-        latitude,
-        longitude,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
         map_pin_address,
         severity: severity || 'HIGH',
         barangay_id: detectedBarangayId,
@@ -92,7 +92,13 @@ export const getIncidents = async (req, res) => {
     const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id } = req.query;
 
     const where = {};
-    if (status) where.status = status;
+    if (status) {
+      if (status.includes(',')) {
+        where.status = { in: status.split(',').map(s => s.trim()) };
+      } else {
+        where.status = status;
+      }
+    }
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
@@ -120,22 +126,35 @@ export const getIncidents = async (req, res) => {
       ];
     }
 
-    if (req.user.role === 'REPORTER') {
+    if (req.user?.role === 'REPORTER') {
       // Reporters only see their own incidents
       where.reported_by = req.user.id;
-    } else if (req.user.role === 'RESPONSE_UNIT') {
-      // Task K scoping: Responders ONLY see incidents assigned to their unit
-      if (req.user.unit_id) {
-        where.assignments = {
-          some: { unit_id: req.user.unit_id }
-        };
+    } else if (req.user?.role === 'RESPONSE_UNIT') {
+      // Relaxed filter: See incidents assigned to unit OR incidents matching unit type
+      const unitType = req.user.unit?.unit_type;
+      
+      if (req.user.unit_id || unitType) {
+        where.OR = [];
+        
+        if (req.user.unit_id) {
+          where.OR.push({ assignments: { some: { unit_id: req.user.unit_id } } });
+        }
+        
+        if (unitType) {
+          where.OR.push({ incident_type: { default_unit_type: unitType } });
+        }
       }
       
-      // They should NOT see REPORTED (unverified) incidents
+      // Include REPORTED so they see incoming alerts even before verification
       if (!status) {
         where.status = {
-          in: ['VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED']
+          in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED']
         };
+      }
+    } else if (!req.user) {
+      // Anonymous/public access — only show REPORTED and active incidents (no personal data filtering)
+      if (!status) {
+        where.status = { in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'] };
       }
     }
     // ADMIN can see all incidents
@@ -147,7 +166,8 @@ export const getIncidents = async (req, res) => {
       barangay: true,
       reporter: { select: { name: true, email: true, contact_number: true } },
       assignments: { include: { unit: { include: { barangay: true } } } },
-      evidence: true
+      evidence: true,
+      post_report: true,
     };
 
     // Allow selective includes for performance - always keep core data
@@ -184,7 +204,8 @@ export const getIncidentById = async (req, res) => {
       reporter: { select: { name: true, email: true, contact_number: true } },
       assignments: { include: { unit: true } },
       status_logs: { orderBy: { changed_at: 'desc' } },
-      evidence: true
+      evidence: true,
+      post_report: true,
     };
 
     if (includeParam.length > 0) {
@@ -281,17 +302,36 @@ export const requestBackup = async (req, res) => {
 
     // Find nearest available unit of requested type, excluding already-assigned units
     const alreadyAssignedIds = incident.assignments.map(a => a.unit_id);
-    const nearestUnits = await geoService.findNearestUnits(
-      incident.latitude, incident.longitude, 3, unit_type
-    );
+    // Direct Prisma lookup to avoid PostGIS distance calculation issues
+    const allUnits = await prisma.responseUnit.findMany({
+      where: {
+        unit_type,
+        availability_status: { not: 'OFFLINE' },
+        latitude: { not: null },
+        longitude: { not: null }
+      }
+    });
 
-    // Filter out already assigned units
-    const available = nearestUnits.filter(u => !alreadyAssignedIds.includes(u.unit_id));
-    if (!available || available.length === 0) {
-      return res.status(404).json({ message: `No available ${unit_type} units found nearby` });
+    // Sort by simple distance in code for 100% reliability
+    const available = allUnits
+      .filter(u => !alreadyAssignedIds.includes(u.unit_id))
+      .sort((a, b) => {
+        const distA = Math.sqrt(Math.pow(a.latitude - incident.latitude, 2) + Math.pow(a.longitude - incident.longitude, 2));
+        const distB = Math.sqrt(Math.pow(b.latitude - incident.latitude, 2) + Math.pow(b.longitude - incident.longitude, 2));
+        return distA - distB;
+      });
+    
+    if (available.length === 0) {
+      const foundCount = allUnits.length;
+      return res.status(404).json({ 
+        message: foundCount > 0 
+          ? `All ${foundCount} nearby ${unit_type} units are already assigned to this incident.`
+          : `No ${unit_type} units found in the system coordinates. Please check unit locations.`
+      });
     }
 
     const backupUnit = available[0];
+    const requesterName = req.user.unit?.unit_name || req.user.name || 'Response Unit';
 
     // Create backup assignment
     const assignment = await prisma.incidentAssignment.create({
@@ -301,16 +341,19 @@ export const requestBackup = async (req, res) => {
         assigned_by: req.user.id,
         status: 'PENDING'
       },
-      include: { unit: true }
+      include: { 
+        unit: true,
+        incident: { include: { incident_type: true } }
+      }
     });
 
-    // Create notification for the backup unit
+    // Create notification for the backup unit with the station's name
     await prisma.notification.create({
       data: {
         incident_id,
         unit_id: backupUnit.unit_id,
         channel: 'DASHBOARD',
-        message_body: `BACKUP REQUEST: ${unit_type} backup needed for ${incident.incident_code}`,
+        message_body: `BACKUP REQUEST: ${requesterName} needs ${unit_type} backup for ${incident.incident_code}`,
         delivery_status: 'SENT'
       }
     });
@@ -321,22 +364,40 @@ export const requestBackup = async (req, res) => {
         incident_id,
         changed_by: req.user.id,
         status: incident.status,
-        remarks: `Backup requested: ${unit_type} unit (${backupUnit.unit_name}) dispatched`
+        remarks: `Backup requested by ${requesterName}: ${unit_type} unit (${backupUnit.unit_name}) dispatched`
       }
     });
 
-    // Emit socket event for backup
+    // --- REAL-TIME NOTIFICATION ---
+    // 1. Notify the specific backup unit instantly (Trigger their route & map)
+    socketService.emitDispatchWithDirections(backupUnit.unit_id, {
+      unit_id: backupUnit.unit_id,
+      unit_name: backupUnit.unit_name,
+      unit_lat: backupUnit.latitude,
+      unit_lng: backupUnit.longitude,
+      incident_id: incident.incident_id,
+      incident_code: incident.incident_code,
+      incident_lat: incident.latitude,
+      incident_lng: incident.longitude,
+      incident_description: incident.description,
+      incident_type: incident.incident_type?.name,
+      severity: incident.severity,
+      priority: incident.priority,
+      is_backup: true
+    });
+
+    // 2. Broadcast general update so requester sees the backup marker appear
     socketService.emitIncidentStatusUpdate({
       incident_id,
       incident_code: incident.incident_code,
       status: incident.status,
       reported_by: incident.reported_by,
       backup_unit: backupUnit.unit_name,
-      incident
+      incident: { ...incident, assignments: [...incident.assignments, assignment] }
     });
 
-    // Try to alert the backup unit
-    await alertService.notifyUnitDispatch(incident, backupUnit, assignment, null)
+    // Try to alert the backup unit via push/native (Non-blocking)
+    alertService.notifyUnitDispatch(incident, backupUnit, assignment, null)
       .catch(err => console.error('Backup alert error:', err));
 
     res.status(201).json({
@@ -545,16 +606,18 @@ export const verifyIncident = async (req, res) => {
         }
       });
 
-      // Notify reporter
-      await prisma.notification.create({
-        data: {
-          user_id: incident.reported_by,
-          incident_id,
-          channel: 'DASHBOARD',
-          message_body: `Your report (${incident.incident_code}) was marked as a false alarm`,
-          delivery_status: 'SENT'
-        }
-      });
+      // Notify reporter (if not anonymous)
+      if (incident.reported_by) {
+        await prisma.notification.create({
+          data: {
+            assigned_by: incident.reported_by,
+            incident_id,
+            channel: 'DASHBOARD',
+            message_body: `Your report (${incident.incident_code}) was marked as a false alarm`,
+            delivery_status: 'SENT'
+          }
+        });
+      }
 
       // Broadcast rejection event
       socketService.emitIncidentRejected(updatedIncident);
@@ -565,16 +628,18 @@ export const verifyIncident = async (req, res) => {
       });
 
     } else if (action === 'REQUEST_INFO') {
-      // Request more info from reporter
-      await prisma.notification.create({
-        data: {
-          user_id: incident.reported_by,
-          incident_id,
-          channel: 'DASHBOARD',
-          message_body: message || 'Admin is requesting more information about your incident',
-          delivery_status: 'SENT'
-        }
-      });
+      // Request more info from reporter (if not anonymous)
+      if (incident.reported_by) {
+        await prisma.notification.create({
+          data: {
+            assigned_by: incident.reported_by,
+            incident_id,
+            channel: 'DASHBOARD',
+            message_body: message || 'Admin is requesting more information about your incident',
+            delivery_status: 'SENT'
+          }
+        });
+      }
 
       // Broadcast event
       socketService.emitMoreInfoRequested(incident, message);

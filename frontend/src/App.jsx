@@ -30,6 +30,7 @@ import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
 import PostIncidentReports from './pages/admin/PostIncidentReports';
 import IncidentArchive from './pages/admin/IncidentArchive';
 import AuditLogs from './pages/admin/AuditLogs';
+import UserGuide from './pages/common/UserGuide';
 
 // Administration Layouts
 import AdminLayout from './components/layout/AdminLayout';
@@ -69,6 +70,7 @@ const App = () => {
                 <Route path="archive" element={<IncidentArchive />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<SystemSettings />} />
+                <Route path="guide" element={<UserGuide />} />
               </Route>
 
               {/* Response Unit Routes */}
@@ -79,21 +81,33 @@ const App = () => {
                 <Route path="dashboard" element={<ResponseDashboard />} />
                 <Route path="map" element={<ResponseMap />} />
                 <Route path="notifications" element={<ResponseNotifications />} />
+                <Route path="guide" element={<UserGuide />} />
               </Route>
 
-              {/* Reporter Routes */}
-              <Route path="/reporter/home" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
-              <Route path="/reporter/report" element={<ProtectedRoute role="REPORTER"><IncidentReportForm /></ProtectedRoute>} />
-              <Route path="/reporter/report/success" element={<ProtectedRoute role="REPORTER"><ReportSuccess /></ProtectedRoute>} />
+              {/* Public Reporter Routes (No Login Required for Emergency) */}
+              <Route path="/reporter/home" element={<ReporterHome />} />
+              <Route path="/reporter/report" element={<IncidentReportForm />} />
+              <Route path="/reporter/report/success" element={<ReportSuccess />} />
+              
+              {/* Optional Reporter Auth Routes */}
               <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
               <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />
-              <Route path="/reporter/*" element={<ProtectedRoute role="REPORTER"><ReporterHome /></ProtectedRoute>} />
+              <Route path="/reporter/*" element={<ReporterHome />} />
 
               {/* Default */}
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-            <Toaster position="top-right" />
+            <Toaster 
+              position="top-right" 
+              toastOptions={{
+                duration: 5000,
+                style: {
+                  background: '#333',
+                  color: '#fff',
+                },
+              }}
+            />
           </NotificationProvider>
         </SocketProvider>
       </AuthProvider>

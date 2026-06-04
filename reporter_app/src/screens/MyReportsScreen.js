@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, FileText, MapPin, Clock } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { incidentAPI } from '../api';
 import { useSocketContext } from '../context/SocketContext';
 import { Colors, FontSizes, BorderRadius } from '../theme/colors';
@@ -12,23 +13,36 @@ export default function MyReportsScreen({ navigation }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await incidentAPI.getAll({ limit: 100 });
-        setReports(res.data?.data || []);
-      } catch (e) { console.error('Fetch reports failed:', e); }
-      finally { setLoading(false); }
-    })();
+  const loadReports = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Load incident IDs saved on this device when reports were submitted
+      const stored = await AsyncStorage.getItem('my_report_ids');
+      const ids = stored ? JSON.parse(stored) : [];
+      if (ids.length === 0) { setReports([]); return; }
+      // Fetch each report by its ID (includes all statuses — REPORTED to RESOLVED)
+      const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
+      const fetched = results
+        .filter(r => r.status === 'fulfilled' && r.value?.data)
+        .map(r => r.value.data);
+      setReports(fetched);
+    } catch (e) {
+      console.error('Fetch reports failed:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => { loadReports(); }, [loadReports]);
+
+  // Real-time status sync via socket
   useEffect(() => {
     const u1 = on('incident_status_updated', (data) => {
       setReports(prev => prev.map(r => r.incident_id === data.incident_id ? { ...r, status: data.status, ...(data.incident || {}) } : r));
     });
     const u2 = on('incident_verified', (data) => {
       const inc = data.incident || data;
-      setReports(prev => prev.map(r => r.incident_id === inc.incident_id ? { ...r, status: 'VERIFIED' } : r));
+      setReports(prev => prev.map(r => r.incident_id === inc.incident_id ? { ...r, status: 'VERIFIED', ...inc } : r));
     });
     const u3 = on('incident_deleted', (data) => {
       setReports(prev => prev.filter(r => r.incident_id !== data.incident_id));
@@ -77,7 +91,12 @@ export default function MyReportsScreen({ navigation }) {
           reports.map(report => {
             const s = getStatusStyle(report.status);
             return (
-              <View key={report.incident_id} style={styles.card}>
+              <TouchableOpacity 
+                key={report.incident_id} 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('ReportDetails', { incident: report })}
+                style={styles.card}
+              >
                 <View style={styles.cardTop}>
                   <View style={styles.cardTopLeft}>
                     <View style={styles.cardIcon}><FileText size={20} color={Colors.primaryDark} /></View>
@@ -95,7 +114,7 @@ export default function MyReportsScreen({ navigation }) {
                   <View style={styles.metaItem}><Clock size={14} color={Colors.slate500} /><Text style={styles.metaText}>{formatDate(report.reported_at)}</Text></View>
                   <View style={styles.metaItem}><MapPin size={14} color={Colors.slate500} /><Text style={styles.metaText} numberOfLines={1}>{report.map_pin_address || 'Unknown'}</Text></View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

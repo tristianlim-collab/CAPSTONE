@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Map as MapIcon, Bell,
   LogOut, Shield, Menu, X, Search, Moon, Sun, 
-  ChevronsLeft, ChevronsRight
+  ChevronsLeft, ChevronsRight, BookOpen
 } from 'lucide-react';
 import NotificationDropdown from '../notifications/NotificationDropdown';
 import { useNotifications } from '../../context/NotificationContext';

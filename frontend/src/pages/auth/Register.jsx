@@ -13,7 +13,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     contact_number: '+63',
-    role: 'REPORTER'
+    role: 'RESPONSE_UNIT'
   });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -129,8 +129,9 @@ const Register = () => {
               onChange={handleChange}
               className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             >
-              <option value="REPORTER">Reporter</option>
+
               <option value="RESPONSE_UNIT">Response Unit</option>
+              <option value="ADMIN">Administrator (Admin)</option>
             </select>
           </div>
 

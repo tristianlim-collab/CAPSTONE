@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, ShieldAlert, AlertTriangle,
   Activity, BarChart3, Bell, Settings, LogOut, Search,
   Menu, X, FileText, Truck, Archive, Megaphone, ScrollText, 
-  ClipboardList, Moon, Sun, ChevronsLeft, ChevronsRight
+  ClipboardList, Moon, Sun, ChevronsLeft, ChevronsRight, BookOpen
 } from 'lucide-react';
 import NotificationDropdown from '../notifications/NotificationDropdown';
 

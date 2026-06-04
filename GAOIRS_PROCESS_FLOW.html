@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAOIRS - Complete Process Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        .process-step {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .process-step:hover {
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-description {
+            color: #666;
+            line-height: 1.6;
+            margin-left: 55px;
+            margin-bottom: 10px;
+        }
+
+        .step-data {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-left: 55px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .step-status {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 55px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .actor {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-left: 55px;
+            margin-top: 10px;
+        }
+
+        .actor strong {
+            color: #1565c0;
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .timeline-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .timeline-time {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .timeline-title {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .timeline-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .key-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature-box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-box:hover {
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .feature-title {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .feature-desc {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-reported {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-verified {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-responding {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-onscene {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-resolved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .decision-box {
+            background: #fff9e6;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .decision-box strong {
+            color: #994000;
+        }
+
+        .role-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .role-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .role-tasks {
+            margin-left: 20px;
+        }
+
+        .role-tasks li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 GAOIRS Complete Process Flow</h1>
+            <p>End-to-End Incident Management Lifecycle</p>
+        </div>
+
+        <div class="content">
+            <!-- OVERVIEW -->
+            <div class="section">
+                <h2>📊 High-Level System Flow</h2>
+                <div class="mermaid">
+graph TD
+    A["📱 Reporter<br/>- Field Reporter<br/>- Citizen"]
+    B["🚨 Incident Report<br/>- Photo Evidence<br/>- Location<br/>- Type & Severity"]
+    C["⚙️ System Processing<br/>- Classify Type<br/>- Calculate Priority<br/>- Assign Unit"]
+    D["🎯 Dispatch Decision<br/>Fire → FIRE Unit<br/>Medical → DRRMO/Medical<br/>Crime → POLICE<br/>Infrastructure → DRRMO"]
+    E["📢 Notifications<br/>- SMS<br/>- Push/FCM<br/>- Email<br/>- Dashboard"]
+    F["🚗 Response Units<br/>- Acknowledge<br/>- Navigate<br/>- Respond"]
+    G["📍 Real-Time Tracking<br/>- Location Updates<br/>- Status Changes<br/>- Admin Dashboard"]
+    H["📝 On-Scene Response<br/>- Actions Taken<br/>- Casualties<br/>- Damages"]
+    I["✅ After-Action Report<br/>- Response Time<br/>- Details<br/>- Photo Evidence"]
+    J["👨‍⚖️ Admin Review<br/>- Verification<br/>- Notes<br/>- Approval/Rejection"]
+    K["📊 Analytics<br/>- Forecasting<br/>- Reports<br/>- Audit Logs"]
+
+    A -->|Submit| B
+    B -->|Process| C
+    C -->|Determine| D
+    D -->|Alert| E
+    E -->|Notify| F
+    F -->|Report Progress| G
+    G -->|Update Dashboard| G
+    H -->|Complete| I
+    I -->|Submit| J
+    J -->|Final Status| K
+    K -->|Insights| A
+                </div>
+            </div>
+
+            <!-- DETAILED PROCESS FLOW -->
+            <div class="section">
+                <h2>🔄 Detailed Step-by-Step Process</h2>
+
+                <!-- PHASE 1: INCIDENT CREATION -->
+                <h3 style="color: #667eea; margin: 30px 0 20px 0; font-size: 1.4em;">Phase 1: Incident Creation & Reporting</h3>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        Reporter Initiates Incident Report
+                    </div>
+                    <div class="step-description">
+                        Field reporter opens mobile app (or calls dispatch) and starts creating an incident report.
+                    </div>
+                    <div class="step-data">
+                        <strong>UI Flow:</strong><br>
+                        Mobile App → Home Screen → "Report Incident" Button → Form Screen
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter (Citizen/Volunteer)
+                    </div>
+                    <div class="step-status">Status: CREATING</div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        Capture Evidence (Photos)
+                    </div>
+                    <div class="step-description">
+                        Reporter takes up to 5 photos from the scene using device camera. Photos are stored locally first (offline support).
+                    </div>
+                    <div class="step-data">
+                        <strong>Data Created:</strong><br>
+                        Evidence records with file_path (Cloudinary URL after upload)<br>
+                        file_type: "image/jpeg", "image/png" etc
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter<br>
+                        <strong>Storage:</strong> Cloudinary (remote), Local queue (offline)
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        Auto-Detect Geolocation
+                    </div>
+                    <div class="step-description">
+                        System uses GPS to detect reporter's current location. Coordinates (latitude, longitude) are captured. Reverse geocoding identifies barangay & municipality.
+                    </div>
+                    <div class="step-data">
+                        <strong>Data Captured:</strong><br>
+                        latitude: Float (e.g., 14.2905°)<br>
+                        longitude: Float (e.g., 120.9789°)<br>
+                        barangay_id: UUID (via PostGIS query)<br>
+                        map_pin_address: String (e.g., "Anabu II-A, Imus, Cavite")
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Mobile App (location service)<br>
+                        <strong>Data Source:</strong> Device GPS + Reverse geocoding API
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        Select Incident Type
+                    </div>
+                    <div class="step-description">
+                        Reporter selects incident type from color-coded list fetched from backend. Each type has a name, icon, and associated unit type.
+                    </div>
+                    <div class="step-data">
+                        <strong>Available Types:</strong><br>
+                        🔴 Fire (FIRE unit)<br>
+                        🟢 Medical/Health Emergency (MEDICAL/DRRMO unit)<br>
+                        🔵 Accident (DRRMO unit)<br>
+                        🟡 Crime/Public Disturbance (POLICE unit)<br>
+                        ⚪ Other/Infrastructure (BARANGAY/DRRMO unit)
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">5</span>
+                        Describe Incident & Select Severity
+                    </div>
+                    <div class="step-description">
+                        Reporter provides text description of what happened and selects severity level (LOW, HIGH, CRITICAL). System assigns priority based on severity.
+                    </div>
+                    <div class="step-data">
+                        <strong>Data:</strong><br>
+                        description: String (max 500 chars)<br>
+                        severity: Enum (LOW | HIGH | CRITICAL)<br>
+                        priority: Enum (AUTO-CALCULATED: CRITICAL→HIGH, HIGH→MEDIUM, LOW→LOW)
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">6</span>
+                        Enter Personal Information
+                    </div>
+                    <div class="step-description">
+                        Reporter provides name and contact number (optional override if different from account). This allows anonymous reporting and field reporters to report on behalf of others.
+                    </div>
+                    <div class="step-data">
+                        <strong>Data:</strong><br>
+                        reporter_name: String (optional, can override user account name)<br>
+                        reporter_phone: String (optional, can override account phone)
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">7</span>
+                        Submit Incident Report
+                    </div>
+                    <div class="step-description">
+                        Reporter taps "Submit" button. System creates incident record and uploads evidence photos. Offline queue auto-syncs when online.
+                    </div>
+                    <div class="step-data">
+                        <strong>Records Created:</strong><br>
+                        1. Incident record with incident_code (auto-generated: INC-YYYYMMDD-XXXXX)<br>
+                        2. Evidence records for each photo<br>
+                        3. First IncidentStatusLog: REPORTED status<br>
+                        status: "REPORTED"<br>
+                        reported_at: NOW()
+                    </div>
+                    <div class="step-status">Status: REPORTED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Field Reporter → Mobile App → Backend API<br>
+                        <strong>Endpoint:</strong> POST /api/incidents
+                    </div>
+                </div>
+
+                <!-- PHASE 2: VERIFICATION & DISPATCH -->
+                <h3 style="color: #667eea; margin: 30px 0 20px 0; font-size: 1.4em;">Phase 2: Verification & Smart Dispatch</h3>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">8</span>
+                        System Processes Incident (Automatic)
+                    </div>
+                    <div class="step-description">
+                        Backend automatically processes the newly created incident. System verifies data integrity, validates location within LGU boundaries.
+                    </div>
+                    <div class="step-data">
+                        <strong>Validations:</strong><br>
+                        ✓ Incident code uniqueness<br>
+                        ✓ Location coordinates valid<br>
+                        ✓ Incident type exists<br>
+                        ✓ Reporter exists and is active
+                    </div>
+                    <div class="step-status">Status: VERIFIED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Backend Service (Automatic trigger)<br>
+                        <strong>Trigger:</strong> Socket.io event: "incident_created"
+                    </div>
+                </div>
+
+                <div class="decision-box">
+                    <strong>🎯 Smart Unit Assignment Decision Logic:</strong><br><br>
+                    <strong>IF</strong> incident_type = "Fire"<br>
+                    &nbsp;&nbsp;→ <strong>ASSIGN TO:</strong> FIRE units in same barangay (sorted by distance & availability)<br><br>
+                    <strong>ELSE IF</strong> incident_type = "Medical/Accident"<br>
+                    &nbsp;&nbsp;→ <strong>ASSIGN TO:</strong> MEDICAL or DRRMO units (sorted by distance & availability)<br><br>
+                    <strong>ELSE IF</strong> incident_type = "Crime"<br>
+                    &nbsp;&nbsp;→ <strong>ASSIGN TO:</strong> POLICE units (sorted by distance & availability)<br><br>
+                    <strong>ELSE IF</strong> incident_type = "Infrastructure/Other"<br>
+                    &nbsp;&nbsp;→ <strong>ASSIGN TO:</strong> DRRMO or BARANGAY units<br><br>
+                    <strong>FOR EACH:</strong> Severity to Capacity Limit<br>
+                    <strong>CRITICAL:</strong> Assign up to 5 units<br>
+                    <strong>HIGH:</strong> Assign up to 3 units<br>
+                    <strong>LOW:</strong> Assign 1 unit
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">9</span>
+                        Automatic Unit Assignment
+                    </div>
+                    <div class="step-description">
+                        System automatically selects appropriate response units based on incident type, severity, and unit availability/proximity. Uses PostGIS to find geographically closest available units.
+                    </div>
+                    <div class="step-data">
+                        <strong>Records Created:</strong><br>
+                        IncidentAssignment records (1-5 depending on severity)<br>
+                        assignment_id: UUID<br>
+                        status: "PENDING"<br>
+                        assigned_at: NOW()<br>
+                        assigned_by: Admin user (or system if auto-assign)
+                    </div>
+                    <div class="step-status">Status: RESPONDING (assignment created)</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Backend Service (Automatic)<br>
+                        <strong>Logic:</strong> responseUnitController.autoAssignUnits()
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">10</span>
+                        Generate & Send Notifications
+                    </div>
+                    <div class="step-description">
+                        System sends multi-channel alerts to assigned units and admin dashboard. Notifications triggered via Socket.io for real-time delivery.
+                    </div>
+                    <div class="step-data">
+                        <strong>Notification Records Created (One per Unit + Admin):</strong><br>
+                        notification_id: UUID<br>
+                        incident_id: UUID<br>
+                        unit_id: UUID (for unit notifications)<br>
+                        channel: SMS | EMAIL | PUSH | DASHBOARD<br>
+                        delivery_status: PENDING → SENT → DELIVERED<br>
+                        message_body: "New incident assigned: [INC-CODE] [TYPE] at [LOCATION]"
+                    </div>
+                    <div class="step-data" style="margin-top: 10px;">
+                        <strong>Delivery Channels:</strong><br>
+                        📱 SMS: Twilio API (for feature phones)<br>
+                        📧 Email: Nodemailer<br>
+                        🔔 PUSH: Firebase Cloud Messaging (Android/iOS)<br>
+                        📊 DASHBOARD: WebSocket broadcast to admin panel
+                    </div>
+                    <div class="step-status">Status: NOTIFICATION SENT</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Backend Service (socketService, notificationController)<br>
+                        <strong>Event:</strong> "incident_assigned" → All connected admins
+                    </div>
+                </div>
+
+                <!-- PHASE 3: UNIT RESPONSE -->
+                <h3 style="color: #667eea; margin: 30px 0 20px 0; font-size: 1.4em;">Phase 3: Unit Response & Tracking</h3>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">11</span>
+                        Unit Acknowledges Assignment
+                    </div>
+                    <div class="step-description">
+                        Response unit receives notification and confirms receipt by tapping "Accept" or "Reject". System records acknowledgment timestamp and updates assignment status.
+                    </div>
+                    <div class="step-data">
+                        <strong>Update IncidentAssignment:</strong><br>
+                        status: "ACCEPTED" (or "REJECTED")<br>
+                        acknowledged_at: NOW()<br>
+                        Update IncidentStatusLog:<br>
+                        status: "VERIFIED" (if accepted)
+                    </div>
+                    <div class="step-status">Status: ACCEPTED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit (dash cam driver/commander)
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">12</span>
+                        Admin Views Real-Time Incident Map
+                    </div>
+                    <div class="step-description">
+                        Admin/dispatch coordinator monitors all active incidents and unit locations on a Leaflet-based interactive map. Can see incident markers, unit positions, and routes.
+                    </div>
+                    <div class="step-data">
+                        <strong>Dashboard Data (Real-Time via WebSocket):</strong><br>
+                        incident_id, incident_code, type, location<br>
+                        unit_id, unit_name, unit_type, current_location<br>
+                        assignment_status (PENDING | ACCEPTED | ON_ROUTE | ON_SCENE | RESOLVED)<br>
+                        Incident colored by severity: RED=CRITICAL, YELLOW=HIGH, BLUE=LOW
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Admin/Dispatcher<br>
+                        <strong>UI:</strong> React Admin Dashboard, Leaflet Map Component
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">13</span>
+                        Unit En Route to Incident
+                    </div>
+                    <div class="step-description">
+                        Response unit departs from station/location and begins navigating to incident scene. Mobile app receives turn-by-turn directions via embedded map.
+                    </div>
+                    <div class="step-data">
+                        <strong>Update IncidentAssignment:</strong><br>
+                        status: "RESPONDING"<br>
+                        Update IncidentStatusLog:<br>
+                        status: "RESPONDING"<br>
+                        remarks: "Unit en route: [UNIT_NAME]"
+                    </div>
+                    <div class="step-status">Status: RESPONDING</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit driver
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">14</span>
+                        Real-Time Location Updates
+                    </div>
+                    <div class="step-description">
+                        Unit's mobile app periodically (every 30 seconds) sends GPS location to backend. Admin dashboard updates unit positions in real-time. All stakeholders see progress.
+                    </div>
+                    <div class="step-data">
+                        <strong>Data Stream:</strong><br>
+                        unit_id, latitude, longitude, timestamp<br>
+                        Update ResponseUnit record:<br>
+                        latitude: Float (current)<br>
+                        longitude: Float (current)<br>
+                        last_updated: NOW()<br>
+                        broadcast via Socket.io: "unit_location_updated"
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Mobile App (background location service)<br>
+                        <strong>Frequency:</strong> Every 30 seconds
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">15</span>
+                        Unit Arrives at Scene
+                    </div>
+                    <div class="step-description">
+                        Unit arrives at incident location. Commander/driver confirms arrival by tapping "On Scene" button in mobile app.
+                    </div>
+                    <div class="step-data">
+                        <strong>Update IncidentAssignment:</strong><br>
+                        status: "ON_SCENE"<br>
+                        arrived_at: NOW()<br>
+                        Update IncidentStatusLog:<br>
+                        status: "ON_SCENE"<br>
+                        Update Incident:<br>
+                        status: "ON_SCENE" (if first unit to arrive)
+                    </div>
+                    <div class="step-status">Status: ON_SCENE</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit commander
+                    </div>
+                </div>
+
+                <!-- PHASE 4: ON-SCENE & RESOLUTION -->
+                <h3 style="color: #667eea; margin: 30px 0 20px 0; font-size: 1.4em;">Phase 4: On-Scene Response & Resolution</h3>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">16</span>
+                        Unit Responds to Incident
+                    </div>
+                    <div class="step-description">
+                        Response unit conducts emergency response operations according to incident type and severity. Actions taken depend on specific incident (fire suppression, medical aid, law enforcement, etc).
+                    </div>
+                    <div class="step-data">
+                        <strong>Unit Captures Information:</strong><br>
+                        - Actual conditions at scene<br>
+                        - Number of victims/affected persons<br>
+                        - Extent of damage<br>
+                        - Scene photos (additional evidence)<br>
+                        - Actions taken to resolve
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit personnel<br>
+                        <strong>Duration:</strong> Variable (minutes to hours)
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">17</span>
+                        Unit Completes Response & Resolves
+                    </div>
+                    <div class="step-description">
+                        When incident is under control/resolved, unit commander marks incident as resolved through mobile app.
+                    </div>
+                    <div class="step-data">
+                        <strong>Update IncidentAssignment:</strong><br>
+                        status: "RESOLVED"<br>
+                        resolved_at: NOW()<br>
+                        Update IncidentStatusLog:<br>
+                        status: "RESOLVED"<br>
+                        Update Incident:<br>
+                        status: "RESOLVED" (when all units mark resolved)
+                    </div>
+                    <div class="step-status">Status: RESOLVED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit commander
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">18</span>
+                        Unit Submits Post-Incident Report
+                    </div>
+                    <div class="step-description">
+                        Unit submits detailed after-action report through mobile app or web dashboard. Report includes response time, actions, casualties, damage estimates, photos, and remarks.
+                    </div>
+                    <div class="step-data">
+                        <strong>PostIncidentReport Created:</strong><br>
+                        report_id: UUID<br>
+                        incident_id: UUID<br>
+                        submitted_by: User (response unit commander)<br>
+                        response_time_minutes: Int (calculated from arrived_at - reported_at)<br>
+                        actions_taken: String (detailed description)<br>
+                        casualties: Int (number of people affected)<br>
+                        damages_estimate: String (estimated cost)<br>
+                        photos: Array&lt;String&gt; (Cloudinary URLs)<br>
+                        remarks: String (additional notes)<br>
+                        status: "PENDING" (awaiting admin review)<br>
+                        submitted_at: NOW()
+                    </div>
+                    <div class="step-status">Status: PENDING REVIEW</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Response Unit commander<br>
+                        <strong>UI:</strong> Mobile App → My Reports Screen
+                    </div>
+                </div>
+
+                <!-- PHASE 5: ADMIN REVIEW & CLOSURE -->
+                <h3 style="color: #667eea; margin: 30px 0 20px 0; font-size: 1.4em;">Phase 5: Admin Review & System Analytics</h3>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">19</span>
+                        Admin Reviews Post-Incident Report
+                    </div>
+                    <div class="step-description">
+                        Admin/supervisor reviews submitted post-incident report to verify accuracy and compliance. Can add notes and approve/reject the report.
+                    </div>
+                    <div class="step-data">
+                        <strong>Admin Actions:</strong><br>
+                        1. View all report details<br>
+                        2. Add admin_notes: String (optional comments)<br>
+                        3. Update status:<br>
+                           - "UNDER_REVIEW" (flag for deeper investigation)<br>
+                           - "APPROVED" (report accepted as accurate)<br>
+                           - "REJECTED" (report has errors, needs resubmission)<br>
+                        4. reviewed_by: User (who reviewed)<br>
+                        5. reviewed_at: NOW()
+                    </div>
+                    <div class="step-status">Status: APPROVED / REJECTED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Admin/Supervisor<br>
+                        <strong>UI:</strong> Admin Dashboard → Post-Incident Reports page
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">20</span>
+                        System Audits All Changes
+                    </div>
+                    <div class="step-description">
+                        Every action throughout the incident lifecycle is logged to SystemAuditLog for compliance and accountability. Immutable audit trail for regulatory oversight.
+                    </div>
+                    <div class="step-data">
+                        <strong>Audit Logs Created For:</strong><br>
+                        ✓ CREATE: New incident, new assignment, submission of post-report<br>
+                        ✓ UPDATE: Status changes, admin notes added, location updates<br>
+                        ✓ DELETE: (restricted to admins only)<br>
+                        ✓ LOGIN: User authentication events<br><br>
+                        <strong>Audit Log Fields:</strong><br>
+                        log_id, user_id, action, resource, resource_id<br>
+                        details: JSON string (old value → new value)<br>
+                        ip_address, created_at
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Backend Service (Automatic on all changes)<br>
+                        <strong>Function:</strong> auditLog.track()
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">21</span>
+                        System Generates Analytics &amp; Forecasts
+                    </div>
+                    <div class="step-description">
+                        ML service ingests incident data and generates 7-day trend forecasts using SARIMA and Prophet algorithms. Forecasting detects patterns and predicts peak incident times/areas.
+                    </div>
+                    <div class="step-data">
+                        <strong>Forecast Inputs:</strong><br>
+                        - Historical incident data (past 30-90 days)<br>
+                        - Incident type, severity, location, time<br>
+                        - Seasonal patterns (weekday vs weekend)<br><br>
+                        <strong>Forecast Outputs:</strong><br>
+                        - Next 7 days predicted incident counts<br>
+                        - Confidence intervals (upper/lower bounds)<br>
+                        - High-risk time windows<br>
+                        - Geographic hotspots<br><br>
+                        <strong>Algorithms:</strong><br>
+                        SARIMA: Champion (RMSE 2.45) - captures weekly seasonality<br>
+                        Prophet: Backup (RMSE 2.78) - trend detection with holidays
+                    </div>
+                    <div class="actor">
+                        <strong>Actor:</strong> ML Service (ml-service/ml-service.js)<br>
+                        <strong>Port:</strong> 5000<br>
+                        <strong>Trigger:</strong> Daily scheduled task or on-demand from admin
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">22</span>
+                        Admin Generates Custom Reports
+                    </div>
+                    <div class="step-description">
+                        Admin can generate PDF or Excel reports filtered by date range, incident type, barangay, severity. Reports include incident summaries, response times, trends, and statistics for LGU leadership.
+                    </div>
+                    <div class="step-data">
+                        <strong>Report Types:</strong><br>
+                        📊 INCIDENT_SUMMARY: Count by type/severity<br>
+                        📍 AREA_REPORT: Incidents by barangay<br>
+                        ⏱️ RESPONSE_TIME: Average response time metrics<br>
+                        📋 FULL_EXPORT: All incident details with full history<br><br>
+                        <strong>File Formats:</strong><br>
+                        PDF (Cloudinary + custom formatting)<br>
+                        EXCEL (xlsx with charts)<br>
+                        CSV (for data import)<br><br>
+                        <strong>GeneratedReport Created:</strong><br>
+                        report_id, generated_by, report_title, report_type<br>
+                        file_format, filters_applied (JSON), file_path, generated_at
+                    </div>
+                    <div class="step-status">Status: GENERATED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> Admin<br>
+                        <strong>UI:</strong> Admin Dashboard → Reports/Analytics page
+                    </div>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-title">
+                        <span class="step-number">23</span>
+                        Incident Officially Closed
+                    </div>
+                    <div class="step-description">
+                        After post-incident report is approved and all data captured, incident lifecycle is complete. Status marked as CLOSED for archival.
+                    </div>
+                    <div class="step-data">
+                        <strong>Final Update to Incident:</strong><br>
+                        status: "CLOSED"<br>
+                        Final IncidentStatusLog:<br>
+                        status: "CLOSED"<br>
+                        remarks: "Incident closed - Post-incident report approved"
+                    </div>
+                    <div class="step-status">Status: CLOSED</div>
+                    <div class="actor">
+                        <strong>Actor:</strong> System (Auto-updated when post-report approved)
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIMELINE -->
+            <div class="section">
+                <h2>⏱️ Typical Emergency Response Timeline</h2>
+                <div class="timeline">
+                    <div class="timeline-card">
+                        <div class="timeline-time">0:00</div>
+                        <div class="timeline-title">Report Received</div>
+                        <div class="timeline-desc">Reporter submits incident via mobile app</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">0:05</div>
+                        <div class="timeline-title">Units Assigned</div>
+                        <div class="timeline-desc">System dispatches appropriate units</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">0:08</div>
+                        <div class="timeline-title">Units En Route</div>
+                        <div class="timeline-desc">Units acknowledge and navigate to scene</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">0:12</div>
+                        <div class="timeline-title">Unit Arrives</div>
+                        <div class="timeline-desc">First responders on scene</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">0:12-1:00</div>
+                        <div class="timeline-title">Response</div>
+                        <div class="timeline-desc">Units conduct emergency operations</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">+1:00</div>
+                        <div class="timeline-title">Report Submitted</div>
+                        <div class="timeline-desc">Post-incident report filed</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">+1:30</div>
+                        <div class="timeline-title">Admin Review</div>
+                        <div class="timeline-desc">Supervisor approves report</div>
+                    </div>
+                    <div class="timeline-card">
+                        <div class="timeline-time">+2:00</div>
+                        <div class="timeline-title">Incident Closed</div>
+                        <div class="timeline-desc">System archived with full audit trail</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BY-ROLE RESPONSIBILITIES -->
+            <div class="section">
+                <h2>👥 Process Flow by User Role</h2>
+
+                <div class="role-section">
+                    <div class="role-title">📱 Field Reporter (Citizen/Volunteer)</div>
+                    <div class="role-tasks">
+                        <ul>
+                            <li><strong>Step 1-7:</strong> Create incident report with photos, location, type, severity, personal info</li>
+                            <li><strong>Step 23:</strong> View incident status & post-incident report status on "My Reports" screen</li>
+                            <li><strong>Access Levels:</strong> Only see own incident reports</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="role-section">
+                    <div class="role-title">🚨 Response Unit (FIRE, POLICE, MEDICAL, DRRMO, BARANGAY)</div>
+                    <div class="role-tasks">
+                        <ul>
+                            <li><strong>Step 11:</strong> Receive assignment notification, accept/reject</li>
+                            <li><strong>Step 13:</strong> Navigate to incident scene</li>
+                            <li><strong>Step 14:</strong> Continuous location sharing (background GPS every 30s)</li>
+                            <li><strong>Step 15:</strong> Confirm arrival at scene</li>
+                            <li><strong>Step 16-17:</strong> Conduct response operations, mark resolved when complete</li>
+                            <li><strong>Step 18:</strong> Submit post-incident report with details & photos</li>
+                            <li><strong>Access Levels:</strong> View own assignments, location, active incident data</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="role-section">
+                    <div class="role-title">👨‍⚖️ Admin/Dispatcher (LGU Official)</div>
+                    <div class="role-tasks">
+                        <ul>
+                            <li><strong>Step 8-10:</strong> Monitor system auto-assignment (can override if needed)</li>
+                            <li><strong>Step 12:</strong> View real-time incident map with all incidents & unit locations</li>
+                            <li><strong>Step 15-17:</strong> Track unit progress in real-time</li>
+                            <li><strong>Step 19:</strong> Review & approve/reject post-incident reports with audit notes</li>
+                            <li><strong>Step 20:</strong> Monitor audit logs for compliance</li>
+                            <li><strong>Step 21-22:</strong> View trend forecasts and generate custom reports</li>
+                            <li><strong>System Config:</strong> Manage LGU boundaries, unit assignments, alert settings</li>
+                            <li><strong>Access Levels:</strong> Full system access, can create custom reports, manage users</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ERROR SCENARIOS -->
+            <div class="section">
+                <h2>⚠️ Exception Handling & Error Scenarios</h2>
+
+                <div class="feature-box">
+                    <div class="feature-title">Offline Incident Queueing</div>
+                    <div class="feature-desc">
+                        <strong>Scenario:</strong> Field reporter has no internet connection<br><br>
+                        <strong>System Response:</strong><br>
+                        • Incident stored in local SQLite queue<br>
+                        • Photos cached locally<br>
+                        • Auto-sync trigger when connection restored<br>
+                        • Successful message shown to reporter<br><br>
+                        <strong>Data Consistency:</strong> No incident_code assigned until server accepts
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">Unit Rejects Assignment</div>
+                    <div class="feature-desc">
+                        <strong>Scenario:</strong> Unit responds to assignment with "REJECTED"<br><br>
+                        <strong>System Response:</strong><br>
+                        • IncidentAssignment status → REJECTED<br>
+                        • System auto-assigns to next available unit (same type)<br>
+                        • New notification sent to backup unit<br>
+                        • Admin notified of rejection<br><br>
+                        <strong>Failsafe:</strong> Always maintain backup unit queue per incident type
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">False Alarm Report</div>
+                    <div class="feature-desc">
+                        <strong>Scenario:</strong> Unit arrives and confirms incident was false<br><br>
+                        <strong>System Response:</strong><br>
+                        • Incident status → FALSE_ALARM<br>
+                        • Add to audit log with remarks<br>
+                        • Post-incident report still required for tracking<br>
+                        • Unit availability updated quickly<br><br>
+                        <strong>Analytics Impact:</strong> False alarms tracked separately for analysis
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">Unauthorized Location Access</div>
+                    <div class="feature-desc">
+                        <strong>Scenario:</strong> Reporter provides coordinates outside LGU jurisdiction<br><br>
+                        <strong>System Response:</strong><br>
+                        • PostGIS validation checks boundary<br>
+                        • Incident still created but flagged<br>
+                        • Admin receives alert for manual review<br>
+                        • May escalate to neighboring LGU if within their boundaries<br><br>
+                        <strong>Safeguard:</strong> Jurisdiction check at incident creation
+                    </div>
+                </div>
+
+                <div class="feature-box">
+                    <div class="feature-title">Network Failure During Real-Time Tracking</div>
+                    <div class="feature-desc">
+                        <strong>Scenario:</strong> Unit loses connection while en route<br><br>
+                        <strong>System Response:</strong><br>
+                        • Last known location retained on dashboard<br>
+                        • Unit can still navigate with offline maps<br>
+                        • Location updates resume when connection restored<br>
+                        • No loss of assignment data<br><br>
+                        <strong>Resilience:</strong> Graceful degradation with data buffering
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATA SECURITY -->
+            <div class="section">
+                <h2>🔒 Data Flow & Security Measures</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Type</th>
+                            <th>Storage Location</th>
+                            <th>Security Measure</th>
+                            <th>Retention Policy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Incident Core Data</td>
+                            <td>PostgreSQL (Supabase)</td>
+                            <td>Encrypted at rest, JWT auth, Row-level security</td>
+                            <td>7 years (regulatory requirement)</td>
+                        </tr>
+                        <tr>
+                            <td>Evidence Photos</td>
+                            <td>Cloudinary CDN</td>
+                            <td>HTTPS, Access tokens, File size limits</td>
+                            <td>Lifetime (after approval)</td>
+                        </tr>
+                        <tr>
+                            <td>Audit Logs</td>
+                            <td>PostgreSQL (immutable)</td>
+                            <td>Encrypted, No delete permission, Signed</td>
+                            <td>Permanent (compliance)</td>
+                        </tr>
+                        <tr>
+                            <td>Passwords</td>
+                            <td>PostgreSQL (hashed)</td>
+                            <td>bcrypt (salt rounds: 10), Never logged</td>
+                            <td>Until password reset</td>
+                        </tr>
+                        <tr>
+                            <td>FCM Tokens</td>
+                            <td>PostgreSQL</td>
+                            <td>Encrypted field, User-specific tokens</td>
+                            <td>Until logout/expiry</td>
+                        </tr>
+                        <tr>
+                            <td>System Config</td>
+                            <td>PostgreSQL</td>
+                            <td>Encrypted values (AES-256), Admin-only access</td>
+                            <td>Until updated</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+        mermaid.contentLoaded();
+    </script>
+</body>
+</html>

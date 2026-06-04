@@ -1,5 +1,8 @@
 import { prisma } from '../config/database.js';
 import socketService from '../services/socketService.js';
+import geoService from '../services/geoService.js';
+import bcrypt from 'bcryptjs';
+
 export const getAll = async (req, res) => {
   try {
     const units = await prisma.responseUnit.findMany({
@@ -13,11 +16,44 @@ export const getAll = async (req, res) => {
 
 export const create = async (req, res) => {
   try {
-    const { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
+    let { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
+    
+    // Auto-detect the Barangay based on the map pin if coordinates are provided
+    if (latitude && longitude && !barangay_id) {
+      barangay_id = await geoService.findBarangayByPoint(latitude, longitude);
+    }
+
+    // 1. Create the physical Response Unit
     const unit = await prisma.responseUnit.create({
       data: { unit_name, unit_type, contact_number, barangay_id, latitude, longitude }
     });
-    res.status(201).json(unit);
+
+    // 2. Automatically create a User account for this unit to log in with
+    const formattedName = unit_name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    // E.g., "Fire Station 1" becomes "fire-station-1@gaoirs.com"
+    const autoEmail = `${formattedName}@gaoirs.com`;
+    const defaultPassword = 'password123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 12);
+
+    await prisma.user.create({
+      data: {
+        name: unit_name,
+        email: autoEmail,
+        password_hash: hashedPassword,
+        role: 'RESPONSE_UNIT',
+        contact_number,
+        unit_id: unit.unit_id
+      }
+    });
+
+    // Return the unit and the generated login details (to possibly show the admin in the frontend later)
+    res.status(201).json({
+      ...unit,
+      temp_account: {
+        email: autoEmail,
+        password: defaultPassword
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error creating', error: error.message });
   }
@@ -26,9 +62,23 @@ export const create = async (req, res) => {
 export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
+    
+    // Auto-detect the Barangay based on the new map pin
+    let detectedId = null;
+    if (latitude !== undefined && longitude !== undefined) {
+      detectedId = await geoService.findBarangayByPoint(latitude, longitude);
+    }
+
+    const data = { latitude, longitude, last_updated: new Date() };
+    // Only update the barangay_id if a valid one was detected
+    if (detectedId) {
+      data.barangay_id = detectedId;
+    }
+
     const unit = await prisma.responseUnit.update({
       where: { unit_id: req.params.id },
-      data: { latitude, longitude, last_updated: new Date() }
+      data,
+      include: { barangay: true }
     });
     // Broadcast location update to all connected clients
     socketService.emitUnitLocationUpdate(unit.unit_id, unit.latitude, unit.longitude, unit.unit_name);
@@ -58,9 +108,19 @@ export const updateUnit = async (req, res) => {
     if (unit_name !== undefined) data.unit_name = unit_name;
     if (unit_type !== undefined) data.unit_type = unit_type;
     if (contact_number !== undefined) data.contact_number = contact_number;
-    if (barangay_id !== undefined) data.barangay_id = barangay_id;
+    
     if (latitude !== undefined) data.latitude = latitude;
     if (longitude !== undefined) data.longitude = longitude;
+
+    // Auto-detect the Barangay based on the map pin if coordinates are provided
+    if (latitude && longitude && !barangay_id) {
+      const detectedId = await geoService.findBarangayByPoint(latitude, longitude);
+      if (detectedId) {
+        data.barangay_id = detectedId;
+      }
+    } else if (barangay_id !== undefined) {
+      data.barangay_id = barangay_id;
+    }
 
     const unit = await prisma.responseUnit.update({
       where: { unit_id: req.params.id },

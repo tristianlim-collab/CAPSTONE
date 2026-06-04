@@ -22,7 +22,7 @@ export const uploadEvidence = async (req, res) => {
     const evidence = await prisma.evidence.create({
       data: {
         incident_id,
-        uploaded_by: req.user.id,
+        ...(req.user?.id ? { uploaded_by: req.user.id } : {}),
         file_path: fileUrl,
         file_type: req.file.mimetype
       }
@@ -86,7 +86,7 @@ export const uploadEvidenceFromUrl = async (req, res) => {
     const evidence = await prisma.evidence.create({
       data: {
         incident_id,
-        uploaded_by: req.user.id,
+        ...(req.user?.id ? { uploaded_by: req.user.id } : {}),
         file_path,
         file_type
       }

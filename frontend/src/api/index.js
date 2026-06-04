@@ -129,6 +129,12 @@ export const reportAPI = {
       return api.get('/reports/export/pdf', { params, responseType: 'blob' });
     }
     return api.get('/reports/export', { params: { ...params, format }, responseType: 'blob' });
+  },
+  exportPostReports: (params) => {
+    return api.get('/reports/export/post-reports', { params, responseType: 'blob' });
+  },
+  exportPostReportsPDF: (params) => {
+    return api.get('/reports/export/post-reports/pdf', { params, responseType: 'blob' });
   }
 };
 

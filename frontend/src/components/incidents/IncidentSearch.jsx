@@ -20,7 +20,7 @@ const SEVERITY_OPTIONS = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
-export default function IncidentSearch({ onFiltersChange, incidentTypes = [], responseUnits = [], showStatusFilter = true, compact = false }) {
+export default function IncidentSearch({ onFiltersChange, incidentTypes = [], responseUnits = [], showStatusFilter = true, compact = false, leadingActions = null }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [severity, setSeverity] = useState('');
@@ -94,6 +94,7 @@ export default function IncidentSearch({ onFiltersChange, incidentTypes = [], re
         </div>
 
         <div className="flex items-center gap-2 w-full lg:w-auto">
+          {leadingActions}
           {showStatusFilter && (
             <select
               value={status}

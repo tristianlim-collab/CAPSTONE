@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAOIRS - Use Case Scenarios</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .use-case-table {
+            width: 100%;
+            margin-bottom: 40px;
+            border-collapse: collapse;
+        }
+
+        .table-title {
+            background-color: #f0f0f0;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 11px;
+            border-bottom: 2px solid #333;
+            margin-bottom: 0;
+        }
+
+        .use-case-header {
+            background-color: #e8e8e8;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid #999;
+        }
+
+        .use-case-label {
+            font-weight: bold;
+            width: 150px;
+            padding: 8px 12px;
+            background-color: #f9f9f9;
+            border-right: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .use-case-content {
+            padding: 8px 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 11px;
+        }
+
+        .row {
+            display: table;
+            width: 100%;
+            border: 1px solid #ccc;
+        }
+
+        .row-label {
+            display: table-cell;
+            font-weight: bold;
+            width: 150px;
+            padding: 10px 12px;
+            background-color: #f9f9f9;
+            border-right: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+            font-size: 11px;
+        }
+
+        .row-content {
+            display: table-cell;
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 11px;
+        }
+
+        .step-number {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .step {
+            margin-bottom: 8px;
+        }
+
+        .page-break {
+            page-break-after: always;
+            margin: 40px 0;
+            border-top: 2px solid #999;
+            padding-top: 30px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>GAOIRS - USE CASE SCENARIOS</h1>
+            <p>Geospatial Approach to Optimize Incident Response System</p>
+            <p>Full System Documentation - 2026</p>
+        </div>
+
+        <!-- USE CASE 1: Report Incident (Reporter) -->
+        <div class="table-title">Table 1: Report Incident via Mobile App</div>
+        <div class="use-case-header">Use Case 1: Report Incident</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow field reporters to submit geo-tagged incident reports with evidence (photos) and description for emergency response dispatch.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Successful incident submission with location and evidence.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">Field Reporter (Mobile App User)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in with valid Reporter credentials, has location permissions enabled, and has internet connectivity.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Reporter opens the mobile app and taps "Report New Incident".</div>
+                <div class="step"><span class="step-number">Step 2:</span>System requests permission to access device location and camera.</div>
+                <div class="step"><span class="step-number">Step 3:</span>Reporter captures up to 5 photos as evidence of the incident.</div>
+                <div class="step"><span class="step-number">Step 4:</span>System automatically fetches GPS coordinates and reverse geocodes to barangay and city.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Reporter selects incident type (Fire, Medical, Accident, Crime, Infrastructure, Other).</div>
+                <div class="step"><span class="step-number">Step 6:</span>Reporter sets severity level (LOW, MEDIUM, HIGH, CRITICAL) based on situation.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Reporter enters detailed description and personal contact information (name, phone).</div>
+                <div class="step"><span class="step-number">Step 8:</span>Reporter reviews all information and taps "Submit Incident".</div>
+                <div class="step"><span class="step-number">Step 9:</span>System validates all required fields and uploads incident with photos to Cloudinary.</div>
+                <div class="step"><span class="step-number">Step 10:</span>System creates incident with status REPORTED and broadcasts to Admin for verification (response units cannot see yet).</div>
+                <div class="step"><span class="step-number">Step 11:</span>System displays success confirmation screen with incident reference code and "Awaiting Verification" message.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Reporter fills incident form with photos, location, type, severity, description, and personal information, then submits for verification.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System validates all fields, uploads evidence to Cloudinary, creates incident with REPORTED status (pending admin verification), broadcasts notification to Admin for verification queue (not visible to response units yet), creates audit log entry, and returns reference code to reporter.</div>
+        </div>
+
+        <!-- USE CASE 2: View Incident Queue (Response Unit) -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 2: Manage Incident Queue</div>
+        <div class="use-case-header">Use Case 2: View Assigned Incidents</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow response units to view their assigned incidents on an interactive map with real-time updates and filtering capabilities.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Response unit views incident queue and accepts assignment.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">Response Unit Officer (Web Dashboard User)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Response Unit officer, incident has been verified and assigned to their unit by admin (status: RESPONDING), and they have access to Response Dashboard.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Officer logs into system and navigates to Response Unit Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays interactive map with all assigned incidents marked as colored pins (status: RESPONDING, ON_SCENE, RESOLVED).</div>
+                <div class="step"><span class="step-number">Step 3:</span>Officer receives real-time Socket.io notification when new incident is assigned by admin.</div>
+                <div class="step"><span class="step-number">Step 4:</span>Officer clicks on incident marker to view incident details (type, severity, location, reporter info, photos, reporter contact).</div>
+                <div class="step"><span class="step-number">Step 5:</span>Officer reviews incident severity, location, and evidence photos in modal.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Officer clicks "Proceed to Scene" button to begin response.</div>
+                <div class="step"><span class="step-number">Step 7:</span>System updates incident status from RESPONDING to ON_SCENE.</div>
+                <div class="step"><span class="step-number">Step 8:</span>System displays GPS route navigation to incident location.</div>
+                <div class="step"><span class="step-number">Step 9:</span>Officer uses map for navigation and can contact reporter if needed via provided phone number.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Officer views dashboard interactive map, selects an assigned incident, reviews all details and photos, and confirms "Proceed to Scene" to begin response.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays interactive map with only assigned verified incidents (RESPONDING/ON_SCENE/RESOLVED), broadcasts assignment notification via Socket.io when admin verifies, shows comprehensive incident details in modal (including reporter contact), updates status to ON_SCENE upon confirmation, displays navigation route with distance/ETA, and logs status change in audit trail.</div>
+        </div>
+
+        <!-- USE CASE 3: Verify Incident -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 3: Verify Incident Reports</div>
+        <div class="use-case-header">Use Case 3: Verify and Dispatch Incidents</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to verify submitted incidents, review evidence, and dispatch to appropriate response units based on incident type and severity.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Admin verifies incident with valid evidence, approves dispatch, and assigns response units.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Incident Verification Queue Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin, incident is in REPORTED status (awaiting verification), and incident has photos and description.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin opens Incident Verification Queue page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays list of incidents with status REPORTED (pending verification) with reporter info and submission time.</div>
+                <div class="step"><span class="step-number">Step 3:</span>Admin clicks on incident to view full verification modal.</div>
+                <div class="step"><span class="step-number">Step 4:</span>System displays modal with: reporter info (name, phone), incident code, description, and photo gallery.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin examines all photos as evidence to validate incident credibility.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin reviews incident type and severity classification for accuracy.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin can edit incident type/severity if needed before approval.</div>
+                <div class="step"><span class="step-number">Step 8:</span>Admin can optionally add verification notes about the incident.</div>
+                <div class="step"><span class="step-number">Step 9:</span>Admin clicks "Approve & Dispatch" button.</div>
+                <div class="step"><span class="step-number">Step 10:</span>System executes smart assignment algorithm: matches incident type to unit type (Fire→FIRE, Medical/Accident→DRRMO, Crime→POLICE, Infrastructure→DRRMO).</div>
+                <div class="step"><span class="step-number">Step 11:</span>System assigns units based on severity: CRITICAL=5 units, HIGH=3 units, MEDIUM=2 units, LOW=1 unit.</div>
+                <div class="step"><span class="step-number">Step 12:</span>System uses geographic prioritization via PostGIS to find nearest available units in same barangay/city.</div>
+                <div class="step"><span class="step-number">Step 13:</span>System updates incident status from REPORTED to RESPONDING and creates assignment records.</div>
+                <div class="step"><span class="step-number">Step 14:</span>System broadcasts real-time dispatch notification to assigned response units via Socket.io.</div>
+                <div class="step"><span class="step-number">Step 15:</span>System creates audit log entry recording verification approval and assigned units.</div>
+                <div class="step"><span class="step-number">Step 16:</span>Admin sees confirmation message and incident is removed from verification queue.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens verification queue, selects incident, reviews reporter info and photos, optionally edits type/severity and adds notes, and clicks "Approve & Dispatch" to trigger automatic unit assignment.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays verification queue with REPORTED incidents and photo gallery in modal, allows editing type/severity/notes, executes smart assignment algorithm on approval (matches incident type→unit type, calculates units by severity), uses PostGIS for geographic prioritization, creates assignment records, updates status to RESPONDING, broadcasts dispatch notifications to assigned units via Socket.io, stores direction coordinates for navigation, and creates immutable audit log entries.</div>
+        </div>
+
+        <!-- USE CASE 4: Submit Post-Incident Report -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 4: Submit Post-Incident Report</div>
+        <div class="use-case-header">Use Case 4: Submit Post-Incident Report</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow response units to submit after-action reports following incident completion with casualty data, damages, and actions taken.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Successful post-incident report submission by response unit after incident is resolved.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">Response Unit Field Officer (Mobile or Web Dashboard)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Response Unit officer, incident status has been changed to RESOLVED, and officer is authorized for the response unit.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Officer marks incident status as "RESOLVED" after completing response operations.</div>
+                <div class="step"><span class="step-number">Step 2:</span>Officer navigates to "Incident Details" page for completed incident.</div>
+                <div class="step"><span class="step-number">Step 3:</span>System displays incident summary and "Submit Post-Report" button (only available after RESOLVED status).</div>
+                <div class="step"><span class="step-number">Step 4:</span>Officer clicks button to open post-incident report form.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Officer enters casualty data (deceased, injured, affected families) based on actual field assessment.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Officer documents damages (property loss amount, critical infrastructure affected, displacement count).</div>
+                <div class="step"><span class="step-number">Step 7:</span>Officer describes detailed actions taken (rescue operations, medical aid provided, evacuation details, equipment used).</div>
+                <div class="step"><span class="step-number">Step 8:</span>Officer can upload additional evidence photos from field operations to Cloudinary.</div>
+                <div class="step"><span class="step-number">Step 9:</span>Officer reviews completed report for accuracy and completeness.</div>
+                <div class="step"><span class="step-number">Step 10:</span>Officer clicks "Submit Post-Report" button.</div>
+                <div class="step"><span class="step-number">Step 11:</span>System validates all required fields are completed.</div>
+                <div class="step"><span class="step-number">Step 12:</span>System saves post-incident report with status PENDING_REVIEW and notifies Admin.</div>
+                <div class="step"><span class="step-number">Step 13:</span>System creates audit log entry recording report submission.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Officer opens incident details after marking RESOLVED, fills post-incident form with casualty data, damages, and actions taken, uploads evidence photos, and submits report for admin review.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays post-incident form with all required fields only after RESOLVED status, validates data completeness and numeric formats, uploads evidence photos to Cloudinary, stores report with PENDING_REVIEW status, notifies Admin dashboard, creates audit log entry with timestamp, and confirms success to officer.</div>
+        </div>
+
+        <!-- USE CASE 5: Review Post-Incident Reports (Admin) -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 5: Review Post-Incident Reports</div>
+        <div class="use-case-header">Use Case 5: Review and Approve Post-Incident Reports</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to review, verify, and approve post-incident reports submitted by response units for compliance and data accuracy.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Successful post-incident report approval by admin.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Admin Dashboard)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin, post-incident report exists with PENDING_REVIEW status, and report is complete and valid.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "Post-Incident Reports" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays list of reports with status badges (PENDING, UNDER_REVIEW, APPROVED, REJECTED).</div>
+                <div class="step"><span class="step-number">Step 3:</span>Admin clicks on pending report to view full details.</div>
+                <div class="step"><span class="step-number">Step 4:</span>System displays modal with incident info, casualty data, damages, and actions taken.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin reviews all details and uploads evidence photos.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin can add review notes in textarea (optional corrections or questions).</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin clicks "Approve" button to mark report as verified.</div>
+                <div class="step"><span class="step-number">Step 8:</span>System updates report status to APPROVED and sends notification to submitting officer.</div>
+                <div class="step"><span class="step-number">Step 9:</span>System creates audit log entry recording approval action and timestamp.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens report, reviews casualty data and damages, optionally adds notes, and approves report for record completion.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays report details in modal view with incident context, allows admin to add review notes, updates report status from PENDING_REVIEW to APPROVED upon approval, notifies submitting officer of approval, and records action in immutable audit logs with timestamp and admin identity.</div>
+        </div>
+
+        <!-- USE CASE 6: View Analytics and Trends -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 6: View Incident Analytics and Trends</div>
+        <div class="use-case-header">Use Case 6: Analyze Incident Trends and Forecasts</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to view incident statistics, historical trends, and AI-powered forecasts for strategic resource planning and emergency preparedness.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Admin views analytics dashboard and 7-day incident forecast.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Admin Analytics Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin, historical incident data exists (minimum 30 days), and ML service is active.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "Analytics" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays key statistics: total incidents, average response time, incidents by type (pie chart).</div>
+                <div class="step"><span class="step-number">Step 3:</span>System displays historical incident trend chart (last 30 days line graph).</div>
+                <div class="step"><span class="step-number">Step 4:</span>System calls ML microservice to generate 7-day forecast using SARIMA algorithm.</div>
+                <div class="step"><span class="step-number">Step 5:</span>System displays forecast chart with projected incident counts and confidence intervals.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin can select date range to refine analytics view.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin can filter by incident type to see type-specific trends.</div>
+                <div class="step"><span class="step-number">Step 8:</span>System displays heatmap showing incident density by barangay/location.</div>
+                <div class="step"><span class="step-number">Step 9:</span>Admin can export analytics report as PDF or Excel.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens Analytics page, reviews historical trends and AI forecasts, applies filters by date and incident type, and exports reports for planning.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System queries incident database to calculate statistics and trends, calls ML microservice (SARIMA/Prophet algorithms) to generate 7-day forecast, displays interactive charts and heatmaps, allows filtering by date range and incident type, and provides export functionality for PDF/Excel reports.</div>
+        </div>
+
+        <!-- USE CASE 7: Manage LGU Configuration -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 7: Manage LGU Configuration</div>
+        <div class="use-case-header">Use Case 7: Configure LGU Jurisdictions</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to manage LGU (Local Government Unit) jurisdictions, municipalities, and barangays for response unit assignment and geographic coverage.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Successful LGU configuration with municipality and barangay management.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (LGU Configuration Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin, LGU database exists, and admin has configuration permissions.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "LGU Configuration" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays list of all LGUs with status (ACTIVE/INACTIVE) and municipality count.</div>
+                <div class="step"><span class="step-number">Step 3:</span>Admin clicks on LGU to view municipalities and barangays in jurisdiction.</div>
+                <div class="step"><span class="step-number">Step 4:</span>Admin can add new municipality to LGU via "Add Municipality" button.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin can view barangays within each municipality.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin can remove municipality from LGU and manage geographic boundaries.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin can toggle LGU status between ACTIVE and INACTIVE.</div>
+                <div class="step"><span class="step-number">Step 8:</span>System validates PostGIS boundary geometry and geographic consistency.</div>
+                <div class="step"><span class="step-number">Step 9:</span>System creates audit log entry for all configuration changes.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens LGU Configuration, views jurisdictions and municipalities, adds/removes municipalities, adjusts LGU status, and confirms changes.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays LGU list with status and counts, allows adding/removing municipalities with geographic validation, updates LGU status, validates PostGIS boundaries for spatial consistency, and records all changes in immutable audit logs with admin identity and timestamp.</div>
+        </div>
+
+        <!-- USE CASE 8: Access Audit Logs -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 8: Access and Filter Audit Logs</div>
+        <div class="use-case-header">Use Case 8: Review System Audit Logs</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to access immutable audit logs for compliance, security monitoring, and accountability of all system actions.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Admin reviews audit logs to verify system compliance and user actions.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Audit Logs Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin, audit logs exist in database, and admin has audit access permissions.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "Audit Logs" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays comprehensive list of all system actions with color-coded action badges.</div>
+                <div class="step"><span class="step-number">Step 3:</span>Admin can filter logs by action type (CREATE, UPDATE, DELETE, LOGIN) using dropdown.</div>
+                <div class="step"><span class="step-number">Step 4:</span>Admin can filter by user to view specific user's actions.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin can filter by resource type (Incident, Report, LGU, User, etc.).</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin can filter by date range to search historical records.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin can export audit logs as CSV for external compliance audits.</div>
+                <div class="step"><span class="step-number">Step 8:</span>Logs are displayed with columns: timestamp, action, user, resource_type, resource_id, details.</div>
+                <div class="step"><span class="step-number">Step 9:</span>Admin cannot delete, edit, or modify any audit log entries (immutable).</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens Audit Logs, applies filters by action/user/resource/date, reviews entries, and optionally exports as CSV.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays chronological audit log entries with color-coded action badges, allows filtering by action type/user/resource/date range, disables all delete/edit operations on logs (immutable), supports CSV export for compliance audits, and displays comprehensive details including timestamp, user identity, and action specifics.</div>
+        </div>
+
+        <!-- USE CASE 9: Send Broadcast Notification -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 9: Send Broadcast Notifications</div>
+        <div class="use-case-header">Use Case 9: Send Emergency Broadcast</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to send priority broadcast messages to all response units for emergency alerts and critical announcements.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Successful emergency broadcast to all assigned response units.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Broadcasts Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin and response units are registered in system with active Socket.io connections.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "Broadcasts" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>Admin clicks "Create New Broadcast" button.</div>
+                <div class="step"><span class="step-number">Step 3:</span>System displays broadcast creation form with fields: title, message, priority, channel.</div>
+                <div class="step"><span class="step-number">Step 4:</span>Admin enters broadcast title and detailed message content.</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin selects priority level (LOW, MEDIUM, HIGH, CRITICAL).</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin selects delivery channel (In-App, SMS, Email, All).</div>
+                <div class="step"><span class="step-number">Step 7:</span>Admin can select target recipients or send to all active response units.</div>
+                <div class="step"><span class="step-number">Step 8:</span>Admin reviews broadcast preview and confirms submission.</div>
+                <div class="step"><span class="step-number">Step 9:</span>System immediately sends broadcast via Socket.io to connected units.</div>
+                <div class="step"><span class="step-number">Step 10:</span>System creates audit log entry and broadcasts notification history record.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin creates broadcast with title, message, priority level, selects channel and recipients, and confirms to send immediately.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays broadcast form with all required fields, validates message content, immediately transmits via Socket.io to all selected/active response units, creates notification history record with PENDING status, sends SMS/Email based on selected channels, records action in audit logs, and updates delivery status as confirmed.</div>
+        </div>
+
+        <!-- USE CASE 10: View Notification History -->
+        <div class="page-break"></div>
+        <div class="table-title">Table 10: Track Notification Delivery</div>
+        <div class="use-case-header">Use Case 10: View Notification History and Delivery Status</div>
+
+        <div class="row">
+            <div class="row-label">Use Case Goal:</div>
+            <div class="row-content">To allow admin to track all sent notifications, monitor delivery status progression, and verify response unit message receipt.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Scenario:</div>
+            <div class="row-content">Scenario 1: Admin views notification delivery timeline and status updates.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Actor:</div>
+            <div class="row-content">System Administrator (Notification History Page)</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pre-condition:</div>
+            <div class="row-content">The user is logged in as Admin and notifications have been sent to response units.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Main Flow:</div>
+            <div class="row-content">
+                <div class="step"><span class="step-number">Step 1:</span>Admin navigates to "Notification History" page from Admin Dashboard.</div>
+                <div class="step"><span class="step-number">Step 2:</span>System displays list of all sent notifications with type, recipient count, and delivery status badges.</div>
+                <div class="step"><span class="step-number">Step 3:</span>Admin can filter notifications by type (Incident, Broadcast, Alert).</div>
+                <div class="step"><span class="step-number">Step 4:</span>Admin can filter by delivery status (PENDING, SENT, DELIVERED, READ, FAILED).</div>
+                <div class="step"><span class="step-number">Step 5:</span>Admin can filter by date range to find specific notifications.</div>
+                <div class="step"><span class="step-number">Step 6:</span>Admin clicks on notification to view detailed timeline modal.</div>
+                <div class="step"><span class="step-number">Step 7:</span>Modal displays delivery progression for each recipient: sent time, delivered time, read time.</div>
+                <div class="step"><span class="step-number">Step 8:</span>Admin can see which response units have not yet read the notification.</div>
+                <div class="step"><span class="step-number">Step 9:</span>System displays status icons and timestamps in chronological order.</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">User Action:</div>
+            <div class="row-content">Admin opens Notification History, applies filters, selects notification to view delivery timeline, and reviews recipient read status.</div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">System Response:</div>
+            <div class="row-content">System displays all sent notifications with delivery status badges, allows filtering by type/status/date range, displays detailed timeline modal showing delivery progression (PENDING→SENT→DELIVERED→READ), displays delivery timestamps and recipient identities, and highlights unread messages for follow-up.</div>
+        </div>
+
+    </div>
+</body>
+</html>

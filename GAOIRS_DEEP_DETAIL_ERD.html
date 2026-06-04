@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GAOIRS - Deep Detail Technical ERD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background: #fff; padding: 20px; }
+        .container { border: 2px solid #000; padding: 20px; }
+        h1 { text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .mermaid { display: flex; justify-content: center; }
+        .btn { background: #000; color: #fff; padding: 10px 20px; border: none; font-weight: bold; cursor: pointer; float: right; }
+        @media print { .btn { display: none; } body { padding: 0; } }
+    </style>
+</head>
+<body>
+    <button class="btn" onclick="window.print()">Print to PDF</button>
+    <div class="container">
+        <h1>GAOIRS Complete Engineering ERD (All Columns)</h1>
+        <div class="mermaid">
+            erDiagram
+                USER ||--o{ INCIDENT : "reports"
+                USER ||--o{ INCIDENT_ASSIGNMENTS : "assigned_by"
+                USER ||--o{ INCIDENT_STATUS_LOG : "changed_by"
+                USER ||--o{ EVIDENCE : "uploaded_by"
+                USER ||--o{ POST_INCIDENT_REPORTS : "submits/reviews"
+                USER ||--o{ SYSTEM_AUDIT_LOGS : "logs"
+                USER ||--o{ SYSTEM_CONFIG : "configures"
+                
+                BARANGAYS ||--o{ INCIDENT : "location"
+                BARANGAYS ||--o{ RESPONSE_UNIT : "jurisdiction"
+                
+                RESPONSE_UNIT ||--o{ INCIDENT_ASSIGNMENTS : "deployed"
+                INCIDENT ||--o| POST_INCIDENT_REPORTS : "closed_by"
+                INCIDENT ||--o{ EVIDENCE : "has_evidence"
+                INCIDENT ||--o{ INCIDENT_STATUS_LOG : "history"
+
+                USER {
+                    string user_id PK
+                    string name
+                    string email UK
+                    string password_hash
+                    string contact_number
+                    string role
+                    boolean is_active
+                    string barangay_id FK
+                    string unit_id FK
+                    string fcm_token
+                    datetime created_at
+                }
+
+                BARANGAYS {
+                    string barangay_id PK
+                    string name
+                    string municipality
+                    string city
+                    json boundary_geojson
+                    datetime created_at
+                }
+
+                RESPONSE_UNIT {
+                    string unit_id PK
+                    string unit_name
+                    string unit_type
+                    string contact_number
+                    float latitude
+                    float longitude
+                    string barangay_id FK
+                    string availability_status
+                    datetime last_updated
+                }
+
+                INCIDENT {
+                    string incident_id PK
+                    string incident_code UK
+                    string reported_by FK
+                    string incident_type_id FK
+                    string barangay_id FK
+                    string description
+                    float latitude
+                    float longitude
+                    string map_pin_address
+                    string reporter_name
+                    string reporter_phone
+                    string status
+                    string severity
+                    string priority
+                    datetime reported_at
+                    datetime updated_at
+                }
+
+                SYSTEM_AUDIT_LOGS {
+                    string log_id PK
+                    string user_id FK
+                    string action
+                    string resource
+                    string resource_id
+                    string details
+                    string ip_address
+                    datetime created_at
+                }
+
+                SYSTEM_CONFIG {
+                    string config_key PK
+                    string config_value
+                    string description
+                    boolean is_encrypted
+                    datetime updated_at
+                    string updated_by FK
+                }
+
+                POST_INCIDENT_REPORTS {
+                    string report_id PK
+                    string incident_id FK
+                    string submitted_by FK
+                    int response_time_minutes
+                    string actions_taken
+                    int casualties
+                    string damages_estimate
+                    string remarks
+                    string photos
+                    datetime submitted_at
+                    string status
+                    string admin_notes
+                    string reviewed_by_id FK
+                    datetime reviewed_at
+                }
+
+                INCIDENT_ASSIGNMENTS {
+                    string assignment_id PK
+                    string incident_id FK
+                    string unit_id FK
+                    string assigned_by FK
+                    string status
+                    datetime assigned_at
+                    datetime acknowledged_at
+                    datetime arrived_at
+                    datetime resolved_at
+                    datetime updated_at
+                }
+
+                INCIDENT_STATUS_LOG {
+                    string log_id PK
+                    string incident_id FK
+                    string changed_by FK
+                    string status
+                    string remarks
+                    datetime changed_at
+                }
+
+                EVIDENCE {
+                    string evidence_id PK
+                    string incident_id FK
+                    string uploaded_by FK
+                    string file_path
+                    string file_type
+                    datetime uploaded_at
+                }
+
+                NOTIFICATIONS {
+                    string notification_id PK
+                    string incident_id FK
+                    string unit_id FK
+                    string assigned_by FK
+                    string channel
+                    string message_body
+                    string delivery_status
+                    datetime sent_at
+                }
+
+                GENERATED_REPORTS {
+                    string report_id PK
+                    string generated_by FK
+                    string report_title
+                    string report_type
+                    string file_format
+                    json filters_applied
+                    string file_path
+                    datetime generated_at
+                }
+
+                INCIDENT_TYPES {
+                    string type_id PK
+                    string name
+                    string color_code
+                    string icon_label
+                    string description
+                    string default_unit_type
+                }
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#fff', primaryTextColor: '#000', primaryBorderColor: '#000', lineColor: '#000' } });
+    </script>
+</body>
+</html>

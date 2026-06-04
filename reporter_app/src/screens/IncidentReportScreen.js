@@ -13,16 +13,41 @@ import {
   ArrowLeft, Camera, Send, X, AlertTriangle, MapPin, Navigation,
   Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown, Navigation2
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { incidentAPI } from '../api';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
 
-const EMERGENCY_TYPES = [
-  { id: 'Fire', name: 'Fire', Icon: Flame, color: Colors.orange, bg: Colors.orangeLight },
-  { id: 'Medical Emergency', name: 'Medical Emergency', Icon: Stethoscope, color: '#E11D48', bg: '#FFF1F2' },
-  { id: 'Accident', name: 'Accident', Icon: Car, color: Colors.primaryDark, bg: Colors.primaryFaint },
-  { id: 'Crime', name: 'Crime-Related', Icon: AlertTriangle, color: '#D97706', bg: Colors.amberLight },
-  { id: 'Other', name: 'Other', Icon: FileText, color: Colors.slate600, bg: Colors.slate100 },
-];
+const getCategoryVisuals = (name, colorHint) => {
+  const n = name?.toLowerCase() || '';
+  let Icon = FileText;
+  let color = Colors.primary;
+  let bg = Colors.primaryFaint;
+
+  if (n.includes('fire')) { Icon = Flame; color = Colors.orange; bg = Colors.orangeLight; }
+  else if (n.includes('med') || n.includes('health') || n.includes('sick')) { Icon = Stethoscope; color = '#E11D48'; bg = '#FFF1F2'; }
+  else if (n.includes('accid') || n.includes('crash') || n.includes('road')) { Icon = Car; color = Colors.primaryDark; bg = Colors.primaryFaint; }
+  else if (n.includes('crime') || n.includes('police') || n.includes('theft')) { Icon = AlertTriangle; color = '#D97706'; bg = Colors.amberLight; }
+  else if (n.includes('infra') || n.includes('flood') || n.includes('calamity')) { Icon = AlertTriangle; color = '#7C3AED'; bg = '#F5F3FF'; }
+
+  // Use color hint from DB if matches our theme
+  const themeColors = {
+    orange: { color: Colors.orange, bg: Colors.orangeLight },
+    rose: { color: '#E11D48', bg: '#FFF1F2' },
+    blue: { color: Colors.primary, bg: Colors.primaryFaint },
+    indigo: { color: '#4F46E5', bg: '#EEF2FF' },
+    emerald: { color: Colors.emerald, bg: '#ECFDF5' },
+    yellow: { color: '#D97706', bg: '#FFFBEB' },
+    purple: { color: '#7C3AED', bg: '#F5F3FF' },
+    slate: { color: Colors.slate600, bg: Colors.slate100 }
+  };
+
+  if (colorHint && themeColors[colorHint]) {
+    color = themeColors[colorHint].color;
+    bg = themeColors[colorHint].bg;
+  }
+
+  return { Icon, color, bg };
+};
 
 const SEVERITIES = ['LOW', 'HIGH', 'CRITICAL'];
 const SEV_COLORS = {
@@ -115,6 +140,8 @@ const STATIC_LEAFLET_HTML = `
 export default function IncidentReportScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef(null);
+  const isMounted = useRef(true);
+  const mapTimeoutRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
   const [geoLoading, setGeoLoading] = useState(true);
@@ -127,38 +154,63 @@ export default function IncidentReportScreen({ navigation }) {
   const [contactNumber, setContactNumber] = useState('+63');
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [incidentTypes, setIncidentTypes] = useState([]);
+  const [showMap, setShowMap] = useState(true);
 
   useEffect(() => {
+    isMounted.current = true;
     (async () => {
       try {
         const res = await api.get('/incident-types');
-        setIncidentTypes(res.data);
-      } catch (e) { console.error('Failed to fetch types:', e); }
+        if (isMounted.current) {
+          setIncidentTypes(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch (e) {
+        console.error('Failed to fetch types:', e);
+        if (isMounted.current) setIncidentTypes([]);
+      }
     })();
+
+    return () => {
+      isMounted.current = false;
+      if (mapTimeoutRef.current) clearTimeout(mapTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') { setGeoLoading(false); return; }
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (status !== 'granted') {
+          if (isMounted.current) setGeoLoading(false);
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeout: 10000
+        });
+
+        if (!isMounted.current) return;
+
         const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
         setLocation(coords);
         setGeoLoading(false);
         reverseGeocode(coords);
-        setTimeout(() => {
-          webViewRef.current?.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}, ${loc.coords.accuracy || 0}); true;`);
-        }, 500); // Give WebView time to load
+
+        mapTimeoutRef.current = setTimeout(() => {
+          if (isMounted.current && webViewRef.current) {
+            webViewRef.current.injectJavaScript(`window.updateMapLocation(${coords.lat}, ${coords.lng}, ${loc.coords.accuracy || 0}); true;`);
+          }
+        }, 800);
       } catch (e) {
         console.warn('Location failed:', e);
-        setGeoLoading(false);
+        if (isMounted.current) setGeoLoading(false);
       }
     })();
   }, []);
 
   const reverseGeocode = async (loc) => {
-    if (!loc) return;
+    if (!loc || !isMounted.current) return;
     setAddressLoading(true);
     try {
       const resp = await fetch(
@@ -168,64 +220,41 @@ export default function IncidentReportScreen({ navigation }) {
             'Accept': 'application/json',
             'Accept-Language': 'en',
             'User-Agent': 'GAOIRS-ReporterApp/1.0',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
           }
         }
       );
       const data = await resp.json();
+      if (!isMounted.current) return;
 
       if (data?.address) {
         const addr = data.address;
-
-        // Local address components
         const road = addr.road || addr.street || '';
         const village = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet || '';
         const city = addr.city || addr.town || addr.municipality || '';
         const province = addr.province || addr.state || addr.county || '';
 
         const parts = [];
-
-        // 1. Street Name
         if (road) parts.push(road);
-
-        // 2. Barangay (Village) - avoid duplicates
         if (village && !road.toLowerCase().includes(village.toLowerCase())) {
           parts.push(village.toLowerCase().includes('barangay') ? village : `Brgy. ${village}`);
         }
-
-        // 3. City/Town
-        if (city && !village.toLowerCase().includes(city.toLowerCase())) {
-          parts.push(city);
-        }
-
-        // 4. Province
-        if (province && province !== city) {
-          parts.push(province);
-        }
+        if (city && !village.toLowerCase().includes(city.toLowerCase())) parts.push(city);
+        if (province && province !== city) parts.push(province);
 
         if (parts.length > 0) {
-          // Filter out redundant names like "McKinley Baybay" if it's not the primary village/road
           let cleanParts = parts.filter((v, i, a) => a.indexOf(v) === i);
-
-          // Fix for specific user report about McKinley Baybay
           cleanParts = cleanParts.filter(p => !p.toLowerCase().includes('mckinley baybay'));
-
           setLocationAddress(cleanParts.join(', '));
         } else if (data.display_name) {
           setLocationAddress(data.display_name.split(',').slice(0, 4).join(','));
-        } else {
-          setLocationAddress(`${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
         }
-      } else if (data?.display_name) {
-        setLocationAddress(data.display_name.split(',').slice(0, 4).join(','));
-      } else {
-        setLocationAddress(`${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
       }
     } catch {
-      setLocationAddress(`${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`);
-    } finally { setAddressLoading(false); }
+      // Silently fail or use coordinates
+    } finally {
+      if (isMounted.current) setAddressLoading(false);
+    }
   };
 
   const handleRefreshLocation = async () => {
@@ -246,7 +275,7 @@ export default function IncidentReportScreen({ navigation }) {
     if (photos.length >= 5) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+      quality: 0.5, // Reduced quality to prevent OOM crashes
       allowsMultipleSelection: true,
       selectionLimit: 5 - photos.length,
     });
@@ -259,21 +288,12 @@ export default function IncidentReportScreen({ navigation }) {
     if (photos.length >= 5) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Camera permission required.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.5 }); // Reduced quality
     if (!result.canceled) {
       setPhotos(prev => [...prev, ...result.assets].slice(0, 5));
     }
   };
 
-  const handlePhotoSelect = () => {
-    Alert.alert(
-      "Photo Evidence",
-      "Choose an option",
-      [
-        { text: "Take Photo", onPress: handleTakePhoto },
-      ]
-    );
-  };
 
   const isValidPhone = /^\+639\d{9}$/.test(contactNumber);
 
@@ -313,6 +333,7 @@ export default function IncidentReportScreen({ navigation }) {
     if (!isValidPhone) { setPhoneTouched(true); Alert.alert('Error', 'Use format +639XXXXXXXXX.'); return; }
 
     setLoading(true);
+    setShowMap(false); // Unmount map immediately to free resources
     try {
       const incRes = await incidentAPI.create({
         incident_type_id: typeId,
@@ -325,8 +346,24 @@ export default function IncidentReportScreen({ navigation }) {
         reporter_phone: contactNumber,
       });
       const incidentId = incRes.data?.incident_id;
+
+      // Save incident ID locally so "My Reports" shows only this device's submissions
+      if (incidentId) {
+        try {
+          const existing = await AsyncStorage.getItem('my_report_ids');
+          const ids = existing ? JSON.parse(existing) : [];
+          // Avoid duplicates if submission somehow triggers twice
+          if (!ids.includes(incidentId)) {
+            ids.unshift(incidentId);
+            await AsyncStorage.setItem('my_report_ids', JSON.stringify(ids.slice(0, 50)));
+          }
+        } catch (e) { console.warn('Could not save report ID locally:', e); }
+      }
       if (incidentId && photos.length > 0) {
-        for (const photo of photos) {
+        // Upload photos one by one and clear them from memory to prevent OOM crash
+        const photosToUpload = [...photos];
+        for (let i = 0; i < photosToUpload.length; i++) {
+          const photo = photosToUpload[i];
           try {
             const formData = new FormData();
             formData.append('file', {
@@ -335,16 +372,36 @@ export default function IncidentReportScreen({ navigation }) {
               name: `evidence_${Date.now()}.jpg`,
             });
             formData.append('incident_id', incidentId);
+
             await api.post('/evidence', formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
             });
-          } catch (e) { console.error('Evidence upload failed:', e); }
+
+            // Clear specific photo from state to free memory
+            setPhotos(prev => prev.filter(p => p.uri !== photo.uri));
+
+            // Small pause for native garbage collection
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (e) {
+            console.error('Evidence upload failed:', e);
+          }
         }
       }
-      navigation.replace('ReportSuccess');
+
+      // Final cooldown before navigation
+      setTimeout(() => {
+        if (isMounted.current) {
+          navigation.replace('ReportSuccess');
+        }
+      }, 500);
+
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to submit report');
-      setLoading(false);
+      if (isMounted.current) {
+        const errorMsg = err.response?.data?.message || 'Failed to submit report. Please check your connection.';
+        Alert.alert('Error', errorMsg);
+        setLoading(false);
+        setShowMap(true); // Restore map so they can try again
+      }
     }
   };
 
@@ -354,10 +411,8 @@ export default function IncidentReportScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerCenter}>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Emergency Report</Text>
-            <Text style={styles.headerSub}>COMPLETE FORM</Text>
-          </View>
+          <Text style={styles.headerTitle}>Emergency Report</Text>
+          <Text style={styles.headerSub}>COMPLETE FORM</Text>
         </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <ArrowLeft size={20} color="#475569" />
@@ -374,7 +429,7 @@ export default function IncidentReportScreen({ navigation }) {
             <Text style={styles.sectionLabel}>PHOTO EVIDENCE</Text>
 
           </View>
-          <TouchableOpacity style={styles.dashedUploadBox} onPress={handlePhotoSelect} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.dashedUploadBox} onPress={handleTakePhoto} activeOpacity={0.7}>
             <Camera size={32} color="#60A5FA" style={{ marginBottom: 8 }} />
             <Text style={styles.uploadBoxTitle}>Click to take a photo</Text>
           </TouchableOpacity>
@@ -405,21 +460,33 @@ export default function IncidentReportScreen({ navigation }) {
 
           {/* Mini Map */}
           <View style={styles.mapCard}>
-            <WebView
-              ref={webViewRef}
-              source={{ html: STATIC_LEAFLET_HTML }}
-              style={styles.mapView}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
-              onMessage={(event) => {
-                try {
-                  const coords = JSON.parse(event.nativeEvent.data);
-                  setLocation(coords);
-                  reverseGeocode(coords);
-                } catch (e) { }
-              }}
-            />
-            {geoLoading && !location && (
+            {showMap ? (
+              <WebView
+                ref={webViewRef}
+                source={{ html: STATIC_LEAFLET_HTML }}
+                style={styles.mapView}
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+                onMessage={(event) => {
+                  if (!event.nativeEvent.data || !isMounted.current) return;
+                  try {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    if (data.lat && data.lng) {
+                      setLocation({ lat: data.lat, lng: data.lng });
+                      reverseGeocode({ lat: data.lat, lng: data.lng });
+                    }
+                  } catch (e) {
+                    console.warn('Map message error:', e);
+                  }
+                }}
+              />
+            ) : (
+              <View style={[StyleSheet.absoluteFill, styles.mapPlaceholder]}>
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text style={{ marginTop: 8, color: '#475569', fontWeight: '500', fontSize: 12 }}>Processing Report...</Text>
+              </View>
+            )}
+            {geoLoading && !location && showMap && (
               <View style={[StyleSheet.absoluteFill, styles.mapPlaceholder]}>
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={{ marginTop: 8, color: '#475569', fontWeight: '500', fontSize: 12 }}>Acquiring GPS...</Text>
@@ -471,8 +538,8 @@ export default function IncidentReportScreen({ navigation }) {
               dropdownIconColor="#475569"
             >
               <Picker.Item label="-- Select Emergency Type --" value="" color="#94A3B8" />
-              {EMERGENCY_TYPES.map(type => (
-                <Picker.Item key={type.id} label={type.name} value={type.id} color="#1E293B" />
+              {incidentTypes.map(type => (
+                <Picker.Item key={type.type_id} label={type.name} value={type.name} color="#1E293B" />
               ))}
             </Picker>
           </View>

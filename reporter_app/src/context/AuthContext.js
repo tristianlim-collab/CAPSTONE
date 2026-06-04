@@ -7,9 +7,9 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// Default reporter credentials (created by seed.js)
-const DEFAULT_REPORTER_EMAIL = 'reporter@gaoirs.com';
-const DEFAULT_REPORTER_PASSWORD = 'Reporter@2026';
+// No auto-login needed — reporter app is fully anonymous/public
+const DEFAULT_REPORTER_EMAIL = null;
+const DEFAULT_REPORTER_PASSWORD = null;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
@@ -21,32 +21,26 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // App is public — just clear any stale tokens and run as guest
     const initAuth = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
         if (token) {
-          // Token exists — verify it's still valid
+          // Check if existing token is still valid (for users who chose to log in)
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const res = await authAPI.getMe().catch(() => null);
           if (res?.data) {
             setUser(res.data);
-            return; // Done — token is valid
+            return;
           }
+          // Token invalid — clear it and run as guest
+          await AsyncStorage.removeItem('token');
+          delete api.defaults.headers.common['Authorization'];
         }
-
-        // No token or expired — auto-login as default reporter
-        console.log('[Auth] No valid token, auto-logging in as default reporter...');
-        const loginRes = await authAPI.login(DEFAULT_REPORTER_EMAIL, DEFAULT_REPORTER_PASSWORD);
-        const data = loginRes.data;
-        if (data?.token) {
-          await AsyncStorage.setItem('token', data.token);
-          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-          setUser(data.user);
-          console.log('[Auth] Auto-login successful:', data.user?.name);
-        }
-      } catch (error) {
-        console.warn('[Auth] Auto-login failed:', error.message);
-        // Keep guest user as fallback
+        // No token — ensure clean guest state
+        delete api.defaults.headers.common['Authorization'];
+      } catch (e) {
+        delete api.defaults.headers.common['Authorization'];
       }
     };
     initAuth();

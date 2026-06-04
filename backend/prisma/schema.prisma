@@ -83,7 +83,7 @@ model IncidentType {
 model Incident {
   incident_id      String               @id @default(uuid())
   incident_code    String               @unique
-  reported_by      String
+  reported_by      String?
   incident_type_id String
   barangay_id      String?
   description      String
@@ -100,7 +100,7 @@ model Incident {
   evidence         Evidence[]
   barangay         Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   incident_type    IncidentType         @relation(fields: [incident_type_id], references: [type_id])
-  reporter         User                 @relation("ReportedBy", fields: [reported_by], references: [user_id])
+  reporter         User?                @relation("ReportedBy", fields: [reported_by], references: [user_id])
   assignments      IncidentAssignment[]
   status_logs      IncidentStatusLog[]
   notifications    Notification[]
@@ -165,12 +165,12 @@ model IncidentStatusLog {
 model Evidence {
   evidence_id String   @id @default(uuid())
   incident_id String
-  uploaded_by String
+  uploaded_by String?
   file_path   String
   file_type   String
   uploaded_at DateTime @default(now())
   incident    Incident @relation(fields: [incident_id], references: [incident_id])
-  uploader    User     @relation("UploadedBy", fields: [uploaded_by], references: [user_id])
+  uploader    User?    @relation("UploadedBy", fields: [uploaded_by], references: [user_id])
 
   @@map("EVIDENCE")
 }

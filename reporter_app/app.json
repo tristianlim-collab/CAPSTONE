@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "reporter_app",
-    "slug": "reporter_app",
+    "name": "GAOIRS Reporter",
+    "slug": "gaoirs-reporter",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,17 +13,41 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gaoirs.reporter",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "GAOIRS needs your location to report emergencies precisely.",
+        "NSCameraUsageDescription": "GAOIRS needs camera access to capture emergency evidence."
+      }
     },
     "android": {
+      "package": "com.gaoirs.reporter",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "edgeToEdgeEnabled": true
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysPermission": "Allow GAOIRS to detect your location even in background for emergency tracking."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GAOIRS to use the camera for evidence reporting."
+        }
+      ]
+    ]
   }
 }

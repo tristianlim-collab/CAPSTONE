@@ -41,7 +41,7 @@ const ResponseIncidents = () => {
 
     const unsub3 = on('incident_deleted', (data) => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
-      toast('ℹ️ Incident deleted', { duration: 3000 });
+      toast('ℹ️ Incident deleted', { duration: 5000 });
     });
 
     return () => { unsub1(); unsub2(); unsub3(); };

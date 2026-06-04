@@ -154,8 +154,6 @@ const EvidenceGallery = ({ evidence }) => {
 
 const QuickVerifyActions = ({ incident, onVerify }) => {
   const [submitting, setSubmitting] = useState(false);
-  const [showRejectInput, setShowRejectInput] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
   const [nearestUnit, setNearestUnit] = useState(null);
   const [loadingUnit, setLoadingUnit] = useState(false);
 
@@ -197,17 +195,11 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
   const handleReject = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!showRejectInput) {
-      setShowRejectInput(true);
-      return;
-    }
     setSubmitting(true);
     try {
-      await onVerify(incident.incident_id, 'REJECT', rejectReason);
+      await onVerify(incident.incident_id, 'REJECT');
     } finally {
       setSubmitting(false);
-      setShowRejectInput(false);
-      setRejectReason('');
     }
   };
 
@@ -254,33 +246,6 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
           Reject
         </button>
       </div>
-      {showRejectInput && (
-        <div className="mt-2">
-          <textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Reason for rejection (optional)..."
-            rows="2"
-            className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs resize-none focus:outline-none focus:ring-1 focus:ring-red-400"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="flex gap-2 mt-1">
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRejectInput(false); }}
-              className="flex-1 px-2 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded-md hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={submitting}
-              className="flex-1 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700 disabled:opacity-50"
-            >
-              Confirm Reject
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

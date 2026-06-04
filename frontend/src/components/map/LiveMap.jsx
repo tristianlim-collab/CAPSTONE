@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker as LeafletMarker, Popup, useMap, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker as LeafletMarker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import IncidentMarker from './IncidentMarker';
 import BoundaryLayer from './BoundaryLayer';
@@ -90,21 +90,7 @@ function getIncidentCity(incident) {
   return null;
 }
 
-// Helper: fetch route from OSRM
-async function fetchRouteFromOSRM(fromLat, fromLng, toLat, toLng) {
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.routes && data.routes.length > 0) {
-      const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-      return coords;
-    }
-  } catch (err) {
-    console.error('OSRM route fetch error:', err);
-  }
-  return null;
-}
+
 
 export default function LiveMap({
   center = [10.0000, 122.9000],
@@ -119,7 +105,7 @@ export default function LiveMap({
   const [units, setUnits] = useState([]);
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
-  const [routes, setRoutes] = useState({});
+
 
   // Bounds for Negros Island Region
   const NIR_BOUNDS = [
@@ -180,24 +166,7 @@ export default function LiveMap({
       const activeIncidents = res.data?.data || [];
       setIncidents(activeIncidents);
 
-      // Auto-load routes for VERIFIED/RESPONDING incidents with assignments
-      const initialRoutes = {};
-      for (const inc of activeIncidents) {
-        if (['VERIFIED', 'RESPONDING'].includes(inc.status) && inc.assignments && inc.assignments.length > 0) {
-          for (const assignment of inc.assignments) {
-            const unit = assignment.unit;
-            if (unit && unit.latitude && unit.longitude && inc.latitude && inc.longitude) {
-              const coords = await fetchRouteFromOSRM(unit.latitude, unit.longitude, inc.latitude, inc.longitude);
-              if (coords) {
-                initialRoutes[`${inc.incident_id}_${unit.unit_id}`] = coords;
-              }
-            }
-          }
-        }
-      }
-      if (Object.keys(initialRoutes).length > 0) {
-        setRoutes(prev => ({ ...prev, ...initialRoutes }));
-      }
+
     }).catch(err => console.error("Map fetch error:", err));
 
     // Fetch active response unit positions
@@ -286,20 +255,7 @@ export default function LiveMap({
       });
     });
 
-    // Listen for dispatch directions — immediately draw route on approval
-    const unsub7 = on('unit_dispatch_with_directions', async (data) => {
-      console.log('[LiveMap] Received dispatch directions:', data);
-      if (data.unit_lat && data.unit_lng && data.incident_lat && data.incident_lng) {
-        const coords = await fetchRouteFromOSRM(
-          Number(data.unit_lat), Number(data.unit_lng), 
-          Number(data.incident_lat), Number(data.incident_lng)
-        );
-        if (coords) {
-          const routeKey = `${data.incident_id}_${data.unit_id}`;
-          setRoutes(prev => ({ ...prev, [routeKey]: coords }));
-        }
-      }
-    });
+
 
     return () => {
       unsub1();
@@ -308,7 +264,6 @@ export default function LiveMap({
       unsub4();
       unsub5();
       unsub6();
-      unsub7();
     };
   }, [on]);
 
@@ -329,51 +284,11 @@ export default function LiveMap({
       const activeIncidents = res.data?.data || [];
       setIncidents(activeIncidents);
 
-      // Auto-load routes for verified incidents with assignments
-      const initialRoutes = {};
-      for (const inc of activeIncidents) {
-        if (['VERIFIED', 'RESPONDING'].includes(inc.status) && inc.assignments && inc.assignments.length > 0) {
-          for (const assignment of inc.assignments) {
-            const unit = assignment.unit;
-            if (unit && unit.latitude && unit.longitude && inc.latitude && inc.longitude) {
-              const coords = await fetchRouteFromOSRM(unit.latitude, unit.longitude, inc.latitude, inc.longitude);
-              if (coords) {
-                initialRoutes[`${inc.incident_id}_${unit.unit_id}`] = coords;
-              }
-            }
-          }
-        }
-      }
-      if (Object.keys(initialRoutes).length > 0) {
-        setRoutes(prev => ({ ...prev, ...initialRoutes }));
-      }
+
     }).catch(err => console.error("Map filter fetch error:", err));
   }, [filters]);
 
-  // Route cleanup effect — remove routes when incident is resolved/closed
-  useEffect(() => {
-    setRoutes(prev => {
-      const activeIncidentIds = new Set(
-        incidents
-          .filter(inc => ['VERIFIED', 'RESPONDING', 'DISPATCHED'].includes(inc.status))
-          .map(inc => inc.incident_id)
-      );
 
-      const cleaned = {};
-      for (const [key, coords] of Object.entries(prev)) {
-        const incidentId = key.split('_')[0];
-        if (activeIncidentIds.has(incidentId)) {
-          cleaned[key] = coords;
-        }
-      }
-
-      // Only update state if something actually changed
-      if (Object.keys(cleaned).length !== Object.keys(prev).length) {
-        return cleaned;
-      }
-      return prev;
-    });
-  }, [incidents]);
 
   // Determine the city for the LGU proximity layer
   const selectedIncident = selectedIncidentId
@@ -438,21 +353,7 @@ export default function LiveMap({
           />
         ))}
 
-        {/* Dispatch Routes Polyline */}
-        {(mode === 'markers' || mode === 'lgu_zones') && Object.values(routes).map((routeCoords, idx) => (
-          <Polyline
-            key={`route-${idx}`}
-            positions={routeCoords}
-            pathOptions={{
-              color: '#3b82f6',
-              weight: 5,
-              opacity: 0.85,
-              dashArray: '10, 10',
-              lineCap: 'round',
-              lineJoin: 'round'
-            }}
-          />
-        ))}
+
 
         {/* Response Unit Markers */}
         {(mode === 'markers' || mode === 'lgu_zones') && units.map(unit => (

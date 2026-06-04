@@ -1,61 +1,92 @@
 import { prisma } from '../config/database.js';
+import socketService from '../services/socketService.js';
 
 /**
  * Submit a post-incident report
  * POST /api/post-reports
  */
 export const submitReport = async (req, res) => {
-  try {
-    const { incident_id, response_time_minutes, actions_taken, casualties, damages_estimate, remarks } = req.body;
+  const { incident_id, response_time_minutes, actions_taken, casualties, damages_estimate, remarks, photos } = req.body;
 
-    if (!incident_id || !actions_taken) {
-      return res.status(400).json({ message: 'incident_id and actions_taken are required' });
+  if (!incident_id || !actions_taken) {
+    return res.status(400).json({ message: 'incident_id and actions_taken are required' });
+  }
+
+  try {
+    // Wrap in transaction for atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check for existing report
+      const existing = await tx.postIncidentReport.findUnique({ where: { incident_id } });
+      if (existing) throw new Error('ALREADY_SUBMITTED');
+
+      // 2. Parse numbers safely
+      const parsedCasualties = casualties ? parseInt(casualties) : 0;
+      const parsedResponseTime = response_time_minutes ? parseInt(response_time_minutes) : null;
+
+      // 3. Create the report
+      const report = await tx.postIncidentReport.create({
+        data: {
+          incident_id,
+          submitted_by: req.user.id,
+          response_time_minutes: isNaN(parsedResponseTime) ? null : parsedResponseTime,
+          actions_taken,
+          casualties: isNaN(parsedCasualties) ? 0 : parsedCasualties,
+          damages_estimate: damages_estimate || null,
+          remarks: remarks || null,
+          photos: Array.isArray(photos) ? photos.filter(p => typeof p === 'string' && p.length > 0) : [],
+          status: 'APPROVED'
+        },
+        include: {
+          incident: { include: { incident_type: true } },
+          submitter: { select: { name: true, email: true } }
+        }
+      });
+
+      // 4. Update incident status
+      await tx.incident.update({
+        where: { incident_id },
+        data: { status: 'RESOLVED' }
+      });
+
+      // 5. Create status log
+      await tx.incidentStatusLog.create({
+        data: {
+          incident_id,
+          changed_by: req.user.id,
+          status: 'RESOLVED',
+          remarks: `Report submitted: ${actions_taken.substring(0, 100)}...`
+        }
+      });
+
+      return report;
+    });
+
+    // Broadcast status update globally (for anonymous reporters)
+    try {
+      const fullIncident = await prisma.incident.findUnique({
+        where: { incident_id },
+        include: { incident_type: true, barangay: true, evidence: true }
+      });
+      socketService.emitIncidentStatusUpdate({
+        incident_id,
+        status: 'RESOLVED',
+        incident: fullIncident,
+        reported_by: fullIncident?.reported_by
+      });
+    } catch (sErr) {
+      console.warn('Socket notification error:', sErr.message);
     }
 
-    // Check if a report already exists for this incident
-    const existing = await prisma.postIncidentReport.findUnique({
-      where: { incident_id }
-    });
-    if (existing) {
+    return res.status(201).json(result);
+  } catch (error) {
+    if (error.message === 'ALREADY_SUBMITTED') {
       return res.status(409).json({ message: 'Post-incident report already submitted for this incident' });
     }
-
-    const report = await prisma.postIncidentReport.create({
-      data: {
-        incident_id,
-        submitted_by: req.user.id,
-        response_time_minutes: response_time_minutes ? parseInt(response_time_minutes) : null,
-        actions_taken,
-        casualties: casualties ? parseInt(casualties) : 0,
-        damages_estimate: damages_estimate || null,
-        remarks: remarks || null
-      },
-      include: {
-        incident: { include: { incident_type: true } },
-        submitter: { select: { name: true, email: true } }
-      }
+    console.error('submitReport transaction error:', error);
+    res.status(500).json({ 
+      message: 'Error submitting post-incident report', 
+      error: error.message 
     });
-
-    // Also update the incident status to RESOLVED
-    await prisma.incident.update({
-      where: { incident_id },
-      data: { status: 'RESOLVED' }
-    });
-
-    // Log the status change
-    await prisma.incidentStatusLog.create({
-      data: {
-        incident_id,
-        changed_by: req.user.id,
-        status: 'RESOLVED',
-        remarks: `Post-incident report submitted. Actions: ${actions_taken}`
-      }
-    });
-
-    res.status(201).json(report);
-  } catch (error) {
-    console.error('submitReport error:', error);
-    res.status(500).json({ message: 'Error submitting post-incident report', error: error.message });
   }
 };
 
@@ -68,7 +99,13 @@ export const getByIncident = async (req, res) => {
     const report = await prisma.postIncidentReport.findUnique({
       where: { incident_id: req.params.incidentId },
       include: {
-        incident: { include: { incident_type: true, barangay: true } },
+        incident: {
+          include: {
+            incident_type: true,
+            barangay: true,
+            evidence: true
+          }
+        },
         submitter: { select: { name: true, email: true, role: true } }
       }
     });
@@ -89,10 +126,15 @@ export const getAllReports = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const { status, from_date, to_date, search } = req.query;
+    const { status, type_id, from_date, to_date, search } = req.query;
 
     const where = {};
     if (status) where.status = status;
+    if (type_id) {
+      where.incident = {
+        incident_type_id: type_id
+      };
+    }
 
     // Date range filter
     if (from_date || to_date) {
@@ -114,7 +156,14 @@ export const getAllReports = async (req, res) => {
       skip,
       take: limit,
       include: {
-        incident: { include: { incident_type: true, barangay: true, reporter: { select: { name: true } } } },
+        incident: {
+          include: {
+            incident_type: true,
+            barangay: true,
+            reporter: { select: { name: true } },
+            evidence: true
+          }
+        },
         submitter: { select: { name: true, email: true, role: true } }
       },
       orderBy: { submitted_at: 'desc' }

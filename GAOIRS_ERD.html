@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAOIRS - Complete Entity Relationship Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .legend {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+        }
+
+        .legend h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .legend-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .legend-item strong {
+            color: #667eea;
+        }
+
+        .relationship-type {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .one-to-many::before {
+            content: "1..N";
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .one-to-one::before {
+            content: "1..1";
+            background: #764ba2;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .model-list {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .model-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .model-header {
+            background: #667eea;
+            color: white;
+            padding: 12px 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .model-fields {
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .field {
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .field:last-child {
+            border-bottom: none;
+        }
+
+        .field-name {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .field-type {
+            color: #764ba2;
+        }
+
+        .field-constraint {
+            color: #e74c3c;
+            font-size: 0.85em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ GAOIRS Entity Relationship Diagram</h1>
+            <p>Geospatial Approach to Optimize Incident Response System</p>
+        </div>
+
+        <div class="content">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">13</div>
+                    <div class="stat-label">Models</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">85+</div>
+                    <div class="stat-label">Fields</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Enums</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">PostgreSQL</div>
+                    <div class="stat-label">+ PostGIS</div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom: 20px; color: #667eea;">Database Schema Diagram</h2>
+
+            <div class="mermaid">
+erDiagram
+    USER ||--o{ BARANGAYS : "assigned to"
+    USER ||--o{ RESPONSE_UNIT : "belongs to"
+    USER ||--o{ INCIDENT : "reports"
+    USER ||--o{ EVIDENCE : "uploads"
+    USER ||--o{ INCIDENT_ASSIGNMENTS : "assigns"
+    USER ||--o{ INCIDENT_STATUS_LOG : "logs"
+    USER ||--o{ GENERATED_REPORTS : "generates"
+    USER ||--o{ POST_INCIDENT_REPORTS : "submits"
+    USER ||--o{ SYSTEM_AUDIT_LOGS : "triggers"
+    USER ||--o{ NOTIFICATIONS : "receives"
+    USER ||--o{ SYSTEM_CONFIG : "updates"
+
+    BARANGAYS ||--o{ RESPONSE_UNIT : "contains"
+    BARANGAYS ||--o{ INCIDENT : "located in"
+
+    RESPONSE_UNIT ||--o{ INCIDENT_ASSIGNMENTS : "receives"
+    RESPONSE_UNIT ||--o{ NOTIFICATIONS : "gets"
+
+    INCIDENT_TYPES ||--o{ INCIDENT : "classifies"
+
+    INCIDENT ||--o{ EVIDENCE : "has"
+    INCIDENT ||--o{ INCIDENT_ASSIGNMENTS : "assigned to"
+    INCIDENT ||--o{ INCIDENT_STATUS_LOG : "tracked by"
+    INCIDENT ||--o{ NOTIFICATIONS : "alerts"
+    INCIDENT ||--|| POST_INCIDENT_REPORTS : "generates"
+
+    INCIDENT_ASSIGNMENTS ||--o{ NOTIFICATIONS : "triggers"
+
+    POST_INCIDENT_REPORTS ||--o{ USER : "reviewed by"
+            </div>
+
+            <div class="legend">
+                <h3>📋 Schema Overview</h3>
+                <p><strong>Database:</strong> PostgreSQL with PostGIS extension</p>
+                <p><strong>Primary Key Pattern:</strong> UUID (auto-generated)</p>
+                <p><strong>Timestamp Pattern:</strong> created_at (auto), updated_at (auto), specific datetime fields for tracking</p>
+
+                <div class="legend-section">
+                    <div>
+                        <h4 style="color: #667eea; margin-bottom: 10px;">Core Models (4)</h4>
+                        <div class="relationship-type one-to-many">
+                            <strong>User:</strong> Authentication & authorization
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>Incident:</strong> Core business entity
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>ResponseUnit:</strong> Emergency responders
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>Barangay:</strong> Geographic divisions (PostGIS)
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #667eea; margin-bottom: 10px;">Process Models (6)</h4>
+                        <div class="relationship-type one-to-many">
+                            <strong>IncidentAssignment:</strong> Unit-to-incident dispatch
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>IncidentStatusLog:</strong> Audit trail
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>PostIncidentReport:</strong> After-action reports
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>Evidence:</strong> Photos/media storage
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>Notification:</strong> Alert distribution
+                        </div>
+                        <div class="relationship-type one-to-many">
+                            <strong>GeneratedReport:</strong> PDF/Excel exports
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 40px; margin-bottom: 20px; color: #667eea;">📊 Detailed Model Definitions</h2>
+
+            <div class="model-list">
+                <!-- USER -->
+                <div class="model-card">
+                    <div class="model-header">👤 USER</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">user_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">name</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">email</span> <span class="field-type">String</span> <span class="field-constraint">UNIQUE</span></div>
+                        <div class="field"><span class="field-name">password_hash</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">contact_number</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">role</span> <span class="field-type">Role</span></div>
+                        <div class="field"><span class="field-name">is_active</span> <span class="field-type">Boolean</span></div>
+                        <div class="field"><span class="field-name">fcm_token</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">barangay_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">unit_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">created_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- BARANGAYS -->
+                <div class="model-card">
+                    <div class="model-header">🗺️ BARANGAYS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">barangay_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">name</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">municipality</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">city</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">boundary_geojson</span> <span class="field-type">GeoJSON</span></div>
+                        <div class="field"><span class="field-name">created_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- RESPONSE_UNIT -->
+                <div class="model-card">
+                    <div class="model-header">🚨 RESPONSE_UNIT</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">unit_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">unit_name</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">unit_type</span> <span class="field-type">UnitType</span></div>
+                        <div class="field"><span class="field-name">contact_number</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">latitude</span> <span class="field-type">Float?</span></div>
+                        <div class="field"><span class="field-name">longitude</span> <span class="field-type">Float?</span></div>
+                        <div class="field"><span class="field-name">availability_status</span> <span class="field-type">UnitStatus</span></div>
+                        <div class="field"><span class="field-name">barangay_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">last_updated</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- INCIDENT_TYPES -->
+                <div class="model-card">
+                    <div class="model-header">🏷️ INCIDENT_TYPES</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">type_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">name</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">color_code</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">icon_label</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">description</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">default_unit_type</span> <span class="field-type">UnitType</span></div>
+                    </div>
+                </div>
+
+                <!-- INCIDENT -->
+                <div class="model-card">
+                    <div class="model-header">🚨 INCIDENT</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_code</span> <span class="field-type">String</span> <span class="field-constraint">UNIQUE</span></div>
+                        <div class="field"><span class="field-name">reported_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK → User</span></div>
+                        <div class="field"><span class="field-name">incident_type_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">barangay_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">description</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">latitude</span> <span class="field-type">Float</span></div>
+                        <div class="field"><span class="field-name">longitude</span> <span class="field-type">Float</span></div>
+                        <div class="field"><span class="field-name">reporter_name</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">reporter_phone</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">status</span> <span class="field-type">IncidentStatus</span></div>
+                        <div class="field"><span class="field-name">severity</span> <span class="field-type">Severity</span></div>
+                        <div class="field"><span class="field-name">priority</span> <span class="field-type">Priority</span></div>
+                        <div class="field"><span class="field-name">reported_at</span> <span class="field-type">DateTime</span></div>
+                        <div class="field"><span class="field-name">updated_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- EVIDENCE -->
+                <div class="model-card">
+                    <div class="model-header">📸 EVIDENCE</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">evidence_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">uploaded_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">file_path</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">file_type</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">uploaded_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- INCIDENT_ASSIGNMENTS -->
+                <div class="model-card">
+                    <div class="model-header">📋 INCIDENT_ASSIGNMENTS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">assignment_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">unit_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">assigned_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">status</span> <span class="field-type">AssignmentStatus</span></div>
+                        <div class="field"><span class="field-name">assigned_at</span> <span class="field-type">DateTime</span></div>
+                        <div class="field"><span class="field-name">acknowledged_at</span> <span class="field-type">DateTime?</span></div>
+                        <div class="field"><span class="field-name">arrived_at</span> <span class="field-type">DateTime?</span></div>
+                        <div class="field"><span class="field-name">resolved_at</span> <span class="field-type">DateTime?</span></div>
+                        <div class="field"><span class="field-name">updated_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- INCIDENT_STATUS_LOG -->
+                <div class="model-card">
+                    <div class="model-header">📝 INCIDENT_STATUS_LOG</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">log_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">changed_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">status</span> <span class="field-type">IncidentStatus</span></div>
+                        <div class="field"><span class="field-name">remarks</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">changed_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- POST_INCIDENT_REPORTS -->
+                <div class="model-card">
+                    <div class="model-header">✅ POST_INCIDENT_REPORTS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">report_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK UNIQUE</span></div>
+                        <div class="field"><span class="field-name">submitted_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">response_time_minutes</span> <span class="field-type">Int?</span></div>
+                        <div class="field"><span class="field-name">actions_taken</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">casualties</span> <span class="field-type">Int</span></div>
+                        <div class="field"><span class="field-name">damages_estimate</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">remarks</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">status</span> <span class="field-type">ReportStatus</span></div>
+                        <div class="field"><span class="field-name">admin_notes</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">reviewed_by_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">submitted_at</span> <span class="field-type">DateTime</span></div>
+                        <div class="field"><span class="field-name">reviewed_at</span> <span class="field-type">DateTime?</span></div>
+                    </div>
+                </div>
+
+                <!-- NOTIFICATIONS -->
+                <div class="model-card">
+                    <div class="model-header">🔔 NOTIFICATIONS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">notification_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">incident_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">unit_id</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">assigned_by</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">channel</span> <span class="field-type">AlertChannel</span></div>
+                        <div class="field"><span class="field-name">message_body</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">delivery_status</span> <span class="field-type">DeliveryStatus</span></div>
+                        <div class="field"><span class="field-name">sent_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- GENERATED_REPORTS -->
+                <div class="model-card">
+                    <div class="model-header">📊 GENERATED_REPORTS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">report_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">generated_by</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">report_title</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">report_type</span> <span class="field-type">ReportType</span></div>
+                        <div class="field"><span class="field-name">file_format</span> <span class="field-type">FileFormat</span></div>
+                        <div class="field"><span class="field-name">filters_applied</span> <span class="field-type">JSON?</span></div>
+                        <div class="field"><span class="field-name">file_path</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">generated_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM_AUDIT_LOGS -->
+                <div class="model-card">
+                    <div class="model-header">🔐 SYSTEM_AUDIT_LOGS</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">log_id</span> <span class="field-type">UUID</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">user_id</span> <span class="field-type">UUID</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">action</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">resource</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">resource_id</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">details</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">ip_address</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">created_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM_CONFIG -->
+                <div class="model-card">
+                    <div class="model-header">⚙️ SYSTEM_CONFIG</div>
+                    <div class="model-fields">
+                        <div class="field"><span class="field-name">config_key</span> <span class="field-type">String</span> <span class="field-constraint">PK</span></div>
+                        <div class="field"><span class="field-name">config_value</span> <span class="field-type">String</span></div>
+                        <div class="field"><span class="field-name">description</span> <span class="field-type">String?</span></div>
+                        <div class="field"><span class="field-name">is_encrypted</span> <span class="field-type">Boolean</span></div>
+                        <div class="field"><span class="field-name">updated_by</span> <span class="field-type">UUID?</span> <span class="field-constraint">FK</span></div>
+                        <div class="field"><span class="field-name">updated_at</span> <span class="field-type">DateTime</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <h3 style="color: #856404; margin-bottom: 10px;">📚 Enum Values</h3>
+                <div style="columns: 2; gap: 20px;">
+                    <div>
+                        <strong style="color: #667eea;">Role:</strong> ADMIN, RESPONSE_UNIT, REPORTER<br>
+                        <strong style="color: #667eea;">UnitType:</strong> FIRE, POLICE, MEDICAL, BARANGAY, DRRMO<br>
+                        <strong style="color: #667eea;">UnitStatus:</strong> AVAILABLE, BUSY, OFFLINE, ON_BREAK<br>
+                        <strong style="color: #667eea;">IncidentStatus:</strong> REPORTED, VERIFIED, RESPONDING, ON_SCENE, RESOLVED, FALSE_ALARM, CLOSED<br>
+                        <strong style="color: #667eea;">Severity:</strong> LOW, HIGH, CRITICAL<br>
+                        <strong style="color: #667eea;">Priority:</strong> LOW, MEDIUM, HIGH, CRITICAL<br>
+                    </div>
+                    <div>
+                        <strong style="color: #667eea;">AssignmentStatus:</strong> PENDING, ACCEPTED, REJECTED, RESPONDING, ON_SCENE, RESOLVED<br>
+                        <strong style="color: #667eea;">AlertChannel:</strong> SMS, EMAIL, DASHBOARD, PUSH<br>
+                        <strong style="color: #667eea;">DeliveryStatus:</strong> PENDING, SENT, DELIVERED, READ, FAILED<br>
+                        <strong style="color: #667eea;">ReportStatus:</strong> PENDING, UNDER_REVIEW, APPROVED, REJECTED<br>
+                        <strong style="color: #667eea;">ReportType:</strong> INCIDENT_SUMMARY, AREA_REPORT, RESPONSE_TIME, FULL_EXPORT<br>
+                        <strong style="color: #667eea;">FileFormat:</strong> PDF, EXCEL, CSV
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; padding: 20px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">
+                <h3 style="color: #155724; margin-bottom: 10px;">✅ Key Database Features</h3>
+                <ul style="color: #155724; margin-left: 20px;">
+                    <li><strong>PostGIS Integration:</strong> Barangay boundaries stored as GeoJSON polygons for geospatial queries</li>
+                    <li><strong>Audit Trail:</strong> INCIDENT_STATUS_LOG & SYSTEM_AUDIT_LOGS track all changes with user attribution</li>
+                    <li><strong>Smart Assignment:</strong> Incidents automatically routed to units based on type & severity</li>
+                    <li><strong>Multi-channel Notifications:</strong> SMS, Email, Push (FCM), Dashboard alerts</li>
+                    <li><strong>Complete Lifecycle Tracking:</strong> Incident creation → assignment → on-scene → resolution</li>
+                    <li><strong>Evidence Management:</strong> Photos/media linked to incidents via Cloudinary</li>
+                    <li><strong>Reporting & Analytics:</strong> PDF/Excel exports with customizable filters</li>
+                    <li><strong>Configuration Management:</strong> Encrypted system settings for sensitive data</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            er: {
+                fontSize: 16,
+                layoutDirection: 'TB'
+            }
+        });
+        mermaid.contentLoaded();
+    </script>
+</body>
+</html>

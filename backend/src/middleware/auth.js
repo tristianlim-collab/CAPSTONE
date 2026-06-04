@@ -29,6 +29,7 @@ export const authenticate = async (req, res, next) => {
         role: true,
         contact_number: true,
         unit_id: true,
+        unit: true,
       },
     });
 
@@ -85,4 +86,38 @@ export const authorize = (...allowedRoles) => {
 
     next();
   };
+};
+
+export const optionalAuthenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, config.jwt.secret);
+    
+    const user = await prisma.user.findUnique({
+      where: { user_id: decoded.user_id || decoded.id },
+      select: {
+        user_id: true,
+        name: true,
+        email: true,
+        role: true,
+        contact_number: true,
+        unit_id: true,
+        unit: true,
+      },
+    });
+
+    if (user) {
+      user.id = user.user_id;
+      req.user = user;
+    }
+    next();
+  } catch (error) {
+    // If token error, just proceed as guest
+    next();
+  }
 };

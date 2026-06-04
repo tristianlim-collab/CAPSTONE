@@ -61,7 +61,7 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = config.port;
 
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║                                                       ║

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Filter, Plus, MoreVertical, Edit2, Trash2, ShieldAlert, Loader2, X, Power } from 'lucide-react';
-import { userAPI, authAPI } from '../../api';
+import { userAPI, authAPI, responseUnitAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
@@ -11,7 +11,8 @@ const UserManagement = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '' });
+  const [units, setUnits] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -24,6 +25,10 @@ const UserManagement = () => {
       const res = await userAPI.getAll();
       if (res.data?.data) {
         setUsers(res.data.data);
+      }
+      const unitRes = await responseUnitAPI.getAll();
+      if (unitRes.data) {
+        setUnits(Array.isArray(unitRes.data) ? unitRes.data : (unitRes.data.data || []));
       }
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -41,11 +46,12 @@ const UserManagement = () => {
         email: user.email,
         password: '', // Leave blank when editing to not change unless typed
         role: user.role,
-        contact_number: user.contact_number || ''
+        contact_number: user.contact_number || '',
+        unit_id: user.unit_id || ''
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '' });
+      setFormData({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '' });
     }
     setIsModalOpen(true);
   };
@@ -65,7 +71,8 @@ const UserManagement = () => {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-          contact_number: formData.contact_number
+          contact_number: formData.contact_number,
+          unit_id: formData.role === 'RESPONSE_UNIT' ? (formData.unit_id || null) : null
         });
         toast.success('User updated successfully');
       } else {
@@ -75,7 +82,10 @@ const UserManagement = () => {
            setSaving(false);
            return;
         }
-        await userAPI.create(formData);
+        await userAPI.create({
+          ...formData,
+          unit_id: formData.role === 'RESPONSE_UNIT' ? (formData.unit_id || null) : null
+        });
         toast.success('User account created');
       }
       closeModal();
@@ -280,6 +290,18 @@ const UserManagement = () => {
                        <option value="ADMIN">System Administrator</option>
                     </select>
                  </div>
+                 
+                 {formData.role === 'RESPONSE_UNIT' && (
+                   <div className="animate-fade-in">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Assign to Unit</label>
+                      <select value={formData.unit_id} onChange={e => setFormData({...formData, unit_id: e.target.value})} className="w-full px-3 py-2 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm outline-none bg-emerald-50">
+                         <option value="">-- Select a Unit --</option>
+                         {units.map(unit => (
+                            <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name} ({unit.unit_type})</option>
+                         ))}
+                      </select>
+                   </div>
+                 )}
                  
                  <div className="pt-2">
                     <button disabled={saving} type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm shadow-indigo-600/30 flex justify-center items-center gap-2 transition-all disabled:opacity-50">

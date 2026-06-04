@@ -6,7 +6,7 @@ import { useSocketContext } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, ChevronLeft, ChevronRight, X, Navigation, Navigation2, PlusCircle, CheckCircle2, Send, Filter } from 'lucide-react';
+import { Clock, AlertTriangle, Map as MapIcon, Loader2, MapPin, User, Image, Camera, ChevronLeft, ChevronRight, X, Navigation, Navigation2, PlusCircle, CheckCircle2, Send, Filter } from 'lucide-react';
 import MapFilterModal from '../../components/map/MapFilterModal';
 
 // Fix leaflet icon paths
@@ -38,6 +38,7 @@ const ICONS = {
   REPORTED: createColoredIcon('#f97316'),  // orange
   VERIFIED: createColoredIcon('#eab308'),  // yellow
   RESPONDING: createColoredIcon('#3b82f6'), // blue
+  ON_SCENE: createColoredIcon('#10b981'),   // emerald
 };
 
 // Custom rich colored marker icons for response units
@@ -118,7 +119,7 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
       toast('🚨 New incident! Auto-zooming to location...', {
         icon: '📍',
         style: { fontWeight: 'bold', borderLeft: '4px solid #f97316' },
-        duration: 4000
+        duration: 6000
       });
     }
   }, [enabled, incidents, map]);
@@ -126,18 +127,23 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
   return null;
 }
 
-function FlyToSelectedIncident({ selectedIncident }) {
+const FlyToSelectedIncident = ({ selectedIncident }) => {
   const map = useMap();
   useEffect(() => {
-    if (selectedIncident?.latitude && selectedIncident?.longitude) {
-      map.flyTo([Number(selectedIncident.latitude), Number(selectedIncident.longitude)], 17, {
-        duration: 1.5,
-        easeLinearity: 0.25,
+    if (selectedIncident && selectedIncident.latitude && selectedIncident.longitude) {
+      const pos = [selectedIncident.latitude, selectedIncident.longitude];
+      map.flyTo(pos, 18, { duration: 1.5 });
+      
+      // Force open the popup for this specific incident
+      map.eachLayer((layer) => {
+        if (layer.options && layer.options.incident_id === selectedIncident.incident_id) {
+          layer.openPopup();
+        }
       });
     }
   }, [selectedIncident, map]);
   return null;
-}
+};
 
 // Helper: fetch route from OSRM
 async function fetchRouteFromOSRM(fromLat, fromLng, toLat, toLng) {
@@ -195,6 +201,10 @@ const ResponseMap = () => {
   });
   const [selectedIncidentForAction, setSelectedIncidentForAction] = useState(null);
 
+  // Photo proof state
+  const [proofPhotos, setProofPhotos] = useState([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
   // Filter state for map filters
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({});
@@ -221,6 +231,8 @@ const ResponseMap = () => {
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === incidentId ? { ...inc, status } : inc
       ));
+      // Re-trigger selection to ensure the popup stays open
+      setSelectedIncidentId(incidentId);
       toast.success(`Status updated to ${status.replace('_', ' ')}`);
     } catch (err) {
       toast.error('Failed to update status');
@@ -241,18 +253,60 @@ const ResponseMap = () => {
     }
   };
 
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (proofPhotos.length + files.length > 5) {
+      return toast.error('Maximum 5 proof photos allowed');
+    }
+
+    const newPhotos = files.map(file => ({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    }));
+
+    setProofPhotos(prev => [...prev, ...newPhotos]);
+  };
+
+  const removePhoto = (index) => {
+    setProofPhotos(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].previewUrl);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
   const handleSubmitReport = async () => {
     if (!selectedIncidentForAction) return;
     if (!reportData.actions_taken) {
       return toast.error('Actions taken description is required');
     }
+    if (proofPhotos.length === 0) {
+      return toast.error('At least one proof photo is required to resolve');
+    }
 
     try {
+      setUploadingPhotos(true);
+      
+      // 1. Upload photos to Cloudinary
+      const uploadedUrls = [];
+      for (const photo of proofPhotos) {
+        const formData = new FormData();
+        formData.append('photo', photo.file);
+        const uploadRes = await api.post('/upload/incident-photo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        uploadedUrls.push(uploadRes.data.data.url);
+      }
+
       setUpdatingId('report');
+      // 2. Submit report with photo URLs
       await postReportAPI.submit({
         incident_id: selectedIncidentForAction.incident_id,
+        photos: uploadedUrls,
         ...reportData
       });
+
       // Filter out of active
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === selectedIncidentForAction.incident_id ? { ...inc, status: 'RESOLVED' } : inc
@@ -260,11 +314,13 @@ const ResponseMap = () => {
       toast.success('Incident resolved and report submitted');
       setShowReportModal(false);
       setReportData({ actions_taken: '', casualties: 0, damages_estimate: '', remarks: '' });
+      setProofPhotos([]);
       setSelectedIncidentForAction(null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit report');
     } finally {
       setUpdatingId(null);
+      setUploadingPhotos(false);
     }
   };
 
@@ -273,21 +329,33 @@ const ResponseMap = () => {
     setRouteLoading(true);
     let unitLat, unitLng, unitName = 'Response Unit';
 
-    const assignedUnit = incident.assignments && incident.assignments.length > 0 ? incident.assignments[0]?.unit : null;
-    if (assignedUnit?.latitude && assignedUnit?.longitude) {
-      unitLat = assignedUnit.latitude;
-      unitLng = assignedUnit.longitude;
-      unitName = assignedUnit.unit_name || unitName;
-    } else if (user?.unit?.latitude && user?.unit?.longitude) {
+    // NEW PRIORITY: Use the CURRENTLY LOGGED IN user's unit location first
+    if (user?.unit?.latitude && user?.unit?.longitude) {
       unitLat = user.unit.latitude;
       unitLng = user.unit.longitude;
       unitName = user.unit?.unit_name || unitName;
     } else {
-      const myUnit = units.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || units[0];
-      if (myUnit) {
-        unitLat = Number(myUnit.latitude);
-        unitLng = Number(myUnit.longitude);
-        unitName = myUnit.unit_name || unitName;
+      // Fallback: If session unit is missing but we have units on map, find ourselves by ID
+      const myActiveUnit = units.find(u => u.unit_id === user?.unit_id || u.user_id === user?.id);
+      if (myActiveUnit) {
+          unitLat = Number(myActiveUnit.latitude);
+          unitLng = Number(myActiveUnit.longitude);
+          unitName = myActiveUnit.unit_name || unitName;
+      } else {
+        // Fallback to officially assigned unit
+        const assignedUnit = incident.assignments && incident.assignments.length > 0 ? incident.assignments[0]?.unit : null;
+        if (assignedUnit?.latitude && assignedUnit?.longitude) {
+          unitLat = assignedUnit.latitude;
+          unitLng = assignedUnit.longitude;
+          unitName = assignedUnit.unit_name || unitName;
+        } else {
+          const firstUnit = units.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || units[0];
+          if (firstUnit) {
+            unitLat = Number(firstUnit.latitude);
+            unitLng = Number(firstUnit.longitude);
+            unitName = firstUnit.unit_name || unitName;
+          }
+        }
       }
     }
 
@@ -322,107 +390,120 @@ const ResponseMap = () => {
 
   // Listen for new incidents in real-time
   useEffect(() => {
+    // 1. New Incident (Only if in my city or assigned)
     const unsub1 = on('new_incident', (incident) => {
-      if (incident.latitude && incident.longitude) {
-        // Fetch full incident data with reporter and evidence
-        const fetchFullIncident = async () => {
-          try {
-            const res = await incidentAPI.getById(incident.incident_id, {
-              include: 'evidence,reporter,type,barangay'
-            });
-            if (res.data) {
-              setIncidents(prev => {
-                if (prev.find(i => i.incident_id === res.data.incident_id)) return prev;
-                return [res.data, ...prev];
-              });
-            }
-          } catch (error) {
-            console.error('Failed to fetch full incident data', error);
-            // Fallback to socket data if it has complete information
-            if (incident.reporter && incident.evidence !== undefined) {
-              setIncidents(prev => {
-                if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
-                return [incident, ...prev];
-              });
-            }
-          }
-        };
-        fetchFullIncident();
+      const isAssigned = incident.assignments?.some(a => a.unit_id === user?.unit_id);
+      const unitName = user?.unit?.unit_name?.toLowerCase() || '';
+      const incidentAddress = (incident.map_pin_address || '').toLowerCase();
+      
+      const isSilayUnit = unitName.includes('silay');
+      const isTalisayUnit = unitName.includes('talisay');
+      const isSilayIncident = incidentAddress.includes('silay');
+      const isTalisayIncident = incidentAddress.includes('talisay');
+
+      let shouldShow = true;
+      if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
+      if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
+
+      if (shouldShow || isAssigned) {
+        setIncidents(prev => {
+          if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
+          return [incident, ...prev];
+        });
       }
     });
 
-    // (Removed incident_awaiting_verification listener: Response units shouldn't see unverified reports)
-
+    // 2. Status Updates (Keep if in area/assigned, remove if not)
     const unsub2 = on('incident_status_updated', (data) => {
-      // Re-fetch the incident to ensure we have all data
-      incidentAPI.getById(data.incident_id, {
-        include: 'evidence,reporter,type,barangay'
-      }).then(res => {
+      const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id);
+      const unitName = user?.unit?.unit_name?.toLowerCase() || '';
+      const incidentAddress = (data.incident?.map_pin_address || '').toLowerCase();
+
+      const isSilayUnit = unitName.includes('silay');
+      const isTalisayUnit = unitName.includes('talisay');
+      const isSilayIncident = incidentAddress.includes('silay');
+      const isTalisayIncident = incidentAddress.includes('talisay');
+
+      let shouldShow = true;
+      if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
+      if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
+
+      if (shouldShow || isAssigned) {
         setIncidents(prev => {
-          return prev
-            .map(inc => inc.incident_id === data.incident_id ? res.data : inc)
-            .filter(inc => ['VERIFIED', 'RESPONDING'].includes(inc.status));
-        });
-      }).catch(err => {
-        // Fallback to local update
-        setIncidents(prev => {
-          return prev
-            .map(inc => inc.incident_id === data.incident_id
-              ? { ...inc, status: data.status, ...(data.incident || {}) }
+          const exists = prev.find(i => i.incident_id === data.incident_id);
+          if (exists) {
+            return prev.map(inc => inc.incident_id === data.incident_id 
+              ? { ...inc, status: data.status, ...data.incident } 
               : inc
-            )
-            .filter(inc => ['VERIFIED', 'RESPONDING'].includes(inc.status));
+            );
+          }
+          if (data.incident) return [data.incident, ...prev];
+          return prev;
         });
-      });
+      } else {
+        setIncidents(prev => prev.filter(i => i.incident_id !== data.incident_id));
+      }
     });
 
+    // 3. Unit Locations
     const unsub3 = on('unit_location_updated', (data) => {
-      setUnits(prev => {
-        return prev.map(unit =>
-          unit.unit_id === data.unitId
-            ? { ...unit, latitude: data.lat, longitude: data.lng }
-            : unit
-        );
-      });
+      setUnits(prev => prev.map(unit =>
+        unit.unit_id === data.unitId ? { ...unit, latitude: data.lat, longitude: data.lng } : unit
+      ));
     });
 
+    // 4. Deletions
     const unsub4 = on('incident_deleted', (data) => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
 
-    // Listen for verified incidents (admin approved)
-    // IMPORTANT: always prepend to position [0] so AutoZoomToLatestIncident detects the new incident
+    // 5. Verification (Prepend for auto-zoom tracking)
     const unsub5 = on('incident_verified', (data) => {
-      if (data.incident?.latitude && data.incident?.longitude) {
+      const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id);
+      const unitName = user?.unit?.unit_name?.toLowerCase() || '';
+      const incidentAddress = (data.incident?.map_pin_address || '').toLowerCase();
+
+      const isSilayUnit = unitName.includes('silay');
+      const isTalisayUnit = unitName.includes('talisay');
+      const isSilayIncident = incidentAddress.includes('silay');
+      const isTalisayIncident = incidentAddress.includes('talisay');
+
+      let shouldShow = true;
+      if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
+      if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
+
+      if (shouldShow || isAssigned) {
         setIncidents(prev => {
-          // Remove any existing entry, then always prepend the verified incident to the front.
-          // This ensures incidents[0] changes, which triggers AutoZoomToLatestIncident.
-          const others = prev.filter(i => i.incident_id !== data.incident.incident_id);
+          const others = prev.filter(i => i.incident_id !== data.incident_id);
           return [data.incident, ...others];
         });
       }
     });
 
-    // Listen for dispatch with directions (auto-route)
+    // 6. Dispatch / Backup Tracker
     const unsub6 = on('unit_dispatch_with_directions', async (data) => {
-      console.log('[ResponseMap] Received dispatch directions:', data);
+      // Only process if this dispatch is for MY unit
+      if (data.unit_id && data.unit_id !== user?.unit_id && data.unit_id !== user?.unit?.unit_id) return;
+
       setRouteLoading(true);
+      toast(`🚨 Backup requested! Dispatched to ${data.incident_code}!`, { icon: '🚨', duration: 10000 });
 
-      // Show toast notification
-      toast(
-        `🚨 Dispatched to ${data.incident_code}!\n${data.incident_type || 'Incident'} • ${data.severity || 'HIGH'} severity`,
-        {
-          icon: '🗺️',
-          duration: 8000,
-          style: {
-            fontWeight: 'bold',
-            borderLeft: '4px solid #3b82f6',
-            background: '#eff6ff',
-          },
+      // FORCE-ADD the incident to this unit's list (bypasses jurisdiction filter — backup is intentional)
+      if (data.incident_id) {
+        try {
+          const incRes = await incidentAPI.getById(data.incident_id, { include: 'evidence,reporter,type,barangay,assignments' });
+          if (incRes.data) {
+            setIncidents(prev => {
+              const others = prev.filter(i => i.incident_id !== data.incident_id);
+              return [incRes.data, ...others];
+            });
+            setSelectedIncidentId(data.incident_id);
+          }
+        } catch (e) {
+          console.warn('Could not fetch backup incident details:', e);
         }
-      );
-
-      // Fetch route from OSRM
+      }
+      
       const route = await fetchRouteFromOSRM(
         Number(data.unit_lat), Number(data.unit_lng),
         Number(data.incident_lat), Number(data.incident_lng)
@@ -441,22 +522,17 @@ const ResponseMap = () => {
       if (route) {
         setActiveRoute({ ...routeData, coords: route.coords, duration: route.duration, distance: route.distance });
       } else {
-        // Fallback: draw a straight line
         setActiveRoute({
           ...routeData,
-          coords: [
-            [Number(data.unit_lat), Number(data.unit_lng)],
-            [Number(data.incident_lat), Number(data.incident_lng)]
-          ],
-          duration: null,
-          distance: null,
+          coords: [[Number(data.unit_lat), Number(data.unit_lng)], [Number(data.incident_lat), Number(data.incident_lng)]],
+          duration: null, distance: null
         });
       }
       setRouteLoading(false);
     });
 
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
-  }, [on]);
+  }, [on, user]);
 
   const fetchIncidents = async (filterParams = {}) => {
     try {
@@ -465,8 +541,8 @@ const ResponseMap = () => {
       const apiParams = {
         limit: 100,
         include: 'evidence,reporter,type,barangay',
-        // Add filters if they exist; responders see only VERIFIED and RESPONDING by default unless overridden
-        status: filterParams.status || 'VERIFIED,RESPONDING'
+        // Responders see all active stages including On Scene
+        status: filterParams.status || 'VERIFIED,RESPONDING,ON_SCENE'
       };
 
       // Add optional filters
@@ -477,38 +553,64 @@ const ResponseMap = () => {
       // Fetch with evidence and reporter data included
       const res = await incidentAPI.getAll(apiParams);
       if (res.data?.data) {
-        const relevantIncidents = res.data.data.filter(inc =>
-          inc.latitude && inc.longitude
-        );
+        const relevantIncidents = res.data.data.filter(inc => {
+          const hasCoordinates = inc.latitude && inc.longitude;
+          if (!hasCoordinates) return false;
+
+          // Priority 1: Show if I am explicitly assigned to it
+          const isAssignedToMe = inc.assignments?.some(a => a.unit_id === user?.unit_id);
+          if (isAssignedToMe) return true;
+
+          // Priority 2: Keyword-based Jurisdiction Filter
+          const unitName = user?.unit?.unit_name?.toLowerCase() || '';
+          const incidentAddress = (inc.map_pin_address || '').toLowerCase();
+          
+          const isSilayUnit = unitName.includes('silay');
+          const isTalisayUnit = unitName.includes('talisay');
+          const isSilayIncident = incidentAddress.includes('silay');
+          const isTalisayIncident = incidentAddress.includes('talisay');
+
+          // If I'm a Silay unit, I only want to see Silay incidents
+          if (isSilayUnit && isTalisayIncident && !isSilayIncident) return false;
+          // If I'm a Talisay unit, I only want to see Talisay incidents
+          if (isTalisayUnit && isSilayIncident && !isTalisayIncident) return false;
+
+          return true;
+        });
         setIncidents(relevantIncidents);
 
         // Auto-load route if already verified/responding
         const dispatchedIncident = relevantIncidents.find(inc =>
-          ['VERIFIED', 'RESPONDING'].includes(inc.status)
+          ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(inc.status)
         );
         if (dispatchedIncident && !activeRoute) {
-          // Try to get unit coordinates from the assignment
-          const assignedUnit = dispatchedIncident.assignments && dispatchedIncident.assignments.length > 0 ? dispatchedIncident.assignments[0]?.unit : null;
-          let unitLat = assignedUnit?.latitude;
-          let unitLng = assignedUnit?.longitude;
+          // NEW PRIORITY: Use logged in user's unit location first for auto-route
+          let unitLat, unitLng, unitName = 'Response Unit';
 
-          // Fallback: use user object's unit coordinates, or fetch active positions
+          if (user?.unit?.latitude && user?.unit?.longitude) {
+            unitLat = user.unit.latitude;
+            unitLng = user.unit.longitude;
+            unitName = user.unit.unit_name || unitName;
+          } else {
+            const assignedUnit = dispatchedIncident.assignments && dispatchedIncident.assignments.length > 0 ? dispatchedIncident.assignments[0]?.unit : null;
+            unitLat = assignedUnit?.latitude;
+            unitLng = assignedUnit?.longitude;
+            unitName = assignedUnit?.unit_name || unitName;
+          }
+
+          // Fallback: fetch active positions if still missing
           if (!unitLat || !unitLng) {
-            if (user?.unit?.latitude && user?.unit?.longitude) {
-              unitLat = user.unit.latitude;
-              unitLng = user.unit.longitude;
-            } else {
-              try {
-                const positionsRes = await api.get('/response-units/positions/active');
-                // Try to find the user's linked unit, otherwise just grab the first available unit on the map
-                const myUnit = positionsRes.data.find(u => u.unit_id === (assignedUnit?.unit_id || user?.unit_id)) || positionsRes.data[0];
-                if (myUnit) {
-                  unitLat = Number(myUnit.latitude);
-                  unitLng = Number(myUnit.longitude);
-                }
-              } catch (e) {
-                console.error('Failed to fetch unit locations fallback', e);
+            try {
+              const positionsRes = await api.get('/response-units/positions/active');
+              // Try to find the user's unit ID first
+              const myUnit = positionsRes.data.find(u => u.unit_id === user?.unit_id || u.unit_id === (dispatchedIncident.assignments?.[0]?.unit_id)) || positionsRes.data[0];
+              if (myUnit) {
+                unitLat = Number(myUnit.latitude);
+                unitLng = Number(myUnit.longitude);
+                unitName = myUnit.unit_name || unitName;
               }
+            } catch (e) {
+              console.error('Failed to fetch unit locations fallback', e);
             }
           }
 
@@ -522,7 +624,7 @@ const ResponseMap = () => {
             const routeData = {
               incident_id: dispatchedIncident.incident_id,
               incident_code: dispatchedIncident.incident_code,
-              unit_name: assignedUnit?.unit_name || 'Response Unit',
+              unit_name: unitName,
               unit_lat: unitLat,
               unit_lng: unitLng,
               incident_lat: Number(dispatchedIncident.latitude),
@@ -667,6 +769,10 @@ const ResponseMap = () => {
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span>
               Responding ({incidents.filter(i => i.status === 'RESPONDING').length})
             </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+              On Scene ({incidents.filter(i => i.status === 'ON_SCENE').length})
+            </div>
 
             <button
               onClick={() => setShowFilters(true)}
@@ -722,6 +828,7 @@ const ResponseMap = () => {
                   key={incident.incident_id}
                   position={[incident.latitude, incident.longitude]}
                   icon={ICONS[incident.status] || ICONS.REPORTED}
+                  incident_id={incident.incident_id} // Custom prop for FlyToSelectedIncident
                   eventHandlers={{
                     click: () => setSelectedIncidentId(incident.incident_id)
                   }}
@@ -781,7 +888,7 @@ const ResponseMap = () => {
                         <button
                           onClick={(e) => handleGetDirections(e, incident)}
                           disabled={routeLoading}
-                          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 py-2.5 rounded-xl text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 text-white shadow-lg py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
                         >
                           {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
                           Get Directions
@@ -791,7 +898,7 @@ const ResponseMap = () => {
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
-                              className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
+                              className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors active:scale-95"
                             >
                               <PlusCircle size={14} /> Backup
                             </button>
@@ -799,14 +906,12 @@ const ResponseMap = () => {
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 await handleUpdateStatus(incident.incident_id, 'ON_SCENE');
-                                setSelectedIncidentForAction(incident);
-                                setShowReportModal(true);
                               }}
                               disabled={updatingId === incident.incident_id}
-                              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors active:scale-95 disabled:opacity-50"
                             >
                               {updatingId === incident.incident_id ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
-                              Arrive
+                              Confirm Arrival
                             </button>
                           </div>
                         )}
@@ -814,11 +919,10 @@ const ResponseMap = () => {
                         {incident.status === 'ON_SCENE' && (
                           <div className="grid grid-cols-2 gap-2">
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(incident.incident_id, 'FALSE_ALARM'); }}
-                              disabled={updatingId === incident.incident_id}
-                              className="flex items-center justify-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95 disabled:opacity-50"
+                              onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
+                              className="flex items-center justify-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 py-2.5 rounded-xl text-[11px] font-bold transition-colors active:scale-95"
                             >
-                              False Alarm
+                              <PlusCircle size={14} /> Backup
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedIncidentForAction(incident); setShowReportModal(true); }}
@@ -902,14 +1006,14 @@ const ResponseMap = () => {
         {showBackupModal && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Request Backup</h3>
-              <p className="text-sm text-slate-500 mb-4">Select the type of unit you need for backup for incident {selectedIncidentForAction?.incident_code}.</p>
+              <h3 className="text-lg font-bold text-slate-800 mb-1">Request Backup</h3>
+              <p className="text-xs text-slate-500 mb-6">Select a unit type to assist with incident <span className="font-bold text-slate-700">{selectedIncidentForAction?.incident_code}</span>.</p>
               <div className="grid grid-cols-2 gap-2 mb-6">
                 {['FIRE', 'POLICE', 'MEDICAL', 'DRRMO'].map(type => (
                   <button
                     key={type}
                     onClick={() => setBackupUnitType(type)}
-                    className={`p-3 rounded-xl font-bold text-sm border-2 transition-all ${backupUnitType === type ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-600 bg-white'
+                    className={`p-3 rounded-xl font-bold text-[10px] uppercase tracking-widest border-2 transition-all ${backupUnitType === type ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400 bg-slate-50'
                       }`}
                   >
                     {type}
@@ -983,20 +1087,66 @@ const ResponseMap = () => {
                     value={reportData.remarks}
                     onChange={e => setReportData({ ...reportData, remarks: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+                    placeholder="Handing over or cleared scene..."
                     rows={2}
                   />
+                </div>
+
+                {/* Proof Photo Upload */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <Camera size={14} /> Proof Photo <span className="lowercase font-bold">(at least 1 required)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-bold">{proofPhotos.length}/5</span>
+                  </div>
+
+                  {proofPhotos.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {proofPhotos.map((p, idx) => (
+                        <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                          <img src={p.previewUrl} alt="proof" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => removePhoto(idx)}
+                            className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {proofPhotos.length < 5 && (
+                    <label className="flex flex-col items-center justify-center gap-2 w-full py-6 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/10 transition-all group">
+                      <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 flex items-center justify-center transition-all">
+                        <PlusCircle size={20} />
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Attach Proof Photo</span>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Capture scene resolution</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handlePhotoSelect}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-8">
-                <button onClick={() => { setShowReportModal(false); setSelectedIncidentForAction(null); }} className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button onClick={() => { setShowReportModal(false); setSelectedIncidentForAction(null); setProofPhotos([]); }} className="px-5 py-2.5 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
                 <button
                   onClick={handleSubmitReport}
-                  disabled={updatingId === 'report' || !reportData.actions_taken}
+                  disabled={updatingId === 'report' || !reportData.actions_taken || proofPhotos.length === 0 || uploadingPhotos}
                   className="flex items-center gap-2 px-5 py-2.5 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm shadow-emerald-600/20 disabled:opacity-50"
                 >
-                  {updatingId === 'report' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                  Submit & Resolve
+                  {(updatingId === 'report' || uploadingPhotos) ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {uploadingPhotos ? 'Uploading...' : 'Submit & Resolve'}
                 </button>
               </div>
             </div>

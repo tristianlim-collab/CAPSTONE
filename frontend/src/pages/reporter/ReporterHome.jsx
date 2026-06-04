@@ -26,6 +26,10 @@ export default function ReporterHome() {
   // Fetch reporter's own incidents
   useEffect(() => {
     const fetchIncidents = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       try {
         const res = await incidentAPI.getAll({ limit: 50 });
         setIncidents(res.data?.data || []);

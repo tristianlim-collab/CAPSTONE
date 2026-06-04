@@ -2,17 +2,18 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, FileText, User } from 'lucide-react-native';
+import { Home, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 
 import ReporterHomeScreen from '../screens/ReporterHomeScreen';
 import MyReportsScreen from '../screens/MyReportsScreen';
-import ReporterProfileScreen from '../screens/ReporterProfileScreen';
+
 import IncidentReportScreen from '../screens/IncidentReportScreen';
 import ReportSuccessScreen from '../screens/ReportSuccessScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ReportDetailsScreen from '../screens/ReportDetailsScreen';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -22,7 +23,6 @@ const Tab = createBottomTabNavigator();
 const TAB_CONFIG = {
   HomeTab: { Icon: Home, label: 'HOME' },
   ReportsTab: { Icon: FileText, label: 'REPORTS' },
-  ProfileTab: { Icon: User, label: 'PROFILE' },
 };
 
 function CustomTabBar({ state, navigation }) {
@@ -75,7 +75,6 @@ function MainTabs() {
     >
       <Tab.Screen name="HomeTab" component={ReporterHomeScreen} />
       <Tab.Screen name="ReportsTab" component={MyReportsScreen} />
-      <Tab.Screen name="ProfileTab" component={ReporterProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -96,6 +95,7 @@ function AppStack() {
       <Stack.Screen name="IncidentReport" component={IncidentReportScreen} />
       <Stack.Screen name="ReportSuccess" component={ReportSuccessScreen} />
       <Stack.Screen name="MyReports" component={MyReportsScreen} />
+      <Stack.Screen name="ReportDetails" component={ReportDetailsScreen} />
     </Stack.Navigator>
   );
 }

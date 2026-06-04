@@ -41,16 +41,7 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const googleLogin = async (credential, preferredRole) => {
-    const data = await authAPI.googleLogin(credential, preferredRole);
-    
-    if (data && data.token) {
-      localStorage.setItem('token', data.token);
-      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    }
-    setUser(data.user);
-    return data.user;
-  };
+
 
   const register = async (userData) => {
     const data = await authAPI.register(userData);
@@ -76,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, logout, isAuthenticated, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

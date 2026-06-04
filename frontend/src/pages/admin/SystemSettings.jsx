@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Settings, Save, Globe, Database, ShieldCheck, Mail, Key, Bell, MessageSquare, Smartphone, Shield, ShieldAlert, Users, Copy, Check, ToggleLeft, ToggleRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Settings, Save, Globe, Database, ShieldCheck, Mail, Key, Bell, MessageSquare, Smartphone, Shield, ShieldAlert, Users, Copy, Check, ToggleLeft, ToggleRight, Loader2, Eye, EyeOff, BookOpen, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { systemConfigAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -81,6 +82,7 @@ const SystemSettings = () => {
     { id: 'roles', label: 'Roles & Permissions', icon: <ShieldCheck size={18} /> },
     { id: 'notifications', label: 'Notification Rules', icon: <Bell size={18} /> },
     { id: 'mail', label: 'SMTP Server', icon: <Mail size={18} /> },
+    { id: 'support', label: 'Help & Documentation', icon: <HelpCircle size={18} /> },
   ]), []);
 
   const renderToggle = (key, label, description) => (
@@ -350,8 +352,52 @@ const SystemSettings = () => {
 
 
 
+          {activeTab === 'support' && (
+            <div className="space-y-6">
+              <div className="mb-6 pb-6 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-2">
+                  <HelpCircle size={20} className="text-indigo-600" />
+                  Support & Documentation
+                </h3>
+                <p className="text-sm text-slate-500">Access the full system operational manual and user guides.</p>
+              </div>
+
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-indigo-100 flex items-center justify-center text-indigo-600 mb-4">
+                  <BookOpen size={32} />
+                </div>
+                <h4 className="text-xl font-black text-slate-800 tracking-tight mb-2">GAOIRS Operational Manual</h4>
+                <p className="text-sm text-slate-600 max-w-sm mb-6 leading-relaxed">
+                  Need help navigating the system? Our comprehensive user guide covers everything from incident reporting to advanced geospatial analytics.
+                </p>
+                <Link 
+                  to="/admin/guide"
+                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <Eye size={18} />
+                  Open User Guide
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                  <h5 className="font-bold text-slate-800 mb-2">Project Defense?</h5>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Show the panelists our Objective 4 alignment by demonstrating the built-in documentation module. It covers all 5 required system features.
+                  </p>
+                </div>
+                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                  <h5 className="font-bold text-slate-800 mb-2">Technical Support</h5>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Questions about the ML forecasting or geofencing logic can be found in the "Advanced Analysis" section of the guide.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ─── Placeholder for other tabs ─── */}
-          {!['general', 'roles', 'notifications', 'mail', 'secrets'].includes(activeTab) && (
+          {!['general', 'roles', 'notifications', 'mail', 'secrets', 'support'].includes(activeTab) && (
             <div className="text-sm text-slate-500">
               This section is not yet connected. (Tab: <span className="font-semibold text-slate-700">{activeTab}</span>)
             </div>

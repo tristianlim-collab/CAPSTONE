@@ -6,13 +6,10 @@ export default {
 
   /**
    * Broadcast a brand-new incident to every response-unit and admin dashboard.
-   * Payload should include nested incident_type, reporter, barangay so the
-   * frontend can render it without refetching.
    */
   emitNewIncident: (incident) => {
     try {
       const io = getIO();
-      // Ensure complete data for map rendering
       const completeIncident = {
         ...incident,
         incident_id: incident.incident_id,
@@ -24,40 +21,37 @@ export default {
         severity: incident.severity,
         map_pin_address: incident.map_pin_address,
         reported_at: incident.reported_at,
-        reporter_name: incident.reporter_name,  // Include optional form override
-        reporter_phone: incident.reporter_phone,  // Include optional form override
+        reporter_name: incident.reporter_name,
+        reporter_phone: incident.reporter_phone,
         incident_type: incident.incident_type,
         reporter: incident.reporter,
         barangay: incident.barangay,
         evidence: incident.evidence
       };
-      // Send to admin room
       io.to('admin').emit('new_incident', completeIncident);
-      // Send to the general response room (all response-unit users)
       io.to('response').emit('new_incident', completeIncident);
     } catch (err) {
-      console.error('Socket emitNewIncident failed (socket may not be ready):', err.message);
+      console.error('Socket emitNewIncident failed:', err.message);
     }
   },
 
   /**
-   * Broadcast an incident status update to admin, reporter, and response rooms.
+   * Broadcast an incident status update globally.
    */
   emitIncidentStatusUpdate: (data) => {
     try {
       const io = getIO();
-      // Ensure the incident object includes ALL fields including reporter_name and reporter_phone
       const completeData = {
         ...data,
         incident: {
           ...data.incident,
-          reporter_name: data.incident?.reporter_name,  // Explicitly include optional fields
+          reporter_name: data.incident?.reporter_name,
           reporter_phone: data.incident?.reporter_phone
         }
       };
-      io.to('admin').emit('incident_status_updated', completeData);
-      io.to('response').emit('incident_status_updated', completeData);
-      // Also notify the specific reporter
+      // Broadcast globally so all reporters (including anonymous) get updates instantly
+      io.emit('incident_status_updated', completeData);
+      
       if (completeData.reported_by) {
         io.to(`reporter-${completeData.reported_by}`).emit('incident_status_updated', completeData);
       }
@@ -81,19 +75,12 @@ export default {
   },
 
   /**
-   * Broadcast a unit location update to admin and response-unit rooms.
-   * Called when a response unit updates its GPS position.
+   * Broadcast a unit location update.
    */
   emitUnitLocationUpdate: (unitId, lat, lng, unitName) => {
     try {
       const io = getIO();
-      const payload = {
-        unitId,
-        lat,
-        lng,
-        unitName,
-        timestamp: new Date()
-      };
+      const payload = { unitId, lat, lng, unitName, timestamp: new Date() };
       io.to('admin').emit('unit_location_updated', payload);
       io.to('response').emit('unit_location_updated', payload);
     } catch (err) {
@@ -102,13 +89,11 @@ export default {
   },
 
   /**
-   * Broadcast that an incident is awaiting admin verification.
-   * Emitted when a reporter submits a new incident.
+   * Broadcast that an incident is awaiting verification.
    */
   emitIncidentAwaitingVerification: (incident) => {
     try {
       const io = getIO();
-      // Ensure complete incident data is included for map rendering
       io.to('admin').emit('incident_awaiting_verification', {
         incident_id: incident.incident_id,
         incident_code: incident.incident_code,
@@ -117,16 +102,10 @@ export default {
         location: incident.map_pin_address,
         description: incident.description,
         reported_at: incident.reported_at,
-        reporter_name: incident.reporter_name || incident.reporter?.name,  // Priority: form override > auth user
-        reporter_phone: incident.reporter_phone || incident.reporter?.contact_number,  // Priority: form override > auth user
         status: incident.status,
         latitude: incident.latitude,
         longitude: incident.longitude,
-        incident_type: incident.incident_type,
-        barangay: incident.barangay,
-        reporter: incident.reporter,
-        evidence: incident.evidence,
-        incident // Full incident object for map markers
+        incident
       });
     } catch (err) {
       console.error('Socket emitIncidentAwaitingVerification failed:', err.message);
@@ -134,74 +113,68 @@ export default {
   },
 
   /**
-   * Broadcast that an incident has been verified and dispatched.
-   * Emitted when admin approves an incident.
+   * Broadcast that an incident has been verified and dispatched globally.
    */
   emitIncidentVerified: (incident, assignments) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_verified', {
+      const payload = {
         incident_id: incident.incident_id,
         incident_code: incident.incident_code,
         status: incident.status,
         assignments,
         incident
-      });
-      io.to('response').emit('incident_verified', {
-        incident_id: incident.incident_id,
-        incident_code: incident.incident_code,
-        status: incident.status,
-        assignments,
-        incident
-      });
+      };
+      // Broadcast globally for reporters
+      io.emit('incident_verified', payload);
     } catch (err) {
       console.error('Socket emitIncidentVerified failed:', err.message);
     }
   },
 
   /**
-   * Broadcast that an incident has been rejected as a false alarm.
-   * Emitted when admin rejects an incident.
+   * Broadcast that an incident has been rejected globally.
    */
   emitIncidentRejected: (incident) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_rejected', {
+      const payload = {
         incident_id: incident.incident_id,
         incident_code: incident.incident_code,
         status: incident.status
-      });
+      };
+      io.emit('incident_rejected', payload);
+      io.emit('incident_status_updated', payload);
     } catch (err) {
       console.error('Socket emitIncidentRejected failed:', err.message);
     }
   },
 
   /**
-   * Notify reporter that admin is requesting more information.
-   * Emitted when admin requests more info about an incident.
+   * Notify reporter about more info request.
    */
   emitMoreInfoRequested: (incident, message) => {
     try {
       const io = getIO();
-      io.to(`reporter-${incident.reported_by}`).emit('more_info_requested', {
-        incident_id: incident.incident_id,
-        incident_code: incident.incident_code,
-        message: message || 'Admin is requesting more information about your incident'
-      });
+      if (incident.reported_by) {
+        io.to(`reporter-${incident.reported_by}`).emit('more_info_requested', {
+          incident_id: incident.incident_id,
+          incident_code: incident.incident_code,
+          message: message || 'Admin is requesting more information about your incident'
+        });
+      }
     } catch (err) {
       console.error('Socket emitMoreInfoRequested failed:', err.message);
     }
   },
 
   /**
-   * Broadcast that an incident has been deleted.
-   * Emitted when admin or system deletes an incident.
+   * Broadcast incident deletion globally.
    */
   emitIncidentDeleted: (incidentId) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_deleted', { incident_id: incidentId });
-      io.to('response').emit('incident_deleted', { incident_id: incidentId });
+      io.emit('incident_deleted', { incident_id: incidentId });
     } catch (err) {
       console.error('Socket emitIncidentDeleted failed:', err.message);
     }
@@ -209,7 +182,6 @@ export default {
 
   /**
    * Broadcast that an incident type has been deleted.
-   * Emitted when admin deletes an incident type.
    */
   emitIncidentTypeDeleted: (typeId) => {
     try {
@@ -223,7 +195,6 @@ export default {
 
   /**
    * Broadcast that a user has been deleted.
-   * Emitted when admin deletes a user account.
    */
   emitUserDeleted: (userId) => {
     try {
@@ -236,7 +207,6 @@ export default {
 
   /**
    * Broadcast that a barangay has been deleted.
-   * Emitted when admin deletes a barangay.
    */
   emitBarangayDeleted: (barangayId) => {
     try {
@@ -249,7 +219,6 @@ export default {
 
   /**
    * Broadcast that a response unit has been deleted.
-   * Emitted when admin deletes a response unit.
    */
   emitResponseUnitDeleted: (unitId) => {
     try {
@@ -263,7 +232,6 @@ export default {
 
   /**
    * Broadcast that an assignment has been deleted/cancelled.
-   * Emitted when an assignment is removed.
    */
   emitAssignmentDeleted: (assignmentId, incidentId) => {
     try {
@@ -276,8 +244,7 @@ export default {
   },
 
   /**
-   * Emit when incident priority changes
-   * Emitted when admin updates incident priority
+   * Emit when incident priority changes.
    */
   emitIncidentPriorityChanged: (incidentId, priority) => {
     try {
@@ -298,13 +265,12 @@ export default {
   },
 
   /**
-   * Emit when incident is escalated with backup units
-   * Emitted when admin escalates an incident
+   * Emit when incident is escalated.
    */
   emitIncidentEscalated: (incidentId, newAssignments) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_escalated', {
+      const payload = {
         incident_id: incidentId,
         new_assignments: newAssignments.map(a => ({
           assignment_id: a.assignment_id,
@@ -314,48 +280,34 @@ export default {
         })),
         total_units_now: newAssignments.length,
         timestamp: new Date()
-      });
-      io.to('response').emit('incident_escalated', {
-        incident_id: incidentId,
-        new_assignments: newAssignments.map(a => ({
-          assignment_id: a.assignment_id,
-          unit_id: a.unit_id,
-          unit_name: a.unit?.unit_name,
-          assigned_at: a.assigned_at
-        })),
-        total_units_now: newAssignments.length,
-        timestamp: new Date()
-      });
+      };
+      io.to('admin').emit('incident_escalated', payload);
+      io.to('response').emit('incident_escalated', payload);
     } catch (err) {
       console.warn('Socket emit error (incident_escalated):', err.message);
     }
   },
 
   /**
-   * Emit when response unit availability status changes
-   * Emitted when unit.availability_status changes
+   * Emit when response unit availability status changes.
    */
   emitUnitAvailabilityChanged: (unitId, status) => {
     try {
       const io = getIO();
-      io.to('admin').emit('unit_availability_changed', {
+      const payload = {
         unit_id: unitId,
         availability_status: status,
         updated_at: new Date()
-      });
-      io.to('response').emit('unit_availability_changed', {
-        unit_id: unitId,
-        availability_status: status,
-        updated_at: new Date()
-      });
+      };
+      io.to('admin').emit('unit_availability_changed', payload);
+      io.to('response').emit('unit_availability_changed', payload);
     } catch (err) {
       console.warn('Socket emit error (unit_availability_changed):', err.message);
     }
   },
 
   /**
-   * Emit new assignment notification to specific unit
-   * Alias for emitAssignment for clarity
+   * Alias for emitAssignment.
    */
   emitNewAssignment: (unitId, data) => {
     try {
@@ -369,17 +321,13 @@ export default {
   },
 
   /**
-   * Emit dispatch directions to the assigned response unit.
-   * Sent when admin approves a report — contains route data from unit base to incident.
+   * Emit dispatch directions.
    */
   emitDispatchWithDirections: (unitId, payload) => {
     try {
       const io = getIO();
-      // Send to the specific unit room
       io.to(`unit-${unitId}`).emit('unit_dispatch_with_directions', payload);
-      // Also send to the general response room so ResponseMap can render the route
       io.to('response').emit('unit_dispatch_with_directions', payload);
-      // Also send to admin room so LiveMap can render the route
       io.to('admin').emit('unit_dispatch_with_directions', payload);
     } catch (err) {
       console.error('Socket emitDispatchWithDirections failed:', err.message);

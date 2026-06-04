@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GAOIRS - Verified & 100% Complete ERD</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background: #fff; padding: 40px; }
+        .box { border: 2px solid #000; padding: 30px; position: relative; }
+        .stamp { position: absolute; top: 10px; right: 10px; border: 3px solid #000; padding: 5px 10px; font-weight: 800; text-transform: uppercase; transform: rotate(5deg); background: #fff; }
+        h1 { margin: 0; font-size: 28px; text-transform: uppercase; text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+        .mermaid { display: flex; justify-content: center; }
+        .btn { background: #000; color: #fff; padding: 12px 24px; border: none; font-weight: bold; cursor: pointer; float: right; margin-bottom: 20px; }
+        @media print { .btn { display: none; } body { padding: 0; } }
+    </style>
+</head>
+<body>
+    <button class="btn" onclick="window.print()">Export to PDF</button>
+    <div class="box">
+        <div class="stamp">100% Verified</div>
+        <h1>GAOIRS Complete ERD Matrix</h1>
+        <div class="mermaid">
+            erDiagram
+                USER ||--o{ INCIDENT : "reported_by"
+                USER ||--o{ INCIDENT_ASSIGNMENTS : "assigned_by"
+                USER ||--o{ INCIDENT_STATUS_LOG : "changed_by"
+                USER ||--o{ EVIDENCE : "uploaded_by"
+                USER ||--o{ POST_INCIDENT_REPORTS : "reviewed_by"
+                USER ||--o{ NOTIFICATIONS : "assigned_to"
+                USER ||--o{ SYSTEM_AUDIT_LOGS : "logs"
+                USER ||--o{ SYSTEM_CONFIG : "configures"
+                USER ||--o{ GENERATED_REPORTS : "generates"
+                
+                BARANGAYS ||--o{ INCIDENT : "location"
+                BARANGAYS ||--o{ RESPONSE_UNIT : "jurisdiction"
+                
+                RESPONSE_UNIT ||--o{ INCIDENT_ASSIGNMENTS : "deployed"
+                RESPONSE_UNIT ||--o{ NOTIFICATIONS : "alerted"
+                
+                INCIDENT_TYPES ||--o{ INCIDENT : "defines"
+                INCIDENT ||--o| POST_INCIDENT_REPORTS : "closes"
+                INCIDENT ||--o{ INCIDENT_STATUS_LOG : "history"
+                INCIDENT ||--o{ EVIDENCE : "media"
+                INCIDENT ||--o{ NOTIFICATIONS : "alert_trigger"
+
+                USER {
+                    string user_id PK
+                    string email UK
+                    string name
+                    string role
+                }
+
+                BARANGAYS {
+                    string barangay_id PK
+                    string name
+                }
+
+                RESPONSE_UNIT {
+                    string unit_id PK
+                    string unit_name
+                    string unit_type
+                }
+
+                INCIDENT {
+                    string incident_id PK
+                    string code UK
+                    string status
+                }
+
+                INCIDENT_TYPES {
+                    string type_id PK
+                    string name
+                }
+
+                INCIDENT_ASSIGNMENTS {
+                    string assignment_id PK
+                    string status
+                }
+
+                INCIDENT_STATUS_LOG {
+                    string log_id PK
+                    string status
+                }
+
+                POST_INCIDENT_REPORTS {
+                    string report_id PK
+                    int casualties
+                }
+
+                EVIDENCE {
+                    string evidence_id PK
+                    string file_path
+                }
+
+                NOTIFICATIONS {
+                    string notification_id PK
+                    string delivery_status
+                }
+
+                GENERATED_REPORTS {
+                    string report_id PK
+                    string report_title
+                }
+
+                SYSTEM_AUDIT_LOGS {
+                    string log_id PK
+                    string action
+                }
+
+                SYSTEM_CONFIG {
+                    string config_key PK
+                    string config_value
+                }
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#ffffff',
+                primaryTextColor: '#000',
+                primaryBorderColor: '#000',
+                lineColor: '#000'
+            }
+        });
+    </script>
+</body>
+</html>

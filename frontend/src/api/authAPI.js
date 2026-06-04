@@ -5,10 +5,6 @@ export const authAPI = {
     const response = await axiosInstance.post('/auth/login', { email, password });
     return response.data;
   },
-  googleLogin: async (credential, preferredRole = 'REPORTER') => {
-    const response = await axiosInstance.post('/auth/google', { credential, role: preferredRole });
-    return response.data;
-  },
   register: async (userData) => {
     const response = await axiosInstance.post('/auth/register', userData);
     return response.data;

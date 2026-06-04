@@ -1,4 +1,6 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
+
 const geoService = {
   /**
    * Find the barangay ID given a latitude/longitude point
@@ -30,8 +32,8 @@ const geoService = {
   async findNearestUnits(lat, lng, limit = 5, unitType = null) {
     try {
       const typeFilter = unitType
-        ? prisma.sql`AND unit_type = ${unitType}`
-        : prisma.sql``;
+        ? Prisma.sql`AND unit_type = ${unitType}`
+        : Prisma.sql``;
 
       const units = await prisma.$queryRaw`
         SELECT unit_id, unit_name, unit_type, contact_number, availability_status, latitude, longitude,
@@ -39,7 +41,7 @@ const geoService = {
                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
                  ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography
                ) as distance
-        FROM "RESPONSE_UNIT"
+        FROM "RESPONSE_UNITS"
         WHERE latitude IS NOT NULL
           AND longitude IS NOT NULL
         ${typeFilter}
@@ -98,7 +100,7 @@ const geoService = {
             WHEN availability_status = 'ON_BREAK' THEN 2
             ELSE 3
           END as status_priority
-        FROM "RESPONSE_UNIT"
+        FROM "RESPONSE_UNITS"
         WHERE
           latitude IS NOT NULL
           AND longitude IS NOT NULL

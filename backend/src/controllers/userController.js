@@ -10,7 +10,7 @@ export const getAllUsers = async (req, res) => {
     const users = await prisma.user.findMany({
       skip,
       take: limit,
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true, unit_id: true, created_at: true }
     });
     
     const total = await prisma.user.count();
@@ -33,7 +33,7 @@ export const getUserById = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { user_id: req.params.id },
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true }
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
@@ -44,11 +44,11 @@ export const getUserById = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, role, contact_number } = req.body;
+    const { name, email, role, contact_number, unit_id } = req.body;
     const user = await prisma.user.update({
       where: { user_id: req.params.id },
-      data: { name, email, role, contact_number },
-      select: { user_id: true, name: true, email: true, role: true }
+      data: { name, email, role, contact_number, unit_id },
+      select: { user_id: true, name: true, email: true, role: true, unit_id: true }
     });
     res.json(user);
   } catch (error) {
@@ -89,7 +89,7 @@ export const toggleStatus = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, contact_number } = req.body;
+    const { name, email, password, role, contact_number, unit_id } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -104,7 +104,8 @@ export const createUser = async (req, res) => {
         email,
         password_hash: hashedPassword,
         role: role || 'REPORTER',
-        contact_number
+        contact_number,
+        unit_id
       }
     });
 

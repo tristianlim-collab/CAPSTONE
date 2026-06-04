@@ -61,7 +61,7 @@ export default function ReportSuccessScreen({ navigation }) {
         {/* Return Button */}
         <TouchableOpacity
           style={styles.returnBtn}
-          onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}
+          onPress={() => navigation.navigate('MainTabs')}
           activeOpacity={0.85}
         >
           <Text style={styles.returnText}>Return to Home</Text>
