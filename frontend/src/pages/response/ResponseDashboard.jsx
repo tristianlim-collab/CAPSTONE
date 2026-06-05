@@ -170,7 +170,7 @@ export default function ResponseDashboard() {
   const handleSubmitReport = async () => {
     if (!reportData.actions_taken) return toast.error('Actions taken description is required');
     if (proofPhotos.length === 0) return toast.error('At least one proof photo is required before resolving.');
-    
+
     try {
       setAcceptingId('report');
       setUploadingPhotos(true);
@@ -198,7 +198,7 @@ export default function ResponseDashboard() {
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === priorityIncident.incident_id ? { ...inc, status: 'RESOLVED' } : inc
       ));
-      
+
       toast.success('Incident resolved. Reporter notified.');
       setShowReportModal(false);
       setReportData({ actions_taken: '', casualties: 0, damages_estimate: '', remarks: '', response_time_minutes: '' });
@@ -214,11 +214,7 @@ export default function ResponseDashboard() {
   return (
     <div className="space-y-8 pb-12">
       {/* Header Area */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 relative overflow-hidden"
-      >
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex items-center gap-6">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
@@ -260,7 +256,7 @@ export default function ResponseDashboard() {
             {isAvailable ? 'Available for Dispatch' : 'On Standby'}
           </button>
         </div>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* KPI & Sidebar Stats */}
@@ -627,7 +623,7 @@ export default function ResponseDashboard() {
 
                 {/* Proof Photo Upload */}
                 <div className="pt-4">
-                   <div className="flex items-center justify-between mb-3 pl-4 pr-2">
+                  <div className="flex items-center justify-between mb-3 pl-4 pr-2">
                     <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-1.5">
                       <Camera size={14} /> Proof Photo <span className="text-rose-400">(required)</span>
                     </label>

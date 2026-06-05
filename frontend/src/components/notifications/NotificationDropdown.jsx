@@ -24,16 +24,16 @@ const NotificationDropdown = () => {
     if (notification.delivery_status !== 'READ') {
       markAsRead(notification.notification_id);
     }
-    
+
     // Navigate based on incident or message content
     if (notification.incident_id) {
-       // Check if we are admin or response to route correctly
-       const currentPath = window.location.pathname;
-       if (currentPath.startsWith('/admin')) {
-         navigate(`/admin/verification?id=${notification.incident_id}`);
-       } else if (currentPath.startsWith('/response')) {
-         navigate(`/response/dashboard?id=${notification.incident_id}`);
-       }
+      // Check if we are admin or response to route correctly
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith('/admin')) {
+        navigate(`/admin/verification?id=${notification.incident_id}`);
+      } else if (currentPath.startsWith('/response')) {
+        navigate(`/response/dashboard?id=${notification.incident_id}`);
+      }
     }
     setIsOpen(false);
   };
@@ -49,9 +49,8 @@ const NotificationDropdown = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full transition-all duration-200 ${
-          isOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-        }`}
+        className={`relative p-2 rounded-full transition-all duration-200 ${isOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+          }`}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
@@ -97,46 +96,43 @@ const NotificationDropdown = () => {
                   <div
                     key={notification.notification_id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`px-5 py-3.5 flex gap-4 cursor-pointer hover:bg-slate-50 transition-all duration-200 relative group ${
-                      notification.delivery_status !== 'READ' ? 'bg-indigo-50/20' : ''
-                    }`}
+                    className={`px-5 py-3.5 flex gap-4 cursor-pointer hover:bg-slate-50 transition-all duration-200 relative group ${notification.delivery_status !== 'READ' ? 'bg-indigo-50/20' : ''
+                      }`}
                   >
                     {notification.delivery_status !== 'READ' && (
                       <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-r-full"></div>
                     )}
-                    
+
                     <div className="flex-shrink-0">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${
-                        notification.delivery_status !== 'READ' ? 'bg-white ring-2 ring-indigo-100' : 'bg-slate-50 ring-1 ring-slate-100'
-                      }`}>
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${notification.delivery_status !== 'READ' ? 'bg-white ring-2 ring-indigo-100' : 'bg-slate-50 ring-1 ring-slate-100'
+                        }`}>
                         {getIcon(notification)}
                       </div>
                     </div>
-                    
+
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <p className={`text-[13px] leading-[1.5] mb-1.5 break-words line-clamp-2 ${
-                        notification.delivery_status !== 'READ' ? 'font-bold text-slate-900' : 'font-medium text-slate-500'
-                      }`}>
+                      <p className={`text-[13px] leading-[1.5] mb-1.5 break-words line-clamp-2 ${notification.delivery_status !== 'READ' ? 'font-bold text-slate-900' : 'font-medium text-slate-500'
+                        }`}>
                         {notification.message_body}
                       </p>
-                      
+
                       <div className="flex items-center gap-2.5">
                         <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 uppercase tracking-tight">
                           <Clock size={10} className="shrink-0" />
                           {formatDistanceToNow(new Date(notification.sent_at), { addSuffix: true })}
                         </span>
-                        
+
                         {notification.incident?.incident_code && (
-                           <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md uppercase border border-indigo-100 transition-colors group-hover:bg-indigo-100/50">
-                              {notification.incident.incident_code}
-                           </span>
+                          <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md uppercase border border-indigo-100 transition-colors group-hover:bg-indigo-100/50">
+                            {notification.incident.incident_code}
+                          </span>
                         )}
                       </div>
                     </div>
 
                     <div className="flex-shrink-0 flex items-center">
                       {notification.delivery_status !== 'READ' ? (
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             markAsRead(notification.notification_id);
@@ -158,7 +154,7 @@ const NotificationDropdown = () => {
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-slate-100 bg-white text-center">
-            <button 
+            <button
               onClick={() => {
                 setIsOpen(false);
                 const currentPath = window.location.pathname;

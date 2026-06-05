@@ -35,7 +35,7 @@ const ResponseLayout = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden">
-      {/* Sidebar Overlay for mobile */}
+      {/* Sidebar Overlay for mobile - only show when sidebar is OPEN */}
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -49,14 +49,8 @@ const ResponseLayout = () => {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{
-          width: sidebarOpen ? 288 : 0,
-          x: sidebarOpen ? 0 : -288,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden lg:!w-72 lg:!translate-x-0`}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden ${sidebarOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full'} lg:!w-72 lg:!translate-x-0 transition-all duration-300`}
       >
         {/* Logo Area */}
         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-800">
@@ -146,7 +140,7 @@ const ResponseLayout = () => {
             <span>End Shift</span>
           </button>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">

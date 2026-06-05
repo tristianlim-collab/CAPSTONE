@@ -133,7 +133,7 @@ const FlyToSelectedIncident = ({ selectedIncident }) => {
     if (selectedIncident && selectedIncident.latitude && selectedIncident.longitude) {
       const pos = [selectedIncident.latitude, selectedIncident.longitude];
       map.flyTo(pos, 18, { duration: 1.5 });
-      
+
       // Force open the popup for this specific incident
       map.eachLayer((layer) => {
         if (layer.options && layer.options.incident_id === selectedIncident.incident_id) {
@@ -287,7 +287,7 @@ const ResponseMap = () => {
 
     try {
       setUploadingPhotos(true);
-      
+
       // 1. Upload photos to Cloudinary
       const uploadedUrls = [];
       for (const photo of proofPhotos) {
@@ -338,9 +338,9 @@ const ResponseMap = () => {
       // Fallback: If session unit is missing but we have units on map, find ourselves by ID
       const myActiveUnit = units.find(u => u.unit_id === user?.unit_id || u.user_id === user?.id);
       if (myActiveUnit) {
-          unitLat = Number(myActiveUnit.latitude);
-          unitLng = Number(myActiveUnit.longitude);
-          unitName = myActiveUnit.unit_name || unitName;
+        unitLat = Number(myActiveUnit.latitude);
+        unitLng = Number(myActiveUnit.longitude);
+        unitName = myActiveUnit.unit_name || unitName;
       } else {
         // Fallback to officially assigned unit
         const assignedUnit = incident.assignments && incident.assignments.length > 0 ? incident.assignments[0]?.unit : null;
@@ -395,7 +395,7 @@ const ResponseMap = () => {
       const isAssigned = incident.assignments?.some(a => a.unit_id === user?.unit_id);
       const unitName = user?.unit?.unit_name?.toLowerCase() || '';
       const incidentAddress = (incident.map_pin_address || '').toLowerCase();
-      
+
       const isSilayUnit = unitName.includes('silay');
       const isTalisayUnit = unitName.includes('talisay');
       const isSilayIncident = incidentAddress.includes('silay');
@@ -432,8 +432,8 @@ const ResponseMap = () => {
         setIncidents(prev => {
           const exists = prev.find(i => i.incident_id === data.incident_id);
           if (exists) {
-            return prev.map(inc => inc.incident_id === data.incident_id 
-              ? { ...inc, status: data.status, ...data.incident } 
+            return prev.map(inc => inc.incident_id === data.incident_id
+              ? { ...inc, status: data.status, ...data.incident }
               : inc
             );
           }
@@ -503,7 +503,7 @@ const ResponseMap = () => {
           console.warn('Could not fetch backup incident details:', e);
         }
       }
-      
+
       const route = await fetchRouteFromOSRM(
         Number(data.unit_lat), Number(data.unit_lng),
         Number(data.incident_lat), Number(data.incident_lng)
@@ -564,7 +564,7 @@ const ResponseMap = () => {
           // Priority 2: Keyword-based Jurisdiction Filter
           const unitName = user?.unit?.unit_name?.toLowerCase() || '';
           const incidentAddress = (inc.map_pin_address || '').toLowerCase();
-          
+
           const isSilayUnit = unitName.includes('silay');
           const isTalisayUnit = unitName.includes('talisay');
           const isSilayIncident = incidentAddress.includes('silay');
