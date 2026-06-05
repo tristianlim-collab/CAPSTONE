@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const data = await authAPI.login(email, password);
-    
+
     if (data && data.token) {
       localStorage.setItem('token', data.token);
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const data = await authAPI.register(userData);
-    
+
     if (data && data.token) {
       localStorage.setItem('token', data.token);
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;

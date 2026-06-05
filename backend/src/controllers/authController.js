@@ -61,6 +61,9 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     let { email, password, fcm_token } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
     email = email.trim().toLowerCase();
     
     const user = await prisma.user.findUnique({ where: { email } });

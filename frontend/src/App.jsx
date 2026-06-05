@@ -19,6 +19,7 @@ import MyReports from './pages/reporter/MyReports';
 import ShiftStart from './pages/response/ShiftStart';
 import ResponseDashboard from './pages/response/ResponseDashboard';
 import ResponseMap from './pages/response/ResponseMap';
+import ResponseIncidents from './pages/response/ResponseIncidents';
 import ResponseNotifications from './pages/response/ResponseNotifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
@@ -80,6 +81,7 @@ const App = () => {
                 <Route index element={<Navigate to="/response/dashboard" replace />} />
                 <Route path="dashboard" element={<ResponseDashboard />} />
                 <Route path="map" element={<ResponseMap />} />
+                <Route path="incidents" element={<ResponseIncidents />} />
                 <Route path="notifications" element={<ResponseNotifications />} />
                 <Route path="guide" element={<UserGuide />} />
               </Route>

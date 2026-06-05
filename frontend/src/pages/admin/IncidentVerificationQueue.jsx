@@ -662,7 +662,7 @@ export default function IncidentVerificationQueue() {
                         disabled={submitting}
                         className="col-span-2 py-3 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-red-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />} 
+                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
                         Mark as False Alarm
                       </button>
                     </div>

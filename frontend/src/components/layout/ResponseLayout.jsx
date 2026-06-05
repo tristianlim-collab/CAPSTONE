@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Map as MapIcon, Bell,
-  LogOut, Shield, Menu, X, Search, Moon, Sun, 
+  LogOut, Shield, Menu, X, Search, Moon, Sun,
   ChevronsLeft, ChevronsRight, BookOpen
 } from 'lucide-react';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -14,10 +14,11 @@ import { useNotifications } from '../../context/NotificationContext';
 const ResponseLayout = () => {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
-  const { unreadCount } = useNotifications();
+  const notificationContext = useNotifications();
+  const unreadCount = notificationContext?.unreadCount || 0;
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile, expanded on desktop
 
   const handleLogout = () => {
     logout();
@@ -36,13 +37,13 @@ const ResponseLayout = () => {
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden">
       {/* Sidebar Overlay for mobile */}
       <AnimatePresence>
-        {!sidebarOpen && (
+        {sidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="lg:hidden fixed inset-0 bg-slate-900/60 z-40 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setSidebarOpen(false)}
           />
         )}
       </AnimatePresence>
@@ -50,12 +51,12 @@ const ResponseLayout = () => {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ 
+        animate={{
           width: sidebarOpen ? 288 : 0,
           x: sidebarOpen ? 0 : -288,
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden lg:!w-72 lg:!translate-x-0`}
       >
         {/* Logo Area */}
         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-800">
@@ -69,7 +70,7 @@ const ResponseLayout = () => {
             </div>
           </div>
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <X size={20} />
@@ -86,6 +87,7 @@ const ResponseLayout = () => {
                 <NavLink
                   key={item.name}
                   to={item.path}
+                  onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
                   className={({ isActive }) => `
                     group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-200
                     ${isActive
@@ -101,7 +103,7 @@ const ResponseLayout = () => {
 
                   {/* Notification badge */}
                   {item.name === 'Notifications' && unreadCount > 0 && (
-                    <motion.span 
+                    <motion.span
                       initial={{ scale: 0.5, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="ml-auto bg-red-500 text-white text-[10px] font-black px-2 flex items-center justify-center h-5 min-w-[20px] rounded-full shadow-[0_2px_8px_rgba(239,68,68,0.4)]"
@@ -111,9 +113,9 @@ const ResponseLayout = () => {
                   )}
 
                   {isActive && (
-                    <motion.div 
+                    <motion.div
                       layoutId="activeNavResponse"
-                      className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+                      className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
                     />
                   )}
                 </NavLink>
@@ -151,14 +153,14 @@ const ResponseLayout = () => {
         {/* Header */}
         <header className="h-20 glass dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 lg:px-8 z-[1001] sticky top-0">
           <div className="flex items-center gap-4">
-             <button
+            <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               {sidebarOpen ? <ChevronsLeft size={22} /> : <ChevronsRight size={22} />}
             </button>
             <div>
-              <motion.h1 
+              <motion.h1
                 key={currentPage}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -171,8 +173,8 @@ const ResponseLayout = () => {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-             {/* Dark Mode Toggle */}
-             <button
+            {/* Dark Mode Toggle */}
+            <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
@@ -185,7 +187,7 @@ const ResponseLayout = () => {
         </header>
 
         {/* Page Content */}
-        <motion.div 
+        <motion.div
           className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 p-6 lg:p-10 hide-scrollbar"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

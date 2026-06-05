@@ -36,7 +36,7 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(prev => {
       const exists = prev.some(n => n.notification_id === newNotification.notification_id);
       if (exists) return prev;
-      
+
       const updated = [newNotification, ...prev];
       setUnreadCount(updated.filter(n => n.delivery_status !== 'READ').length);
       return updated.slice(0, 50); // Keep last 50
@@ -89,9 +89,9 @@ export const NotificationProvider = ({ children }) => {
     });
 
     const cleanupNewAssignment = on('new_assignment', (data) => {
-       // data typically has { incident, assignment }
-       const incident = data.incident;
-       const notif = {
+      // data typically has { incident, assignment }
+      const incident = data.incident;
+      const notif = {
         notification_id: `as-${data.assignment?.assignment_id || Date.now()}`,
         message_body: `You have been dispatched to a new incident`,
         sent_at: new Date().toISOString(),
@@ -125,7 +125,7 @@ export const NotificationProvider = ({ children }) => {
   const markAsRead = async (id) => {
     try {
       await notificationAPI.markAsRead(id);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.notification_id === id ? { ...n, delivery_status: 'READ' } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));

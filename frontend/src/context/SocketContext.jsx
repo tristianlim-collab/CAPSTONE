@@ -65,27 +65,27 @@ export const SocketProvider = ({ children }) => {
 		};
 	}, [isAuthenticated, user]);
 
-  const on = useCallback((eventName, callback) => {
-    if (!socketRef.current) {
-      return () => {};
-    }
-    socketRef.current.on(eventName, callback);
-    return () => socketRef.current?.off(eventName, callback);
-  }, [connected]);
+	const on = useCallback((eventName, callback) => {
+		if (!socketRef.current) {
+			return () => { };
+		}
+		socketRef.current.on(eventName, callback);
+		return () => socketRef.current?.off(eventName, callback);
+	}, [connected]);
 
-  const emit = useCallback((eventName, payload) => {
-    socketRef.current?.emit(eventName, payload);
-  }, [connected]);
+	const emit = useCallback((eventName, payload) => {
+		socketRef.current?.emit(eventName, payload);
+	}, [connected]);
 
-  const value = useMemo(
-    () => ({
-      socket: socketRef.current,
-      connected,
-      on,
-      emit,
-    }),
-    [connected, on, emit]
-  );
+	const value = useMemo(
+		() => ({
+			socket: socketRef.current,
+			connected,
+			on,
+			emit,
+		}),
+		[connected, on, emit]
+	);
 
 	return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
 };
