@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
   ChevronDown, Eye, CheckCircle, Clock, AlertCircle, Loader2,
@@ -232,7 +233,7 @@ const PostIncidentReports = () => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm font-bold text-sm disabled:opacity-50"
             >
               {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-              Export Report
+              Export
               <ChevronDown size={16} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
             </button>
 
@@ -579,20 +580,29 @@ const PostIncidentReports = () => {
         </div>
       )}
 
-      {/* ─── LIGHTBOX ─── */}
-      {lightboxImg && (
+      {/* ─── LIGHTBOX via Portal ─── */}
+      {lightboxImg && createPortal(
         <div
-          className="fixed inset-0 bg-black/90 z-[2001] flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 bg-slate-950/98 backdrop-blur-md flex items-center justify-center z-[9999] p-4 sm:p-8 animate-in fade-in duration-300"
           onClick={() => setLightboxImg(null)}
         >
-          <img src={lightboxImg} alt="Evidence" className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" />
-          <button
-            className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/40 rounded-full p-2"
-            onClick={() => setLightboxImg(null)}
-          >
-            <XCircle size={28} />
-          </button>
-        </div>
+          <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
+            <img
+              src={lightboxImg}
+              alt="Evidence Full"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              className="absolute top-0 right-0 sm:-top-12 sm:right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all active:scale-90 border border-white/20"
+              onClick={() => setLightboxImg(null)}
+              title="Close Preview"
+            >
+              <XCircle size={28} />
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

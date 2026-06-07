@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api, { incidentAPI, postReportAPI } from '../../api';
@@ -760,11 +761,6 @@ const ResponseMap = () => {
           </div>
 
           <div className="flex flex-wrap gap-4">
-
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]"></span>
-              Verified ({incidents.filter(i => i.status === 'VERIFIED').length})
-            </div>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span>
               Responding ({incidents.filter(i => i.status === 'RESPONDING').length})
@@ -1153,27 +1149,29 @@ const ResponseMap = () => {
           </div>
         )}
 
-        {/* Fullscreen Photo Modal */}
-        {fullscreenPhoto && (
+        {/* Fullscreen Photo Modal via Portal */}
+        {fullscreenPhoto && createPortal(
           <div
             onClick={() => setFullscreenPhoto(null)}
-            className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-slate-950/98 backdrop-blur-md flex items-center justify-center z-[9999] p-4 sm:p-8 animate-in fade-in duration-300"
           >
-            <div className="relative max-w-4xl max-h-[90vh]">
+            <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
               <img
                 src={fullscreenPhoto}
-                alt="Fullscreen evidence"
-                className="w-full h-full object-contain"
+                alt="Evidence Full"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95"
                 onClick={(e) => e.stopPropagation()}
               />
               <button
                 onClick={() => setFullscreenPhoto(null)}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all"
+                className="absolute top-0 right-0 sm:-top-12 sm:right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all active:scale-90 border border-white/20"
+                title="Close Preview"
               >
-                <X size={24} />
+                <X size={28} />
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Filter Modal */}

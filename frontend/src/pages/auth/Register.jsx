@@ -18,13 +18,13 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     let value = e.target.value;
-    
+
     if (e.target.name === 'contact_number') {
       const digitsOnly = value.replace(/\D/g, '');
       let normalized = digitsOnly;
@@ -38,14 +38,14 @@ const Register = () => {
       normalized = normalized.slice(0, 10);
       value = `+63${normalized}`;
     }
-    
+
     setFormData({ ...formData, [e.target.name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    
+
     if (formData.password !== formData.confirmPassword) {
       setErrorMsg('Passwords do not match');
       return;
@@ -84,7 +84,7 @@ const Register = () => {
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </div>
-        
+
         <div className="text-center mb-8 mt-4">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 shadow-sm border border-indigo-100/50 transform rotate-3">
             <UserPlus className="w-7 h-7 -rotate-3" />
@@ -120,12 +120,12 @@ const Register = () => {
             required
             className="border-slate-200 focus:ring-blue-500"
           />
-          
+
           <div className="flex flex-col gap-1 w-full">
             <label className="text-sm font-medium text-slate-700">Role</label>
-            <select 
-              name="role" 
-              value={formData.role} 
+            <select
+              name="role"
+              value={formData.role}
               onChange={handleChange}
               className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             >

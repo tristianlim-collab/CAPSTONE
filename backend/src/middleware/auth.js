@@ -29,7 +29,7 @@ export const authenticate = async (req, res, next) => {
         role: true,
         contact_number: true,
         unit_id: true,
-        unit: true,
+        unit: { include: { barangay: true } },
       },
     });
 

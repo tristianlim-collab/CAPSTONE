@@ -333,7 +333,7 @@ export default function IncidentReportScreen({ navigation }) {
     if (!isValidPhone) { setPhoneTouched(true); Alert.alert('Error', 'Use format +639XXXXXXXXX.'); return; }
 
     setLoading(true);
-    setShowMap(false); // Unmount map immediately to free resources
+    // Removed immediate map unmount to prevent potential stability issues during submission
     try {
       const incRes = await incidentAPI.create({
         incident_type_id: typeId,
@@ -360,10 +360,9 @@ export default function IncidentReportScreen({ navigation }) {
         } catch (e) { console.warn('Could not save report ID locally:', e); }
       }
       if (incidentId && photos.length > 0) {
-        // Upload photos one by one and clear them from memory to prevent OOM crash
-        const photosToUpload = [...photos];
-        for (let i = 0; i < photosToUpload.length; i++) {
-          const photo = photosToUpload[i];
+        // Prepare list of photos for clean upload
+        const currentPhotos = [...photos];
+        for (const photo of currentPhotos) {
           try {
             const formData = new FormData();
             formData.append('file', {
@@ -376,24 +375,19 @@ export default function IncidentReportScreen({ navigation }) {
             await api.post('/evidence', formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
             });
-
-            // Clear specific photo from state to free memory
-            setPhotos(prev => prev.filter(p => p.uri !== photo.uri));
-
-            // Small pause for native garbage collection
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Small gap to let the bridge breathe
+            await new Promise(r => setTimeout(r, 150));
           } catch (e) {
-            console.error('Evidence upload failed:', e);
+            console.warn('Individual photo upload failed:', e);
           }
         }
       }
 
-      // Final cooldown before navigation
-      setTimeout(() => {
-        if (isMounted.current) {
-          navigation.replace('ReportSuccess');
-        }
-      }, 500);
+      // Final check for mount status before replacing screen
+      if (isMounted.current) {
+        setPhotos([]); // Clear all photos at once
+        navigation.replace('ReportSuccess');
+      }
 
     } catch (err) {
       if (isMounted.current) {

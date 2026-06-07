@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
@@ -678,25 +679,35 @@ export default function IncidentVerificationQueue() {
         </div>
       </div>
 
-      {/* Fullscreen Photo Modal */}
-      {fullscreenPhoto && (
+      {/* Fullscreen Photo Modal via Portal */}
+      {fullscreenPhoto && createPortal(
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={() => setFullscreenPhoto(null)}
-          className="fixed inset-0 bg-slate-950/95 flex items-center justify-center z-[2000] p-6 backdrop-blur-xl"
+          className="fixed inset-0 bg-slate-950/98 backdrop-blur-md flex items-center justify-center z-[9999] p-4 sm:p-8"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="relative max-w-5xl max-h-screen"
+            className="relative max-w-5xl w-full h-full flex items-center justify-center"
           >
-            <img src={fullscreenPhoto} alt="Evidence" className="w-full h-full object-contain rounded-3xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
-            <button onClick={() => setFullscreenPhoto(null)} className="absolute -top-12 right-0 text-white/50 hover:text-white transition-all flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-              Close <X size={24} />
+            <img 
+              src={fullscreenPhoto} 
+              alt="Evidence Full" 
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95" 
+              onClick={(e) => e.stopPropagation()} 
+            />
+            <button 
+              onClick={() => setFullscreenPhoto(null)} 
+              className="absolute top-0 right-0 sm:-top-12 sm:right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all active:scale-90 border border-white/20"
+              title="Close Preview"
+            >
+              <X size={28} />
             </button>
           </motion.div>
-        </motion.div>
+        </motion.div>,
+        document.body
       )}
 
       {/* Verification Modals Wrapper */}

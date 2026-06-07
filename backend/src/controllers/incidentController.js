@@ -130,26 +130,49 @@ export const getIncidents = async (req, res) => {
       // Reporters only see their own incidents
       where.reported_by = req.user.id;
     } else if (req.user?.role === 'RESPONSE_UNIT') {
-      // Relaxed filter: See incidents assigned to unit OR incidents matching unit type
-      const unitType = req.user.unit?.unit_type;
-      
-      if (req.user.unit_id || unitType) {
-        where.OR = [];
+      const unit = req.user.unit;
+      const unitType = unit?.unit_type;
+      const userMunicipality = unit?.barangay?.municipality;
+
+      if (req.user.unit_id || (unitType && userMunicipality)) {
+        const roleFilters = [];
         
+        // 1. Always see explicitly assigned incidents (including backups)
         if (req.user.unit_id) {
-          where.OR.push({ assignments: { some: { unit_id: req.user.unit_id } } });
+          roleFilters.push({ assignments: { some: { unit_id: req.user.unit_id } } });
         }
         
+        // 2. See incidents of their type within their jurisdiction (including REPORTED)
         if (unitType) {
-          where.OR.push({ incident_type: { default_unit_type: unitType } });
+          const typeAndCityFilter = { incident_type: { default_unit_type: unitType } };
+          
+          if (userMunicipality) {
+            // If they have a city, restrict feed to that city
+            typeAndCityFilter.barangay = { municipality: { equals: userMunicipality, mode: 'insensitive' } };
+          }
+          // If no municipality assigned, they see all incidents of their type system-wide
+
+          roleFilters.push({
+            AND: [
+              { status: { in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED'] } },
+              typeAndCityFilter
+            ]
+          });
         }
-      }
-      
-      // Include REPORTED so they see incoming alerts even before verification
-      if (!status) {
-        where.status = {
-          in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED']
-        };
+
+        if (where.OR) {
+          // If search is active, intersect search with role filters
+          where.AND = [
+            { OR: where.OR },
+            { OR: roleFilters }
+          ];
+          delete where.OR;
+        } else {
+          where.OR = roleFilters;
+        }
+      } else {
+        // Fallback or restricted access if unit info is missing
+        where.assignments = { some: { unit_id: req.user.unit_id || 'none' } };
       }
     } else if (!req.user) {
       // Anonymous/public access — only show REPORTED and active incidents (no personal data filtering)

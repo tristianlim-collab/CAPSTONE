@@ -83,9 +83,9 @@ export const submitReport = async (req, res) => {
       return res.status(409).json({ message: 'Post-incident report already submitted for this incident' });
     }
     console.error('submitReport transaction error:', error);
-    res.status(500).json({ 
-      message: 'Error submitting post-incident report', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Error submitting post-incident report',
+      error: error.message
     });
   }
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import moment from 'moment';
-import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2, Car } from 'lucide-react';
+import { Image, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2, Car, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getProvinceForNirLguName, getNearestCity, getProximityLevel } from '../../config/nirLgus';
 import api from '../../api';
@@ -91,7 +92,7 @@ const createColoredIcon = (color, isNew) => {
 };
 
 // Image Gallery Component for Photos
-const EvidenceGallery = ({ evidence }) => {
+const EvidenceGallery = ({ evidence, onExpand }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!evidence || evidence.length === 0) {
@@ -100,11 +101,13 @@ const EvidenceGallery = ({ evidence }) => {
 
   const goToPrevious = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex === 0 ? evidence.length - 1 : prevIndex - 1));
   };
 
   const goToNext = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex === evidence.length - 1 ? 0 : prevIndex + 1));
   };
 
@@ -118,7 +121,10 @@ const EvidenceGallery = ({ evidence }) => {
         <span>Evidence Photos ({evidence.length})</span>
       </div>
       {isImage && (
-        <div className="relative w-full rounded overflow-hidden bg-gray-100">
+        <div 
+          className="relative w-full rounded overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => onExpand(currentEvidence.file_path)}
+        >
           <img
             src={currentEvidence.file_path}
             alt="Evidence"
@@ -143,7 +149,7 @@ const EvidenceGallery = ({ evidence }) => {
               </button>
             </div>
           )}
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 py-0.5 rounded text-xs">
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 py-0.5 rounded text-xs text-center min-w-[30px]">
             {currentIndex + 1} / {evidence.length}
           </div>
         </div>
@@ -253,6 +259,7 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
 export default function IncidentMarker({ incident, colorMode = 'severity', onVerify, onSelect, isSelected, focusedIncidentCity }) {
   const { user } = useAuth();
   const markerRef = React.useRef(null);
+  const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
   
   const lguIndicator = getLguIndicator(incident, user, focusedIncidentCity);
   const color =
@@ -276,66 +283,93 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
   };
 
   return (
-    <Marker 
-      ref={markerRef}
-      position={[incident.latitude, incident.longitude]} 
-      icon={icon} 
-      eventHandlers={{ click: handleClick }}
-    >
-      <Popup className="min-w-[280px] max-w-[350px]">
-        <div className="font-sans pr-1 pb-1">
-          <div className="flex items-center justify-between border-b pb-2 mb-2">
-            <strong className="text-lg">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
-            <span className={`px-2 py-1 text-xs font-bold rounded-full ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
-              {incident.status}
-            </span>
-          </div>
-
-          <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
-
-          {/* Location/Barangay Display */}
-          {incident.barangay ? (
-            <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
-          ) : incident.map_pin_address ? (
-            <p className="text-sm mb-1"><strong>Location:</strong> {incident.map_pin_address}</p>
-          ) : (
-            <p className="text-sm mb-1 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
-          )}
-
-          <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
-          <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
-
-          {/* Reporter Personal Info - Priority: form fields > auth user fields */}
-          {(incident.reporter_name || incident.reporter_phone || incident.reporter || incident.reported_by) && (
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
-              <p className="text-xs text-gray-600">
-                <strong>Name:</strong> {incident.reporter_name || incident.reporter?.name || 'Not provided'}
-              </p>
-              <p className="text-xs text-gray-600">
-                <strong>Phone:</strong> {incident.reporter_phone ? `${incident.reporter_phone}` : incident.reporter?.contact_number || 'Not provided'}
-              </p>
-              <p className="text-xs text-gray-600">
-                <strong>Email:</strong> {incident.reporter?.email || 'Not provided'}
-              </p>
+    <>
+      <Marker 
+        ref={markerRef}
+        position={[incident.latitude, incident.longitude]} 
+        icon={icon} 
+        eventHandlers={{ click: handleClick }}
+      >
+        <Popup className="min-w-[280px] max-w-[350px]">
+          <div className="font-sans pr-1 pb-1">
+            <div className="flex items-center justify-between border-b pb-2 mb-2">
+              <strong className="text-lg">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
+              <span className={`px-2 py-1 text-xs font-bold rounded-full ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+                {incident.status}
+              </span>
             </div>
-          )}
 
-          {/* Evidence Gallery - PROMINENT DISPLAY */}
-          {incident.evidence && incident.evidence.length > 0 ? (
-            <EvidenceGallery evidence={incident.evidence} />
-          ) : (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <p className="text-xs text-gray-400 italic">📸 No photos attached</p>
+            <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
+
+            {/* Location/Barangay Display */}
+            {incident.barangay ? (
+              <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
+            ) : incident.map_pin_address ? (
+              <p className="text-sm mb-1"><strong>Location:</strong> {incident.map_pin_address}</p>
+            ) : (
+              <p className="text-sm mb-1 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
+            )}
+
+            <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
+            <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
+
+            {/* Reporter Personal Info - Priority: form fields > auth user fields */}
+            {(incident.reporter_name || incident.reporter_phone || incident.reporter || incident.reported_by) && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
+                <p className="text-xs text-gray-600">
+                  <strong>Name:</strong> {incident.reporter_name || incident.reporter?.name || 'Not provided'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  <strong>Phone:</strong> {incident.reporter_phone ? `${incident.reporter_phone}` : incident.reporter?.contact_number || 'Not provided'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  <strong>Email:</strong> {incident.reporter?.email || 'Not provided'}
+                </p>
+              </div>
+            )}
+
+            {/* Evidence Gallery - PROMINENT DISPLAY */}
+            {incident.evidence && incident.evidence.length > 0 ? (
+              <EvidenceGallery evidence={incident.evidence} onExpand={(url) => setFullscreenPhoto(url)} />
+            ) : (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-400 italic">📸 No photos attached</p>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-400 mt-2">
+              Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
             </div>
-          )}
-
-          <div className="text-xs text-gray-400 mt-2">
-            Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
+            <QuickVerifyActions incident={incident} onVerify={onVerify} />
           </div>
-          <QuickVerifyActions incident={incident} onVerify={onVerify} />
-        </div>
-      </Popup>
-    </Marker>
+        </Popup>
+      </Marker>
+
+      {/* Fullscreen Photo Modal via Portal */}
+      {fullscreenPhoto && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-950/98 backdrop-blur-md flex items-center justify-center z-[9999] p-4 sm:p-8 animate-in fade-in duration-300"
+          onClick={() => setFullscreenPhoto(null)}
+        >
+          <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
+            <img 
+              src={fullscreenPhoto} 
+              alt="Evidence Full" 
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button 
+              onClick={() => setFullscreenPhoto(null)}
+              className="absolute top-0 right-0 sm:-top-12 sm:right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all active:scale-90 border border-white/20"
+              title="Close Preview"
+            >
+              <X size={28} />
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

@@ -93,7 +93,7 @@ export const login = async (req, res) => {
     // Fetch full user with unit details for the response
     const fullUser = await prisma.user.findUnique({
       where: { user_id: user.user_id },
-      include: { unit: true }
+      include: { unit: { include: { barangay: true } } }
     });
 
     res.json({
@@ -161,7 +161,7 @@ export const googleLogin = async (req, res) => {
     // Fetch full user with unit details for the response
     const fullUser = await prisma.user.findUnique({
       where: { user_id: user.user_id },
-      include: { unit: true }
+      include: { unit: { include: { barangay: true } } }
     });
 
     res.json({
@@ -184,8 +184,11 @@ export const googleLogin = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { user_id: req.user.id || req.user.id },
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, unit: true }
+      where: { user_id: req.user.id },
+      select: { 
+        user_id: true, name: true, email: true, role: true, contact_number: true, unit_id: true, 
+        unit: { include: { barangay: true } } 
+      }
     });
     
     if (!user) return res.status(404).json({ message: 'User not found' });

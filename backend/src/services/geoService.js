@@ -32,7 +32,7 @@ const geoService = {
   async findNearestUnits(lat, lng, limit = 5, unitType = null) {
     try {
       const typeFilter = unitType
-        ? Prisma.sql`AND unit_type = ${unitType}`
+        ? Prisma.sql`AND unit_type = ${unitType}::"UnitType"`
         : Prisma.sql``;
 
       const units = await prisma.$queryRaw`
@@ -41,7 +41,7 @@ const geoService = {
                  ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
                  ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography
                ) as distance
-        FROM "RESPONSE_UNITS"
+        FROM "RESPONSE_UNIT"
         WHERE latitude IS NOT NULL
           AND longitude IS NOT NULL
         ${typeFilter}
@@ -100,11 +100,11 @@ const geoService = {
             WHEN availability_status = 'ON_BREAK' THEN 2
             ELSE 3
           END as status_priority
-        FROM "RESPONSE_UNITS"
+        FROM "RESPONSE_UNIT"
         WHERE
           latitude IS NOT NULL
           AND longitude IS NOT NULL
-          AND unit_type = ${unitType}
+          AND unit_type = ${unitType}::"UnitType"
         ORDER BY
           status_priority ASC,        -- AVAILABLE units first
           jurisdiction_priority ASC,  -- Same barangay next

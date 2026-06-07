@@ -38,6 +38,14 @@ export const initSocket = (server) => {
 			console.log(`[Socket] ${socket.id} joined response room`);
 		});
 
+		socket.on("join_municipality", (municipality) => {
+			if (municipality) {
+				const room = `municipality-${municipality.toLowerCase()}`;
+				socket.join(room);
+				console.log(`[Socket] ${socket.id} joined ${room}`);
+			}
+		});
+
 		socket.on("disconnect", (reason) => {
 			console.log(`[Socket] Client disconnected: ${socket.id} (${reason})`);
 		});

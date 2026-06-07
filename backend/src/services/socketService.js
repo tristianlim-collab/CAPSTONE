@@ -10,26 +10,17 @@ export default {
   emitNewIncident: (incident) => {
     try {
       const io = getIO();
-      const completeIncident = {
-        ...incident,
-        incident_id: incident.incident_id,
-        incident_code: incident.incident_code,
-        status: incident.status,
-        latitude: incident.latitude,
-        longitude: incident.longitude,
-        description: incident.description,
-        severity: incident.severity,
-        map_pin_address: incident.map_pin_address,
-        reported_at: incident.reported_at,
-        reporter_name: incident.reporter_name,
-        reporter_phone: incident.reporter_phone,
-        incident_type: incident.incident_type,
-        reporter: incident.reporter,
-        barangay: incident.barangay,
-        evidence: incident.evidence
-      };
+      const completeIncident = { ...incident };
+      
+      // Always notify admins about every report
       io.to('admin').emit('new_incident', completeIncident);
-      io.to('response').emit('new_incident', completeIncident);
+
+      // Notify responders in the specific municipality, even if unverified (REPORTED)
+      // This ensures local units are aware of incoming emergencies immediately.
+      if (incident.barangay?.municipality) {
+        const room = `municipality-${incident.barangay.municipality.toLowerCase()}`;
+        io.to(room).emit('new_incident', completeIncident);
+      }
     } catch (err) {
       console.error('Socket emitNewIncident failed:', err.message);
     }
@@ -68,7 +59,12 @@ export default {
       const io = getIO();
       io.to(`unit-${unitId}`).emit('new_assignment', data);
       io.to('admin').emit('new_assignment', data);
-      io.to('response').emit('new_assignment', data);
+      
+      // If the incident has a municipality, also notify other responders in that city
+      if (data.incident?.barangay?.municipality) {
+        const room = `municipality-${data.incident.barangay.municipality.toLowerCase()}`;
+        io.to(room).emit('new_assignment', data);
+      }
     } catch (err) {
       console.error('Socket emitAssignment failed:', err.message);
     }
@@ -127,6 +123,12 @@ export default {
       };
       // Broadcast globally for reporters
       io.emit('incident_verified', payload);
+      
+      // Notify responders in the specific municipality
+      if (incident.barangay?.municipality) {
+        const room = `municipality-${incident.barangay.municipality.toLowerCase()}`;
+        io.to(room).emit('new_incident', incident);
+      }
     } catch (err) {
       console.error('Socket emitIncidentVerified failed:', err.message);
     }
@@ -176,7 +178,7 @@ export default {
       const io = getIO();
       io.emit('incident_deleted', { incident_id: incidentId });
     } catch (err) {
-      console.error('Socket emitIncidentDeleted failed:', err.message);
+      console.error('Socket_emitIncidentDeleted failed:', err.message);
     }
   },
 
@@ -314,7 +316,11 @@ export default {
       const io = getIO();
       io.to(`unit-${unitId}`).emit('new_assignment', data);
       io.to('admin').emit('new_assignment', data);
-      io.to('response').emit('new_assignment', data);
+      
+      if (data.incident?.barangay?.municipality) {
+        const room = `municipality-${data.incident.barangay.municipality.toLowerCase()}`;
+        io.to(room).emit('new_assignment', data);
+      }
     } catch (err) {
       console.error('Socket emitNewAssignment failed:', err.message);
     }

@@ -23,12 +23,12 @@ const Login = () => {
     try {
       const user = await login(email, password);
       toast.success('Login successful');
-      
+
       const role = user.role;
       if (role === 'ADMIN') {
         navigate('/admin/dashboard');
       } else if (role === 'RESPONSE_UNIT') {
-        navigate('/response/dashboard');
+        navigate('/response/map');
       } else {
         navigate('/reporter/home');
       }
@@ -107,8 +107,8 @@ const Login = () => {
         </form>
 
         <div className="flex flex-col items-center gap-4 mt-8 pt-6 border-t border-slate-100 uppercase tracking-tighter">
-          <Link 
-            to="/reporter/home" 
+          <Link
+            to="/reporter/home"
             className="text-blue-600 hover:text-blue-700 font-black text-xs"
           >
             Report Emergency (No login required)

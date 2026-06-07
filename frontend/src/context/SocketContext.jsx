@@ -40,6 +40,10 @@ export const SocketProvider = ({ children }) => {
 				if (user?.unit_id) {
 					socket.emit("join_unit", user.unit_id);
 				}
+				// Join municipality room for city-scoped alerts
+				if (user?.unit?.barangay?.municipality) {
+					socket.emit("join_municipality", user.unit.barangay.municipality);
+				}
 			}
 			if (user?.role === "REPORTER") {
 				const userId = user?.user_id || user?.id;
