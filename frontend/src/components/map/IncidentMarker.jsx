@@ -262,10 +262,7 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
   const [fullscreenPhoto, setFullscreenPhoto] = useState(null);
   
   const lguIndicator = getLguIndicator(incident, user, focusedIncidentCity);
-  const color =
-    colorMode === 'lgu'
-      ? lguIndicator.color
-      : getColor(incident.status, incident.severity);
+  const color = getColor(incident.status, incident.severity);
   
   const isNew = incident.status === 'REPORTED';
   const icon = createColoredIcon(color, isNew);

@@ -21,7 +21,7 @@ export default function AdminDashboard() {
     // Reconcile stats every 30 seconds to catch any missed events
     const reconcileInterval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(reconcileInterval);
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     const unsub1 = on('new_incident', (inc) => {
@@ -54,9 +54,10 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      const params = { limit: 10, ...filters };
       const [statsRes, incRes] = await Promise.all([
-        analyticsAPI.getSummary(),
-        incidentAPI.getAll({ limit: 10 })
+        analyticsAPI.getSummary(filters),
+        incidentAPI.getAll(params)
       ]);
       if (statsRes.data?.data) setStats(statsRes.data.data);
       if (incRes.data?.data) setRecentIncidents(incRes.data.data);

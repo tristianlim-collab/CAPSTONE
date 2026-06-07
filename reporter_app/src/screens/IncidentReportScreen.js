@@ -275,9 +275,10 @@ export default function IncidentReportScreen({ navigation }) {
     if (photos.length >= 5) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5, // Reduced quality to prevent OOM crashes
-      allowsMultipleSelection: true,
-      selectionLimit: 5 - photos.length,
+      quality: 0.4, // Lower quality to save memory
+      allowsEditing: false,
+      maxWidth: 1200, // Limit width
+      maxHeight: 1200, // Limit height
     });
     if (!result.canceled) {
       setPhotos(prev => [...prev, ...result.assets].slice(0, 5));
@@ -288,7 +289,11 @@ export default function IncidentReportScreen({ navigation }) {
     if (photos.length >= 5) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Camera permission required.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.5 }); // Reduced quality
+    const result = await ImagePicker.launchCameraAsync({ 
+      quality: 0.4,
+      maxWidth: 1200,
+      maxHeight: 1200 
+    });
     if (!result.canceled) {
       setPhotos(prev => [...prev, ...result.assets].slice(0, 5));
     }
@@ -333,8 +338,12 @@ export default function IncidentReportScreen({ navigation }) {
     if (!isValidPhone) { setPhoneTouched(true); Alert.alert('Error', 'Use format +639XXXXXXXXX.'); return; }
 
     setLoading(true);
-    // Removed immediate map unmount to prevent potential stability issues during submission
+    setShowMap(false); 
+
     try {
+      // Small delay to let WebView unmount fully before heavy API work
+      await new Promise(r => setTimeout(r, 500));
+
       const incRes = await incidentAPI.create({
         incident_type_id: typeId,
         description: generatedDescription,
@@ -347,22 +356,8 @@ export default function IncidentReportScreen({ navigation }) {
       });
       const incidentId = incRes.data?.incident_id;
 
-      // Save incident ID locally so "My Reports" shows only this device's submissions
-      if (incidentId) {
-        try {
-          const existing = await AsyncStorage.getItem('my_report_ids');
-          const ids = existing ? JSON.parse(existing) : [];
-          // Avoid duplicates if submission somehow triggers twice
-          if (!ids.includes(incidentId)) {
-            ids.unshift(incidentId);
-            await AsyncStorage.setItem('my_report_ids', JSON.stringify(ids.slice(0, 50)));
-          }
-        } catch (e) { console.warn('Could not save report ID locally:', e); }
-      }
       if (incidentId && photos.length > 0) {
-        // Prepare list of photos for clean upload
-        const currentPhotos = [...photos];
-        for (const photo of currentPhotos) {
+        for (const photo of photos) {
           try {
             const formData = new FormData();
             formData.append('file', {
@@ -375,26 +370,27 @@ export default function IncidentReportScreen({ navigation }) {
             await api.post('/evidence', formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
             });
-            // Small gap to let the bridge breathe
-            await new Promise(r => setTimeout(r, 150));
+            // Force a 500ms breather between photos to prevent memory spikes
+            await new Promise(r => setTimeout(r, 500)); 
           } catch (e) {
-            console.warn('Individual photo upload failed:', e);
+            console.error('Photo upload failed:', e);
           }
         }
       }
 
-      // Final check for mount status before replacing screen
       if (isMounted.current) {
-        setPhotos([]); // Clear all photos at once
+        setPhotos([]);
+        setSelectedType('');
+        setLoading(false);
         navigation.replace('ReportSuccess');
       }
 
     } catch (err) {
       if (isMounted.current) {
-        const errorMsg = err.response?.data?.message || 'Failed to submit report. Please check your connection.';
-        Alert.alert('Error', errorMsg);
+        const errorMsg = err.response?.data?.message || 'Failed to submit. Check connection.';
+        Alert.alert('Submission Error', errorMsg);
         setLoading(false);
-        setShowMap(true); // Restore map so they can try again
+        setShowMap(true);
       }
     }
   };

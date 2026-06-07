@@ -530,7 +530,7 @@ export default function ResponseDashboard() {
               <p className="text-sm font-medium text-slate-400 mb-8 border-l-2 border-orange-500 pl-4 uppercase tracking-[0.1em] text-[10px]">Select tactical unit reinforcement</p>
 
               <div className="grid grid-cols-2 gap-3 mb-8">
-                {['FIRE', 'POLICE', 'MEDICAL', 'DRRMO'].map(type => (
+                {['FIRE', 'POLICE', 'DRRMO'].map(type => (
                   <button
                     key={type}
                     onClick={() => setBackupUnitType(type)}

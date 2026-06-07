@@ -27,7 +27,7 @@ export default {
   },
 
   /**
-   * Broadcast an incident status update globally.
+   * Broadcast an incident status update to relevant parties only.
    */
   emitIncidentStatusUpdate: (data) => {
     try {
@@ -40,11 +40,30 @@ export default {
           reporter_phone: data.incident?.reporter_phone
         }
       };
-      // Broadcast globally so all reporters (including anonymous) get updates instantly
-      io.emit('incident_status_updated', completeData);
+
+      // 1. Notify Admins
+      io.to('admin').emit('incident_status_updated', completeData);
+
+      // 2. Notify units in the specific municipality
+      if (data.incident?.barangay?.municipality) {
+        const room = `municipality-${data.incident.barangay.municipality.toLowerCase()}`;
+        io.to(room).emit('incident_status_updated', completeData);
+      }
+
+      // 3. Notify explicitly assigned units (crucial for backups from other cities)
+      if (data.incident?.assignments) {
+        data.incident.assignments.forEach(asgn => {
+          io.to(`unit-${asgn.unit_id}`).emit('incident_status_updated', completeData);
+        });
+      }
       
+      // 4. Stay connected to the reporter
       if (completeData.reported_by) {
         io.to(`reporter-${completeData.reported_by}`).emit('incident_status_updated', completeData);
+      } else {
+        // For anonymous, we still need a way to reach them if they are on the success page
+        // We use a global emit ONLY for the status updated event but reporters usually listen for their specific ID
+        io.emit('incident_status_anonymous_update', completeData);
       }
     } catch (err) {
       console.error('Socket emitIncidentStatusUpdate failed:', err.message);

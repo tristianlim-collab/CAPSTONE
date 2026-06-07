@@ -42,10 +42,10 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     }
 
     if (previousLatestId.current !== latestId) {
-      map.flyTo([lat, lng], 16, { 
-        duration: 2.0, 
+      map.flyTo([lat, lng], 16, {
+        duration: 2.0,
         easeLinearity: 0.25,
-        noMoveStart: true 
+        noMoveStart: true
       });
       previousLatestId.current = latestId;
       toast('🔴 New incident reported! Map zoomed to location.', {
@@ -119,7 +119,7 @@ export default function LiveMap({
   const createUnitIcon = (unit) => {
     const status = unit.availability_status;
     const color = status === 'AVAILABLE' ? '#22c55e' : status === 'BUSY' ? '#f59e0b' : '#94a3b8';
-    
+
     let iconContent = '🛡️';
     if (unit.unit_type === 'FIRE') iconContent = '🚒';
     else if (unit.unit_type === 'MEDICAL') iconContent = '🚑';
@@ -309,11 +309,16 @@ export default function LiveMap({
           className={`px-4 py-2 text-sm font-semibold ${mode === 'markers' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => setMode('markers')}
         >
-          Live Markers
+          Markers
         </button>
         <button
           className={`px-4 py-2 text-sm font-semibold ${mode === 'lgu_zones' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => setMode('lgu_zones')}
+        >
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-semibold ${mode === 'heatmap' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+          onClick={() => setMode('heatmap')}
         >
           Heatmap
         </button>
@@ -369,9 +374,8 @@ export default function LiveMap({
                     <span className="font-bold text-slate-800 text-sm block">{unit.unit_name}</span>
                     <span className="text-xs text-slate-400 block mt-0.5">{unit.unit_type}</span>
                   </div>
-                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${
-                    unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
-                  } shadow-sm`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full text-white ${unit.availability_status === 'AVAILABLE' ? 'bg-green-500' : 'bg-orange-500'
+                    } shadow-sm`}>
                     {unit.availability_status}
                   </span>
                 </div>
@@ -394,15 +398,15 @@ export default function LiveMap({
           <div className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">LGU Proximity</div>
           <div className="flex items-center gap-2.5">
             <span className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/30" />
-            <span className="font-medium">Incident City</span>
+            <span className="font-medium">Critical</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <span className="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/30" />
-            <span className="font-medium">Nearby City </span>
+            <span className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm shadow-blue-500/30" />
+            <span className="font-medium">High</span>
           </div>
           <div className="flex items-center gap-2.5">
             <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-500/30" />
-            <span className="font-medium">Far City </span>
+            <span className="font-medium">Low </span>
           </div>
         </div>
       )}

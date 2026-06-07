@@ -409,6 +409,11 @@ const ResponseMap = () => {
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
           if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
+          // DOUBLE CHECK: Even if 'shouldShow' was true based on keywords, 
+          // if it's a cross-city incident and we aren't assigned, hide it.
+          const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
+          if (isCrossCity && !isAssigned) return prev;
+
           return [incident, ...prev];
         });
       }
@@ -431,6 +436,9 @@ const ResponseMap = () => {
 
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
+          const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
+          if (isCrossCity && !isAssigned) return prev.filter(i => i.incident_id !== data.incident_id);
+
           const exists = prev.find(i => i.incident_id === data.incident_id);
           if (exists) {
             return prev.map(inc => inc.incident_id === data.incident_id
@@ -475,6 +483,9 @@ const ResponseMap = () => {
 
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
+          const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
+          if (isCrossCity && !isAssigned) return prev.filter(i => i.incident_id !== data.incident_id);
+
           const others = prev.filter(i => i.incident_id !== data.incident_id);
           return [data.incident, ...others];
         });
@@ -1005,7 +1016,7 @@ const ResponseMap = () => {
               <h3 className="text-lg font-bold text-slate-800 mb-1">Request Backup</h3>
               <p className="text-xs text-slate-500 mb-6">Select a unit type to assist with incident <span className="font-bold text-slate-700">{selectedIncidentForAction?.incident_code}</span>.</p>
               <div className="grid grid-cols-2 gap-2 mb-6">
-                {['FIRE', 'POLICE', 'MEDICAL', 'DRRMO'].map(type => (
+                {['FIRE', 'POLICE', 'DRRMO'].map(type => (
                   <button
                     key={type}
                     onClick={() => setBackupUnitType(type)}
