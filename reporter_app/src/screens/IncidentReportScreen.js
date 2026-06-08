@@ -96,9 +96,9 @@ const STATIC_LEAFLET_HTML = `
       zoomAnimation: true
     }).setView([10.74, 122.96], 13);
     
-    L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
-      attribution: '&copy; Google'
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
     var marker = null;
@@ -441,7 +441,10 @@ export default function IncidentReportScreen({ navigation }) {
         {/* Location */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionLabel}><MapPin size={16} color="#22C55E" /> YOUR LOCATION</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MapPin size={16} color="#22C55E" />
+              <Text style={styles.sectionLabel}>YOUR LOCATION</Text>
+            </View>
             <TouchableOpacity style={styles.refreshBtn} onPress={handleRefreshLocation} disabled={geoLoading}>
               <RefreshCw size={12} color="#16A34A" />
               <Text style={styles.refreshText}>Refresh</Text>
@@ -519,7 +522,10 @@ export default function IncidentReportScreen({ navigation }) {
 
         {/* Emergency Type */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { marginBottom: 12 }]}><AlertTriangle size={16} color="#F97316" /> EMERGENCY TYPE <Text style={{ color: '#EF4444' }}>*</Text></Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <AlertTriangle size={16} color="#F97316" />
+            <Text style={styles.sectionLabel}>EMERGENCY TYPE <Text style={{ color: '#EF4444' }}>*</Text></Text>
+          </View>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={selectedType}
@@ -537,7 +543,10 @@ export default function IncidentReportScreen({ navigation }) {
 
         {/* Severity */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { marginBottom: 12 }]}><AlertTriangle size={16} color="#F97316" /> INCIDENT SEVERITY</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <AlertTriangle size={16} color="#F97316" />
+            <Text style={styles.sectionLabel}>INCIDENT SEVERITY</Text>
+          </View>
           <View style={styles.sevRow}>
             {SEVERITIES.map((level) => {
               const sel = severity === level;
