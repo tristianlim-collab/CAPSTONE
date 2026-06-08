@@ -1,6 +1,8 @@
 import { prisma } from '../config/database.js';
 import socketService from '../services/socketService.js';
 import bcrypt from 'bcryptjs';
+import { logAuditEvent } from './auditController.js';
+
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -51,6 +53,17 @@ export const updateUser = async (req, res) => {
       select: { user_id: true, name: true, email: true, role: true, unit_id: true }
     });
     res.json(user);
+
+    // Log the update
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'UPDATED_USER',
+      resource: 'USER',
+      resource_id: user.user_id,
+      details: `Updated info for user ${user.email} (${user.name})`,
+      ip_address: req.ip
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Error updating user' });
   }
@@ -65,6 +78,17 @@ export const deleteUser = async (req, res) => {
     socketService.emitUserDeleted(userId);
 
     res.json({ message: 'User deleted successfully' });
+
+    // Log the deletion
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'DELETED_USER',
+      resource: 'USER',
+      resource_id: userId,
+      details: `Deleted user account with ID: ${userId}`,
+      ip_address: req.ip
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Error deleting user' });
   }
@@ -113,6 +137,17 @@ export const createUser = async (req, res) => {
       message: 'User created successfully',
       user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
     });
+
+    // Log the creation
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'CREATED_USER',
+      resource: 'USER',
+      resource_id: user.user_id,
+      details: `Created new user ${user.email} with role ${user.role}`,
+      ip_address: req.ip
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error creating user' });

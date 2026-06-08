@@ -38,7 +38,7 @@ export default function AdminDashboard() {
       setRecentIncidents(prev => prev.map(inc =>
         inc.incident_id === data.incident_id ? { ...inc, ...fullIncident, status: data.status } : inc
       ));
-      if (data.status === 'RESOLVED' || data.status === 'CLOSED') {
+      if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(data.status)) {
         setStats(s => ({ ...s, active: Math.max(0, s.active - 1), resolved: s.resolved + 1 }));
       }
     });
@@ -200,13 +200,13 @@ export default function AdminDashboard() {
               <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
               <span className="font-bold text-emerald-800 text-sm">Resolved</span>
               <span className="ml-auto bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                {recentIncidents.filter(i => ['RESOLVED', 'CLOSED'].includes(i.status)).length}
+                {recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).length}
               </span>
             </div>
             <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
-              {recentIncidents.filter(i => ['RESOLVED', 'CLOSED'].includes(i.status)).length === 0 ? (
+              {recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No resolved incidents</p>
-              ) : recentIncidents.filter(i => ['RESOLVED', 'CLOSED'].includes(i.status)).map(inc => (
+              ) : recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).map(inc => (
                 <div key={inc.incident_id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
                   <div className="flex items-center justify-between mb-1">
                     <code className="text-xs font-bold text-emerald-600">{inc.incident_code}</code>

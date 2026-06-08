@@ -2,6 +2,8 @@ import { prisma } from '../config/database.js';
 import socketService from '../services/socketService.js';
 import geoService from '../services/geoService.js';
 import bcrypt from 'bcryptjs';
+import { logAuditEvent } from './auditController.js';
+
 
 export const getAll = async (req, res) => {
   try {
@@ -53,6 +55,16 @@ export const create = async (req, res) => {
         email: autoEmail,
         password: defaultPassword
       }
+    });
+
+    // Log the creation
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'CREATED_UNIT',
+      resource: 'RESPONSE_UNIT',
+      resource_id: unit.unit_id,
+      details: `Created new ${unit_type} unit: ${unit_name}`,
+      ip_address: req.ip
     });
   } catch (error) {
     res.status(500).json({ message: 'Error creating', error: error.message });
@@ -127,6 +139,17 @@ export const updateUnit = async (req, res) => {
       data
     });
     res.json(unit);
+
+    // Log the update
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'UPDATED_UNIT',
+      resource: 'RESPONSE_UNIT',
+      resource_id: unit.unit_id,
+      details: `Updated details for unit: ${unit.unit_name}`,
+      ip_address: req.ip
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Error updating unit', error: error.message });
   }
@@ -141,6 +164,17 @@ export const deleteUnit = async (req, res) => {
     socketService.emitResponseUnitDeleted(unitId);
 
     res.json({ message: 'Deleted successfully' });
+
+    // Log the deletion
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'DELETED_UNIT',
+      resource: 'RESPONSE_UNIT',
+      resource_id: unitId,
+      details: `Deleted response unit with ID: ${unitId}`,
+      ip_address: req.ip
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Error deleting unit', error: error.message });
   }

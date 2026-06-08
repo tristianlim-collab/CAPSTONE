@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
+import { logAuditEvent } from './auditController.js';
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -96,7 +98,17 @@ export const login = async (req, res) => {
       include: { unit: { include: { barangay: true } } }
     });
 
+    // Log the successful login
+    await logAuditEvent({
+      user_id: user.user_id,
+      action: 'USER_LOGIN',
+      resource: 'AUTH',
+      details: `User ${user.email} logged in successfully`,
+      ip_address: req.ip
+    });
+
     res.json({
+
       token,
       user: { 
         id: fullUser.user_id, 

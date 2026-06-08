@@ -8,8 +8,8 @@ export const getSummary = async (_req, res) => {
   try {
     const [total, active, resolved, users] = await Promise.all([
       prisma.incident.count(),
-      prisma.incident.count({ where: { status: { in: ["REPORTED", "VERIFIED", "RESPONDING"] } } }),
-      prisma.incident.count({ where: { status: { in: ["RESOLVED", "CLOSED"] } } }),
+      prisma.incident.count({ where: { status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
+      prisma.incident.count({ where: { status: { in: ["RESOLVED", "CLOSED", "FALSE_ALARM"] } } }),
       prisma.user.count(),
     ]);
 

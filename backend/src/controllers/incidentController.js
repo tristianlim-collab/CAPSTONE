@@ -2,6 +2,8 @@ import { prisma } from '../config/database.js';
 import geoService from '../services/geoService.js';
 import alertService from '../services/alertService.js';
 import socketService from '../services/socketService.js';
+import { logAuditEvent } from './auditController.js';
+
 
 export const createIncident = async (req, res) => {
   try {
@@ -583,6 +585,16 @@ export const verifyIncident = async (req, res) => {
       // Broadcast verification event
       socketService.emitIncidentVerified(updatedIncident, assignments);
 
+      // Log audit event
+      await logAuditEvent({
+        user_id: req.user.id,
+        action: 'VERIFIED_INCIDENT',
+        resource: 'INCIDENT',
+        resource_id: incident_id,
+        details: `Approved and dispatched incident ${incident.incident_code}`,
+        ip_address: req.ip
+      });
+
       // Emit dispatch-with-directions for each assigned unit that has a pinned base location
       for (const assignment of assignments) {
         const unit = assignment.unit;
@@ -644,6 +656,16 @@ export const verifyIncident = async (req, res) => {
 
       // Broadcast rejection event
       socketService.emitIncidentRejected(updatedIncident);
+
+      // Log audit event
+      await logAuditEvent({
+        user_id: req.user.id,
+        action: 'REJECTED_INCIDENT',
+        resource: 'INCIDENT',
+        resource_id: incident_id,
+        details: `Rejected incident ${incident.incident_code} as false alarm: ${message || 'No remarks'}`,
+        ip_address: req.ip
+      });
 
       res.json({
         message: 'Incident rejected',
