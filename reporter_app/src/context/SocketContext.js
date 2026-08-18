@@ -52,7 +52,7 @@ export const SocketProvider = ({ children }) => {
         socketRef.current.off(eventName, callback);
       }
     };
-  }, [connected]);
+  }, []);
 
   const emit = useCallback((eventName, payload) => {
     if (socketRef.current?.connected) {

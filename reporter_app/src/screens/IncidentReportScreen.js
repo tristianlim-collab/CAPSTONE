@@ -11,7 +11,7 @@ import { WebView } from 'react-native-webview';
 import { Picker } from '@react-native-picker/picker';
 import {
   ArrowLeft, Camera, Send, X, AlertTriangle, MapPin, Navigation,
-  Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown, Navigation2
+  Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { incidentAPI } from '../api';
@@ -338,7 +338,8 @@ export default function IncidentReportScreen({ navigation }) {
     if (!isValidPhone) { setPhoneTouched(true); Alert.alert('Error', 'Use format +639XXXXXXXXX.'); return; }
 
     setLoading(true);
-    setShowMap(false); 
+    // Keeping map mounted prevents WebView unmount crashes during heavy FormData processing
+    // setShowMap(false); 
 
     try {
       // Small delay to let WebView unmount fully before heavy API work
@@ -491,7 +492,7 @@ export default function IncidentReportScreen({ navigation }) {
                 onPress={handleRefreshLocation}
                 activeOpacity={0.8}
               >
-                <Navigation2 size={18} color="#FFFFFF" />
+                <Navigation size={18} color="#FFFFFF" />
               </TouchableOpacity>
             )}
           </View>

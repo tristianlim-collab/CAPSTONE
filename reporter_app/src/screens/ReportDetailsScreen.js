@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: Colors.slate100 
   },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.slate900, tracking: -0.5 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.slate900, letterSpacing: -0.5 },
   scrollView: { flex: 1 },
   scrollContent: { padding: 24, paddingBottom: 60 },
   
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   
   addressBox: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.slate50, marginBottom: 16 },
   addressText: { fontSize: 14, color: Colors.slate600, fontWeight: '500', flex: 1 },
-  description: { fontSize: 15, color: Colors.slate700, lineHeight: 22, fontStyle: 'italic', fontBold: '500' },
+  description: { fontSize: 15, color: Colors.slate700, lineHeight: 22, fontStyle: 'italic', fontWeight: '500' },
   
   resolutionSection: { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' },
   resolutionDetails: { gap: 8, marginBottom: 16 },
