@@ -30,9 +30,12 @@ const getBackendIp = () => {
 
 const backendIp = getBackendIp();
 
-// Automatically construct the backend URLs using the detected IP
-const API_URL = `http://${backendIp}:3001/api`;
-export const SOCKET_URL = `http://${backendIp}:3001`;
+// In production (standalone APK build), use live Render backend. In local dev, auto-detect IP.
+const isDev = __DEV__;
+const PROD_URL = 'https://gaoirs.onrender.com';
+
+const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
+export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
