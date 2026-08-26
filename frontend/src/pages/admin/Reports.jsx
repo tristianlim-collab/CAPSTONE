@@ -97,10 +97,21 @@ const Reports = () => {
              <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Report Type</label>
                 <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
-                  <option value="INCIDENT_SUMMARY">Incident Summary</option>
-                  <option value="AREA_REPORT">Area Breakdown</option>
+                  <option value="INCIDENT_SUMMARY">Incident Summary (NDRRMC Compliant)</option>
+                  <option value="AREA_REPORT">Area / Barangay Breakdown</option>
                   <option value="RESPONSE_TIME">Response Time KPIs</option>
                   <option value="FULL_EXPORT">Complete Database Export</option>
+                </select>
+             </div>
+             <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Congressional District</label>
+                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+                  <option value="">All Districts (NIR / Negros Occidental)</option>
+                  <option value="3rd District">3rd District (Silay, Talisay, EB Magalona, Victorias, Murcia)</option>
+                  <option value="1st District">1st District</option>
+                  <option value="2nd District">2nd District</option>
+                  <option value="4th District">4th District</option>
+                  <option value="5th District">5th District</option>
                 </select>
              </div>
              <div>

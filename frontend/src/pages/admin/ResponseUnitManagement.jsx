@@ -50,8 +50,8 @@ const ResponseUnitManagement = () => {
     try {
       setLoading(true);
       const [unitsRes, brgyRes] = await Promise.all([
-         responseUnitAPI.getAll(),
-         barangayAPI.getAll()
+        responseUnitAPI.getAll(),
+        barangayAPI.getAll()
       ]);
       if (unitsRes.data) {
         setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : unitsRes.data.data || []);
@@ -93,10 +93,10 @@ const ResponseUnitManagement = () => {
     try {
       setSaving(true);
       const payload = {
-         ...formData,
-         barangay_id: formData.barangay_id === '' ? null : formData.barangay_id
+        ...formData,
+        barangay_id: formData.barangay_id === '' ? null : formData.barangay_id
       };
-      
+
       if (editingId) {
         await responseUnitAPI.update(editingId, payload);
         toast.success('Unit updated successfully');
@@ -162,7 +162,7 @@ const ResponseUnitManagement = () => {
   };
 
   const getStatusBadge = (status) => {
-    switch(status) {
+    switch (status) {
       case 'AVAILABLE': return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available</span>;
       case 'BUSY': return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Busy</span>;
       case 'OFFLINE': return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Offline</span>;
@@ -190,7 +190,7 @@ const ResponseUnitManagement = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Units</p>
-            <h3 className="text-2xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-5 h-5"/> : units.length}</h3>
+            <h3 className="text-2xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-5 h-5" /> : units.length}</h3>
           </div>
           <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <Truck size={24} />
@@ -199,7 +199,7 @@ const ResponseUnitManagement = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
-            <h3 className="text-2xl font-black text-emerald-600">{loading ? <Loader2 className="animate-spin w-5 h-5 text-emerald-500"/> : units.filter(u => u.availability_status === 'AVAILABLE').length}</h3>
+            <h3 className="text-2xl font-black text-emerald-600">{loading ? <Loader2 className="animate-spin w-5 h-5 text-emerald-500" /> : units.filter(u => u.availability_status === 'AVAILABLE').length}</h3>
           </div>
           <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <ShieldAlert size={24} />
@@ -211,9 +211,9 @@ const ResponseUnitManagement = () => {
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between gap-4 bg-slate-50/50">
           <div className="relative w-full sm:max-w-xs group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search units..." 
+            <input
+              type="text"
+              placeholder="Search units..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-white"
@@ -293,49 +293,49 @@ const ResponseUnitManagement = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closeModal}></div>
-           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative z-10 overflow-hidden animate-fade-in">
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 className="font-bold text-slate-800 text-lg">{editingId ? 'Edit Unit Details' : 'Register New Unit'}</h3>
-                <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-100 p-1 rounded-md transition-colors border border-slate-200">
-                   <X size={18} />
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closeModal}></div>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md relative z-10 overflow-hidden animate-fade-in">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 text-lg">{editingId ? 'Edit Unit Details' : 'Register New Unit'}</h3>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-100 p-1 rounded-md transition-colors border border-slate-200">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Unit Name / Callsign</label>
+                <input required type="text" value={formData.unit_name} onChange={e => setFormData({ ...formData, unit_name: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="e.g. Engine 54" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Unit Type</label>
+                <select value={formData.unit_type} onChange={e => setFormData({ ...formData, unit_type: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
+                  <option value="POLICE">Police Unit</option>
+                  <option value="FIRE">Fire Engine</option>
+                  <option value="MEDICAL">Medical / EMS</option>
+                  <option value="BARANGAY">Barangay Responders</option>
+                  <option value="DRRMO">DRRMO Team</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Base Station (Barangay)</label>
+                <select value={formData.barangay_id} onChange={e => setFormData({ ...formData, barangay_id: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
+                  <option value="">-- Unassigned (System-Wide) --</option>
+                  {barangays.map(b => (
+                    <option key={b.barangay_id} value={b.barangay_id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contact Number</label>
+                <input type="text" value={formData.contact_number} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="+63 900 000 0000" />
+              </div>
+              <div className="pt-2">
+                <button disabled={saving} type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm shadow-indigo-600/30 flex justify-center items-center gap-2 transition-all disabled:opacity-50">
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : null} {editingId ? 'Save Changes' : 'Register Unit'}
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                 <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Unit Name / Callsign</label>
-                    <input required type="text" value={formData.unit_name} onChange={e => setFormData({...formData, unit_name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="e.g. Engine 54" />
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Unit Type</label>
-                    <select value={formData.unit_type} onChange={e => setFormData({...formData, unit_type: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
-                       <option value="POLICE">Police Unit</option>
-                       <option value="FIRE">Fire Engine</option>
-                       <option value="MEDICAL">Medical / EMS</option>
-                       <option value="BARANGAY">Barangay Responders</option>
-                       <option value="DRRMO">DRRMO Team</option>
-                    </select>
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Base Station (Barangay)</label>
-                    <select value={formData.barangay_id} onChange={e => setFormData({...formData, barangay_id: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
-                       <option value="">-- Unassigned (System-Wide) --</option>
-                       {barangays.map(b => (
-                          <option key={b.barangay_id} value={b.barangay_id}>{b.name}</option>
-                       ))}
-                    </select>
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contact Number</label>
-                    <input type="text" value={formData.contact_number} onChange={e => setFormData({...formData, contact_number: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="+63 900 000 0000" />
-                 </div>
-                 <div className="pt-2">
-                    <button disabled={saving} type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm shadow-indigo-600/30 flex justify-center items-center gap-2 transition-all disabled:opacity-50">
-                       {saving ? <Loader2 size={18} className="animate-spin" /> : null} {editingId ? 'Save Changes' : 'Register Unit'}
-                    </button>
-                 </div>
-              </form>
-           </div>
+            </form>
+          </div>
         </div>
       )}
 

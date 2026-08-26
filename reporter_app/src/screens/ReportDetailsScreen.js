@@ -78,6 +78,12 @@ export default function ReportDetailsScreen({ route, navigation }) {
             <MapPin size={16} color={Colors.slate400} />
             <Text style={styles.addressText}>{incident.map_pin_address || incident.barangay?.name || 'Locating...'}</Text>
           </View>
+          {incident.landmark ? (
+            <View style={[styles.addressBox, { borderTopWidth: 0, paddingTop: 0 }]}>
+              <MapPin size={16} color={Colors.indigo || '#4F46E5'} />
+              <Text style={[styles.addressText, { fontWeight: '700', color: Colors.slate800 }]}>Near Landmark: {incident.landmark}</Text>
+            </View>
+          ) : null}
           <Text style={styles.description}>"{incident.description}"</Text>
         </View>
 

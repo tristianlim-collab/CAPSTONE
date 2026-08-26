@@ -150,6 +150,7 @@ export default function IncidentReportScreen({ navigation }) {
   const [photos, setPhotos] = useState([]);
   const [selectedType, setSelectedType] = useState('');
   const [severity, setSeverity] = useState('LOW');
+  const [landmark, setLandmark] = useState('');
   const [fullName, setFullName] = useState('');
   const [contactNumber, setContactNumber] = useState('+63');
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -289,10 +290,10 @@ export default function IncidentReportScreen({ navigation }) {
     if (photos.length >= 5) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission needed', 'Camera permission required.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ 
+    const result = await ImagePicker.launchCameraAsync({
       quality: 0.4,
       maxWidth: 1200,
-      maxHeight: 1200 
+      maxHeight: 1200
     });
     if (!result.canceled) {
       setPhotos(prev => [...prev, ...result.assets].slice(0, 5));
@@ -351,6 +352,7 @@ export default function IncidentReportScreen({ navigation }) {
         latitude: location.lat,
         longitude: location.lng,
         map_pin_address: locationAddress,
+        landmark: landmark || undefined,
         severity,
         reporter_name: fullName || undefined,
         reporter_phone: contactNumber,
@@ -372,7 +374,7 @@ export default function IncidentReportScreen({ navigation }) {
               headers: { 'Content-Type': 'multipart/form-data' },
             });
             // Force a 500ms breather between photos to prevent memory spikes
-            await new Promise(r => setTimeout(r, 500)); 
+            await new Promise(r => setTimeout(r, 500));
           } catch (e) {
             console.error('Photo upload failed:', e);
           }
@@ -518,6 +520,20 @@ export default function IncidentReportScreen({ navigation }) {
                 </>
               )}
             </View>
+          </View>
+
+          {/* Near Landmark / Location Details */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={[styles.sectionLabel, { fontSize: 12, marginBottom: 6, color: '#475569' }]}>
+              NEAR LANDMARK / LOCATION DETAILS
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Near City Hall, In front of Shell Station"
+              placeholderTextColor="#94A3B8"
+              value={landmark}
+              onChangeText={setLandmark}
+            />
           </View>
         </View>
 

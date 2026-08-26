@@ -13,6 +13,7 @@ export default function ReportStep2() {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState([]); // support multiple photos
   const [severity, setSeverity] = useState('LOW'); // default severity
+  const [landmark, setLandmark] = useState(''); // Landmark or location context
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [locationAddress, setLocationAddress] = useState('');
   const [addressLoading, setAddressLoading] = useState(true);
@@ -92,6 +93,7 @@ export default function ReportStep2() {
         latitude: location?.lat || 0,
         longitude: location?.lng || 0,
         map_pin_address: locationAddress || undefined,
+        landmark: landmark || undefined,
         severity: severity
       });
 
@@ -233,6 +235,20 @@ export default function ReportStep2() {
                 </>
               )}
             </div>
+          </div>
+
+          {/* Near Landmark / Location Details */}
+          <div className="bg-white rounded-2xl px-4 py-3 border border-slate-200 shadow-sm">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+              Near Landmark / Location Details
+            </label>
+            <input
+              type="text"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              placeholder="e.g. Near City Hall, In front of Shell Station"
+              className="w-full text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
           </div>
 
           {/* Date & Time */}

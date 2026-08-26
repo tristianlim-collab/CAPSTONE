@@ -51,11 +51,12 @@ export default function ReportStep1() {
   const [selectedType, setSelectedType] = useState('');
 
   const emergencyTypes = [
-    { id: 'FIRE', name: 'FIRE', icon: <Flame size={24} />, color: 'bg-orange-50 text-orange-600 border-orange-200' },
+    { id: 'FIRE', name: 'FIRE INCIDENT', icon: <Flame size={24} />, color: 'bg-orange-50 text-orange-600 border-orange-200' },
+    { id: 'FLOOD', name: 'FLOOD / TYPHOON', icon: <AlertTriangle size={24} />, color: 'bg-blue-50 text-blue-600 border-blue-200' },
+    { id: 'LANDSLIDE', name: 'LANDSLIDE', icon: <AlertTriangle size={24} />, color: 'bg-purple-50 text-purple-600 border-purple-200' },
     { id: 'MEDICAL', name: 'MEDICAL EMERGENCY', icon: <Stethoscope size={24} />, color: 'bg-rose-50 text-rose-600 border-rose-200' },
-    { id: 'ACCIDENT', name: 'ACCIDENT', icon: <Car size={24} />, color: 'bg-blue-50 text-blue-600 border-blue-200' },
-    { id: 'CRIME', name: 'CRIME-RELATED', icon: <AlertTriangle size={24} />, color: 'bg-amber-50 text-amber-600 border-amber-200' },
-    { id: 'OTHER', name: 'OTHER', icon: <FileText size={24} />, color: 'bg-slate-50 text-slate-600 border-slate-200' },
+    { id: 'ACCIDENT', name: 'VEHICULAR ACCIDENT', icon: <Car size={24} />, color: 'bg-amber-50 text-amber-600 border-amber-200' },
+    { id: 'INFRASTRUCTURE', name: 'INFRASTRUCTURE DAMAGE', icon: <FileText size={24} />, color: 'bg-slate-50 text-slate-600 border-slate-200' },
   ];
 
   useEffect(() => {

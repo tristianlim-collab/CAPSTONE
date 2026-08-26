@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function seed() {
   console.log('Seeding fake response units...');
-  
+
   const hashedPassword = await bcrypt.hash('password123', 10);
 
   const units = [
@@ -42,10 +42,10 @@ async function seed() {
       console.log(`User ${u.email} already exists, skipping...`);
       // Update their coordinates just in case to make sure they are available!
       if (exists.unit_id) {
-          await prisma.responseUnit.update({
-              where: { unit_id: exists.unit_id },
-              data: { latitude: u.lat, longitude: u.lng, availability_status: 'AVAILABLE' }
-          });
+        await prisma.responseUnit.update({
+          where: { unit_id: exists.unit_id },
+          data: { latitude: u.lat, longitude: u.lng, availability_status: 'AVAILABLE' }
+        });
       }
       continue;
     }
@@ -73,7 +73,7 @@ async function seed() {
         unit_id: unit.unit_id
       }
     });
-    
+
     console.log(`Created ${u.name} and account ${u.email}`);
   }
 

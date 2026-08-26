@@ -232,6 +232,7 @@ const IncidentArchive = () => {
                 <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Reported At</label><p className="text-sm text-slate-700">{fmt(selected.reported_at)}</p></div>
               </div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Location</label><p className="text-sm text-slate-700 flex items-center gap-1.5"><MapPin size={14} className="text-slate-400"/>{selected.map_pin_address || `${selected.latitude}, ${selected.longitude}`}</p></div>
+              {selected.landmark && <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Landmark</label><p className="text-sm text-slate-700">{selected.landmark}</p></div>}
               <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Description</label><p className="text-sm text-slate-700 leading-relaxed">{selected.description}</p></div>
               {selected.reporter_name && <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Reporter</label><p className="text-sm text-slate-700">{selected.reporter_name}{selected.reporter_phone ? ` • ${selected.reporter_phone}` : ''}</p></div>}
             </div>

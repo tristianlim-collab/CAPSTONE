@@ -137,6 +137,13 @@ const MyReports = () => {
               {report.description && (
                 <p className="text-sm text-slate-600 line-clamp-2">{report.description}</p>
               )}
+
+              {report.landmark && (
+                <div className="bg-blue-50/80 border border-blue-100 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-800 flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>Landmark: <span className="font-bold">{report.landmark}</span></span>
+                </div>
+              )}
               
               <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500 text-xs text-left">

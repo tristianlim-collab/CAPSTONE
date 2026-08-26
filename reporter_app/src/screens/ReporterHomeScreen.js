@@ -18,9 +18,11 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
 
 const TYPE_ICONS = {
   'FIRE': Flame,
+  'FLOOD': AlertTriangle,
+  'LANDSLIDE': AlertTriangle,
   'MEDICAL': Stethoscope,
   'ACCIDENT': Car,
-  'CRIME': AlertTriangle,
+  'INFRASTRUCTURE': FileText,
 };
 
 export default function ReporterHomeScreen({ navigation }) {

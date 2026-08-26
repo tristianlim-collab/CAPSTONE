@@ -455,8 +455,8 @@ export default function IncidentVerificationQueue() {
                         </p>
                         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                           <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-400" /> {getTimeAgo(incident.reported_at)}</span>
-                          <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || 'Local Resident'}</span>
-                          <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.barangay?.name || 'Area Known'}</span>
+                          <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || incident.reporter_name || 'Local Resident'}</span>
+                          <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.landmark ? `${incident.barangay?.name || 'Area'} (${incident.landmark})` : (incident.barangay?.name || 'Area Known')}</span>
                         </div>
                       </div>
                       <div className={`self-center ${isSelected ? 'text-indigo-500' : 'text-slate-300'} transition-all group-hover:translate-x-1`}>
@@ -562,6 +562,9 @@ export default function IncidentVerificationQueue() {
                         )}
                         <div className="absolute bottom-4 left-4 z-[1000] right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl">
                           <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 line-clamp-1">{selectedIncident.map_pin_address}</p>
+                          {selectedIncident.landmark && (
+                            <p className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 line-clamp-1 mt-0.5">Landmark: {selectedIncident.landmark}</p>
+                          )}
                         </div>
                       </div>
                     </div>

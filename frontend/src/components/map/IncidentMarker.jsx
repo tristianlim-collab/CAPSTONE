@@ -307,6 +307,10 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
               <p className="text-sm mb-1 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
             )}
 
+            {incident.landmark && (
+              <p className="text-sm mb-1"><strong>Near Landmark:</strong> {incident.landmark}</p>
+            )}
+
             <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
             <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
 
@@ -319,9 +323,6 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
                 </p>
                 <p className="text-xs text-gray-600">
                   <strong>Phone:</strong> {incident.reporter_phone ? `${incident.reporter_phone}` : incident.reporter?.contact_number || 'Not provided'}
-                </p>
-                <p className="text-xs text-gray-600">
-                  <strong>Email:</strong> {incident.reporter?.email || 'Not provided'}
                 </p>
               </div>
             )}

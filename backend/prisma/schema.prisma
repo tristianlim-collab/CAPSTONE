@@ -37,15 +37,16 @@ model User {
 }
 
 model Barangay {
-  barangay_id      String         @id @default(uuid())
-  name             String
-  municipality     String
-  city             String?
-  boundary_geojson Json
-  created_at       DateTime       @default(now())
-  incidents        Incident[]
-  response_units   ResponseUnit[]
-  users            User[]
+  barangay_id            String         @id @default(uuid())
+  name                   String
+  municipality           String
+  city                   String?
+  congressional_district String?
+  boundary_geojson       Json
+  created_at             DateTime       @default(now())
+  incidents              Incident[]
+  response_units         ResponseUnit[]
+  users                  User[]
 
   @@map("BARANGAYS")
 }
@@ -87,6 +88,7 @@ model Incident {
   incident_type_id String
   barangay_id      String?
   description      String
+  landmark         String?
   latitude         Float
   longitude        Float
   map_pin_address  String?

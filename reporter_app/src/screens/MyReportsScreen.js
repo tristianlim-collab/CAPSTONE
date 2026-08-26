@@ -110,6 +110,12 @@ export default function MyReportsScreen({ navigation }) {
                   </View>
                 </View>
                 {report.description && <Text style={styles.cardDesc} numberOfLines={2}>{report.description}</Text>}
+                {report.landmark && (
+                  <View style={{ marginTop: 8, backgroundColor: '#EFF6FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MapPin size={12} color="#2563EB" />
+                    <Text style={{ fontSize: 12, color: '#1D4ED8', fontWeight: '500' }}>Landmark: <Text style={{ fontWeight: '700' }}>{report.landmark}</Text></Text>
+                  </View>
+                )}
                 <View style={styles.cardMeta}>
                   <View style={styles.metaItem}><Clock size={14} color={Colors.slate500} /><Text style={styles.metaText}>{formatDate(report.reported_at)}</Text></View>
                   <View style={styles.metaItem}><MapPin size={14} color={Colors.slate500} /><Text style={styles.metaText} numberOfLines={1}>{report.map_pin_address || 'Unknown'}</Text></View>

@@ -9,6 +9,7 @@ const talisayBarangays = [
     name: "Zone 1",
     municipality: "Talisay",
     city: "Negros Occidental",
+    congressional_district: "3rd District of Negros Occidental",
     boundary_geojson: {
       type: "Polygon",
       coordinates: [[[122.9595, 10.736], [122.966, 10.736], [122.966, 10.742], [122.9595, 10.742], [122.9595, 10.736]]],
@@ -18,6 +19,7 @@ const talisayBarangays = [
     name: "Zone 2",
     municipality: "Talisay",
     city: "Negros Occidental",
+    congressional_district: "3rd District of Negros Occidental",
     boundary_geojson: {
       type: "Polygon",
       coordinates: [[[122.966, 10.736], [122.972, 10.736], [122.972, 10.742], [122.966, 10.742], [122.966, 10.736]]],
@@ -27,6 +29,7 @@ const talisayBarangays = [
     name: "Zone 3",
     municipality: "Talisay",
     city: "Negros Occidental",
+    congressional_district: "3rd District of Negros Occidental",
     boundary_geojson: {
       type: "Polygon",
       coordinates: [[[122.972, 10.736], [122.978, 10.736], [122.978, 10.742], [122.972, 10.742], [122.972, 10.736]]],
@@ -36,6 +39,7 @@ const talisayBarangays = [
     name: "Zone 4",
     municipality: "Talisay",
     city: "Negros Occidental",
+    congressional_district: "3rd District of Negros Occidental",
     boundary_geojson: {
       type: "Polygon",
       coordinates: [[[122.9595, 10.742], [122.966, 10.742], [122.966, 10.748], [122.9595, 10.748], [122.9595, 10.742]]],
@@ -45,6 +49,7 @@ const talisayBarangays = [
     name: "Zone 5",
     municipality: "Talisay",
     city: "Negros Occidental",
+    congressional_district: "3rd District of Negros Occidental",
     boundary_geojson: {
       type: "Polygon",
       coordinates: [[[122.966, 10.742], [122.972, 10.742], [122.972, 10.748], [122.966, 10.748], [122.966, 10.742]]],
@@ -53,13 +58,13 @@ const talisayBarangays = [
 ];
 
 const incidentTypeSeed = [
-  { name: "Fire", color_code: "#F97316", icon_label: "Flame", description: "Structural or open fire incident", default_unit_type: "FIRE" },
-  { name: "Medical Emergency", color_code: "#EF4444", icon_label: "Ambulance", description: "Personal medical emergencies", default_unit_type: "DRRMO" },
-  { name: "Accident", color_code: "#F59E0B", icon_label: "Car", description: "Vehicular or other accidents", default_unit_type: "DRRMO" },
-  { name: "Crime", color_code: "#8B5CF6", icon_label: "ShieldAlert", description: "Crime-related incident", default_unit_type: "POLICE" },
-  { name: "Infrastructure Damage", color_code: "#F59E0B", icon_label: "Construction", description: "Road/bridge/public utility damage", default_unit_type: "DRRMO" },
-  { name: "Public Disturbance", color_code: "#3B82F6", icon_label: "Users", description: "Public order disturbance", default_unit_type: "POLICE" },
-  { name: "Other", color_code: "#64748B", icon_label: "FileText", description: "Other types of emergencies", default_unit_type: "BARANGAY" },
+  { name: "Fire Incident", color_code: "#F97316", icon_label: "Flame", description: "Structural, chemical, or grass fire emergency", default_unit_type: "FIRE" },
+  { name: "Flood / Typhoon", color_code: "#3B82F6", icon_label: "Droplets", description: "Severe flooding, storm surge, or typhoon disaster", default_unit_type: "DRRMO" },
+  { name: "Landslide", color_code: "#7C3AED", icon_label: "Mountain", description: "Landslide or soil erosion hazard", default_unit_type: "DRRMO" },
+  { name: "Medical Emergency", color_code: "#EF4444", icon_label: "Ambulance", description: "Emergency medical response and trauma injuries", default_unit_type: "DRRMO" },
+  { name: "Vehicular Accident", color_code: "#F59E0B", icon_label: "Car", description: "Road crash or transportation accident", default_unit_type: "DRRMO" },
+  { name: "Infrastructure Damage", color_code: "#64748B", icon_label: "Construction", description: "Bridge, road, power line, or utility failure", default_unit_type: "DRRMO" },
+  { name: "Other Emergency", color_code: "#475569", icon_label: "FileText", description: "Other disaster and emergency response", default_unit_type: "BARANGAY" },
 ];
 
 async function main() {
@@ -70,6 +75,7 @@ async function main() {
   await prisma.postIncidentReport.deleteMany();
   await prisma.incident.deleteMany();
   await prisma.generatedReport.deleteMany();
+  await prisma.systemAuditLog.deleteMany();
   await prisma.user.deleteMany();
   await prisma.responseUnit.deleteMany();
   await prisma.incidentType.deleteMany();

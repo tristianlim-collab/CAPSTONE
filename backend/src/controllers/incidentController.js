@@ -7,7 +7,7 @@ import { logAuditEvent } from './auditController.js';
 
 export const createIncident = async (req, res) => {
   try {
-    const { incident_type_id, description, latitude, longitude, map_pin_address, severity, force_create, reporter_name, reporter_phone } = req.body;
+    const { incident_type_id, description, latitude, longitude, map_pin_address, landmark, severity, force_create, reporter_name, reporter_phone } = req.body;
 
     // --- Duplicate Detection ---
     // Check for similar incidents (same type + nearby location within 5 minutes)
@@ -39,7 +39,14 @@ export const createIncident = async (req, res) => {
     // Auto-detect barangay via PostGIS
     const detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
 
-    // Generate unique code (e.g. INC-Date-Rand)
+    // Enforce NIR (Negros Island Region) Geofence Guard
+    // If PostGIS cannot match the coordinates to a registered NIR Barangay polygon, reject the report
+    if (!detectedBarangayId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location Out of Coverage Area: Emergency reporting is currently restricted to the Negros Island Region (NIR).'
+      });
+    }
     const incident_code = `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const incidentType = await prisma.incidentType.findUnique({ where: { type_id: incident_type_id } });
@@ -56,6 +63,7 @@ export const createIncident = async (req, res) => {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         map_pin_address,
+        landmark: landmark || null,
         severity: severity || 'HIGH',
         barangay_id: detectedBarangayId,
         status: 'REPORTED', // Explicitly set to REPORTED - requires admin verification before dispatch
@@ -91,7 +99,7 @@ export const getIncidents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id } = req.query;
+    const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id, district } = req.query;
 
     const where = {};
     if (status) {
@@ -104,6 +112,9 @@ export const getIncidents = async (req, res) => {
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
+    if (district) {
+      where.barangay = { congressional_district: { contains: district, mode: 'insensitive' } };
+    }
 
     if (unit_id) {
       where.assignments = {

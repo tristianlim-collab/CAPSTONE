@@ -56,6 +56,26 @@ export default function MapFilterModal({
     );
   };
 
+  // 3-Tier Location Filter state
+  const [district, setDistrict] = useState(initialFilters.district || '');
+  const [city, setCity] = useState(initialFilters.city || '');
+  const [barangay, setBarangay] = useState(initialFilters.barangay_id || '');
+
+  const DISTRICT_CITIES = {
+    '3rd District': ['Talisay City', 'Silay City', 'E.B. Magalona', 'Victorias City', 'Murcia'],
+    '1st District': ['San Carlos City', 'Escalante City', 'Toboso', 'Calatrava', 'Salvador Benedicto'],
+    '2nd District': ['Sagay City', 'Cadiz City', 'Manapla'],
+    '4th District': ['Bago City', 'La Carlota City', 'San Enrique', 'Pontevedra', 'Pulupandan', 'Valladolid'],
+    '5th District': ['Himamaylan City', 'Binalbagan', 'Hinigaran', 'Isabela', 'La Castellana', 'Moises Padilla'],
+    '6th District': ['Kabankalan City', 'Sipalay City', 'Cauayan', 'Candoni', 'Ilog', 'Hinoba-an']
+  };
+
+  const handleDistrictChange = (val) => {
+    setDistrict(val);
+    setCity('');
+    setBarangay('');
+  };
+
   const handleApplyFilters = () => {
     const filters = {};
     if (selectedStatuses.length > 0) {
@@ -63,6 +83,15 @@ export default function MapFilterModal({
     }
     if (selectedType) {
       filters.type_id = selectedType;
+    }
+    if (district) {
+      filters.district = district;
+    }
+    if (city) {
+      filters.city = city;
+    }
+    if (barangay) {
+      filters.barangay_id = barangay;
     }
     if (fromDate) {
       filters.from_date = fromDate;
@@ -77,13 +106,16 @@ export default function MapFilterModal({
   const handleClearAll = () => {
     setSelectedStatuses(defaultPreset === 'active' ? ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'DISPATCHED'] : []);
     setSelectedType('');
+    setDistrict('');
+    setCity('');
+    setBarangay('');
     setFromDate('');
     setToDate('');
     onFiltersChange({});
     onClose();
   };
 
-  const hasActiveFilters = selectedStatuses.length > 0 || selectedType || fromDate || toDate;
+  const hasActiveFilters = selectedStatuses.length > 0 || selectedType || district || city || barangay || fromDate || toDate;
 
   if (!isOpen) return null;
 
@@ -145,7 +177,62 @@ export default function MapFilterModal({
                 </option>
               ))}
             </select>
-            {typesLoading && <p className="text-xs text-slate-400 mt-1">Loading types...</p>}
+          </div>
+
+          {/* 3-Tier Location Hierarchy Filter */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Location Filter (3-Tier Hierarchy)
+            </label>
+
+            {/* Tier 1: Congressional District */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                1. Congressional District
+              </label>
+              <select
+                value={district}
+                onChange={(e) => handleDistrictChange(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              >
+                <option value="">All Congressional Districts</option>
+                {Object.keys(DISTRICT_CITIES).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tier 2: City / Municipality */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                2. City / Municipality
+              </label>
+              <select
+                value={city}
+                onChange={(e) => { setCity(e.target.value); setBarangay(''); }}
+                disabled={!district}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50"
+              >
+                <option value="">{district ? 'All Cities/Towns in District' : 'Select District First'}</option>
+                {district && DISTRICT_CITIES[district]?.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tier 3: Barangay */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                3. Barangay Name / Zone
+              </label>
+              <input
+                type="text"
+                value={barangay}
+                onChange={(e) => setBarangay(e.target.value)}
+                placeholder={city ? `Filter Barangay in ${city}` : 'Enter Barangay Name'}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              />
+            </div>
           </div>
 
           {/* Date Range */}
