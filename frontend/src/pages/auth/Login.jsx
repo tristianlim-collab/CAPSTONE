@@ -95,7 +95,7 @@ const Login = () => {
           </div>
 
           <Button type="submit" fullWidth loading={loading} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20">
-            Sign In
+            {loading ? 'Connecting...' : 'Sign In'}
           </Button>
 
           <div className="text-center text-sm text-slate-500 mt-6">

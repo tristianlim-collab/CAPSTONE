@@ -47,6 +47,13 @@ const EmptyResponsePage = ({ title }) => (
 );
 
 const App = () => {
+  React.useEffect(() => {
+    // Silent warm-up ping to wake up free Render backend on app load
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    fetch(`${baseUrl}/health`).catch(() => {});
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
