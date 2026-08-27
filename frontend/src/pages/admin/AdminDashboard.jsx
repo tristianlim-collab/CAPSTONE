@@ -54,7 +54,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const params = { limit: 10, ...filters };
+      const params = { limit: 50, ...filters };
       const [statsRes, incRes] = await Promise.all([
         analyticsAPI.getSummary(filters),
         incidentAPI.getAll(params)
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
                 {recentIncidents.filter(i => i.status === 'REPORTED').length}
               </span>
             </div>
-            <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {recentIncidents.filter(i => i.status === 'REPORTED').length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No new reports</p>
               ) : recentIncidents.filter(i => i.status === 'REPORTED').map(inc => (
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
                 {recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).length}
               </span>
             </div>
-            <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No active responses</p>
               ) : recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).map(inc => (

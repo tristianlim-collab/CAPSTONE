@@ -42,8 +42,9 @@ export default {
         }
       };
 
-      // 1. Notify Admins
+      // 1. Notify Admins and all connected response portals
       io.to('admin').emit('incident_status_updated', completeData);
+      io.emit('incident_status_updated', completeData);
 
       // 2. Notify units in the specific municipality
       if (data.incident?.barangay?.municipality) {
