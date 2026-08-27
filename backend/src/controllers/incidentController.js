@@ -36,16 +36,57 @@ export const createIncident = async (req, res) => {
       });
     }
 
-    // Auto-detect barangay via PostGIS
-    const detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
+    // 1. Auto-detect barangay via PostGIS
+    let detectedBarangayId = await geoService.findBarangayByPoint(latitude, longitude);
 
-    // Enforce NIR (Negros Island Region) Geofence Guard
-    // If PostGIS cannot match the coordinates to a registered NIR Barangay polygon, reject the report
-    if (!detectedBarangayId) {
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const addr = (map_pin_address || '').toLowerCase();
+
+    // Check explicitly for outside regions (Panay/Iloilo, Cebu, Bohol, Leyte, Manila, Mindanao, etc.)
+    const isOutsideRegion = addr.includes('iloilo') || addr.includes('antique') || addr.includes('capiz') || addr.includes('aklan') || addr.includes('cebu') || addr.includes('bohol') || addr.includes('leyte') || addr.includes('manila') || addr.includes('davao') || addr.includes('quezon city') || addr.includes('makati');
+
+    // Complete NIR Keyword detection (Negros Occidental, Negros Oriental, and Siquijor)
+    const nirLguKeywords = [
+      'negros', 'siquijor',
+      // Negros Occidental
+      'bacolod', 'bago', 'cadiz', 'escalante', 'himamaylan', 'kabankalan', 'la carlota', 'sagay', 'san carlos', 'silay', 'sipalay', 'talisay', 'victorias',
+      'binalbagan', 'calatrava', 'candoni', 'cauayan', 'e.b. magalona', 'magalona', 'hinigaran', 'hinoba-an', 'hinobaan', 'ilog', 'isabela', 'la castellana',
+      'manapla', 'moises padilla', 'murcia', 'pontevedra', 'pulupandan', 'salvador benedicto', 'san enrique', 'toboso', 'valladolid',
+      // Negros Oriental
+      'dumaguete', 'bais', 'bayawan', 'canlaon', 'guihulngan', 'tanjay', 'amlan', 'ayungon', 'bacong', 'basay', 'bindoy', 'dauin', 'jimalalud',
+      'la libertad', 'mabinay', 'manjuyod', 'pamplona', 'san jose', 'santa catalina', 'siaton', 'sibulan', 'tayasan', 'valencia', 'vallehermoso', 'zamboanguita',
+      // Siquijor
+      'larena', 'lazi', 'maria', 'san juan', 'enrique villanueva'
+    ];
+    const isNirAddress = nirLguKeywords.some(kw => addr.includes(kw));
+
+    // NIR Geographic Bounding Box: Lat 8.9 to 11.1, Lng 122.35 to 123.6
+    const isWithinNirGeoBounds = lat >= 8.9 && lat <= 11.1 && lng >= 122.35 && lng <= 123.6;
+
+    // Reject if outside region OR not recognized as NIR
+    if (isOutsideRegion || (!isNirAddress && !isWithinNirGeoBounds && !detectedBarangayId)) {
       return res.status(400).json({
         success: false,
         message: 'Location Out of Coverage Area: Emergency reporting is currently restricted to the Negros Island Region (NIR).'
       });
+    }
+
+    // Fallback: If PostGIS exact polygon match did not return a barangay ID, but location IS in NIR (e.g. Silay), assign nearest barangay in city
+    if (!detectedBarangayId) {
+      const cityMatch = addr.split(',').find(p => p.trim())?.trim();
+      const fallbackBarangay = await prisma.barangay.findFirst({
+        where: cityMatch ? {
+          OR: [
+            { city: { contains: cityMatch, mode: 'insensitive' } },
+            { municipality: { contains: cityMatch, mode: 'insensitive' } },
+            { name: { contains: cityMatch, mode: 'insensitive' } }
+          ]
+        } : undefined
+      });
+      if (fallbackBarangay) {
+        detectedBarangayId = fallbackBarangay.barangay_id;
+      }
     }
     const incident_code = `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 

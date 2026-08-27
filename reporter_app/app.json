@@ -31,7 +31,11 @@
         "ACCESS_FINE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true
     },
@@ -48,6 +52,11 @@
           "cameraPermission": "Allow GAOIRS to use the camera for evidence reporting."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a33cce58-aae7-44bb-a4fd-788ab4c0b81d"
+      }
+    }
   }
 }
