@@ -37,6 +37,8 @@ export default function ResponseDashboard() {
 
   useEffect(() => {
     fetchIncidents();
+    const interval = setInterval(fetchIncidents, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

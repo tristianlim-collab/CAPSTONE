@@ -95,7 +95,11 @@ export default function IncidentVerificationQueue() {
       } catch (err) { console.error('Failed to fetch units:', err); }
     };
     fetchUnits();
-  }, [fetchIncidents]);
+
+    // Fast 5-second background auto-sync to ensure queue updates without manual refresh
+    const autoSyncInterval = setInterval(() => fetchIncidents(searchFilters), 5000);
+    return () => clearInterval(autoSyncInterval);
+  }, [fetchIncidents, searchFilters]);
 
   const handleFiltersChange = useCallback((filters) => {
     setSearchFilters(filters);
