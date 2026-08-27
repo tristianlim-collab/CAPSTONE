@@ -34,8 +34,9 @@ const backendIp = getBackendIp();
 const isDev = __DEV__;
 const PROD_URL = 'https://gaoirs.onrender.com';
 
-const API_URL = isDev ? `http://${backendIp}:5000/api` : `${PROD_URL}/api`;
-export const SOCKET_URL = isDev ? `http://${backendIp}:5000` : PROD_URL;
+// Connect directly to live Render backend so mobile app and Vercel admin panel share real-time socket events
+const API_URL = `${PROD_URL}/api`;
+export const SOCKET_URL = PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
