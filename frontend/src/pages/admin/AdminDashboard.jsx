@@ -18,8 +18,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-    // Reconcile stats every 30 seconds to catch any missed events
-    const reconcileInterval = setInterval(fetchDashboardData, 30000);
+    // Fast auto-sync every 5 seconds + instant WebSocket push
+    const reconcileInterval = setInterval(fetchDashboardData, 5000);
     return () => clearInterval(reconcileInterval);
   }, [filters]);
 
