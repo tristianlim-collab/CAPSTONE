@@ -14,6 +14,7 @@ export default {
       
       // Always notify admins about every report
       io.to('admin').emit('new_incident', completeIncident);
+      io.emit('new_incident', completeIncident);
 
       // Notify responders in the specific municipality, even if unverified (REPORTED)
       // This ensures local units are aware of incoming emergencies immediately.

@@ -31,28 +31,6 @@ export const SocketProvider = ({ children }) => {
 			setConnected(true);
 			console.log("[Socket] Connected:", socket.id);
 
-			if (user?.role === "ADMIN") {
-				socket.emit("join_admin");
-			}
-			if (user?.role === "RESPONSE_UNIT") {
-				// Join the general response room so we get all broadcasts
-				socket.emit("join_response");
-				// Also join unit-specific room if we have a unit_id
-				if (user?.unit_id) {
-					socket.emit("join_unit", user.unit_id);
-				}
-				// Join municipality room for city-scoped alerts
-				if (user?.unit?.barangay?.municipality) {
-					socket.emit("join_municipality", user.unit.barangay.municipality);
-				}
-			}
-			if (user?.role === "REPORTER") {
-				const userId = user?.user_id || user?.id;
-				if (userId) {
-					socket.emit("join_reporter", userId);
-				}
-			}
-
 			// Request browser notification permission and set up listeners
 			requestNotificationPermission().then(() => {
 				setupSocketNotifications(socket);
@@ -68,7 +46,31 @@ export const SocketProvider = ({ children }) => {
 			socket.disconnect();
 			socketRef.current = null;
 		};
-	}, [isAuthenticated, user]);
+	}, [isAuthenticated]);
+
+	// Join rooms whenever socket connects or user state is populated/updated
+	useEffect(() => {
+		if (!connected || !socketRef.current || !user) return;
+
+		const role = user?.role?.toUpperCase();
+		if (role === "ADMIN") {
+			console.log("[Socket] Emitting join_admin");
+			socketRef.current.emit("join_admin");
+		} else if (role === "RESPONSE_UNIT") {
+			socketRef.current.emit("join_response");
+			if (user?.unit_id) {
+				socketRef.current.emit("join_unit", user.unit_id);
+			}
+			if (user?.unit?.barangay?.municipality) {
+				socketRef.current.emit("join_municipality", user.unit.barangay.municipality);
+			}
+		} else if (role === "REPORTER") {
+			const userId = user?.user_id || user?.id;
+			if (userId) {
+				socketRef.current.emit("join_reporter", userId);
+			}
+		}
+	}, [connected, user]);
 
 	const on = useCallback((eventName, callback) => {
 		if (!socketRef.current) {
