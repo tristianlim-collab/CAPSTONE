@@ -34,8 +34,8 @@ const backendIp = getBackendIp();
 const isDev = __DEV__;
 const PROD_URL = 'https://gaoirs.onrender.com';
 
-const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
-export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
+const API_URL = isDev ? `http://${backendIp}:5000/api` : `${PROD_URL}/api`;
+export const SOCKET_URL = isDev ? `http://${backendIp}:5000` : PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
