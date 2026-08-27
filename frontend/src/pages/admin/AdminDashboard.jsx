@@ -24,14 +24,22 @@ export default function AdminDashboard() {
   }, [filters]);
 
   useEffect(() => {
-    const unsub1 = on('new_incident', (inc) => {
-      // Deduplication: don't add if already exists
+    const handleNewIncident = (data) => {
+      const inc = data.incident || data;
+      if (!inc || !inc.incident_id) return;
       setRecentIncidents(prev => {
-        if (prev.find(i => i.incident_id === inc.incident_id)) return prev;
-        return [inc, ...prev.slice(0, 9)];
+        if (prev.some(i => i.incident_id === inc.incident_id)) return prev;
+        return [inc, ...prev];
       });
       setStats(s => ({ ...s, total: s.total + 1, active: s.active + 1 }));
-    });
+      toast('🚨 New Emergency Report Received!', {
+        icon: '⚠️',
+        style: { borderRadius: '12px', background: '#0F172A', color: '#fff' }
+      });
+    };
+
+    const unsub1 = on('new_incident', handleNewIncident);
+    const unsub_awaiting = on('incident_awaiting_verification', handleNewIncident);
 
     const unsub2 = on('incident_status_updated', (data) => {
       const fullIncident = data.incident || {};
@@ -49,7 +57,7 @@ export default function AdminDashboard() {
       toast('ℹ️ Incident deleted', { duration: 5000 });
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    return () => { unsub1(); unsub_awaiting(); unsub2(); unsub3(); };
   }, [on]);
 
   const fetchDashboardData = async () => {

@@ -111,7 +111,7 @@ export default {
   emitIncidentAwaitingVerification: (incident) => {
     try {
       const io = getIO();
-      io.to('admin').emit('incident_awaiting_verification', {
+      const payload = {
         incident_id: incident.incident_id,
         incident_code: incident.incident_code,
         type: incident.incident_type?.name,
@@ -123,7 +123,9 @@ export default {
         latitude: incident.latitude,
         longitude: incident.longitude,
         incident
-      });
+      };
+      io.to('admin').emit('incident_awaiting_verification', payload);
+      io.emit('incident_awaiting_verification', payload);
     } catch (err) {
       console.error('Socket emitIncidentAwaitingVerification failed:', err.message);
     }
