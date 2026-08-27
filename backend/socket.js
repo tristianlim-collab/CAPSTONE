@@ -5,7 +5,10 @@ let io;
 export const initSocket = (server) => {
 	io = new Server(server, {
 		cors: {
-			origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5713", "http://localhost:5173"],
+			origin: (origin, callback) => {
+				// Allow all origins (localhost, vercel.app, mobile apps) for seamless real-time sockets
+				return callback(null, true);
+			},
 			credentials: true,
 		},
 	});

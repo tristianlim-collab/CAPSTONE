@@ -21,7 +21,7 @@ const app = express();
 
 app.use(
 	cors({
-		origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5713", "http://localhost:5173"],
+		origin: (origin, callback) => callback(null, true),
 		credentials: true,
 		exposedHeaders: ["Content-Disposition"],
 	})
