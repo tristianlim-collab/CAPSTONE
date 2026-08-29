@@ -104,11 +104,20 @@ const STATIC_LEAFLET_HTML = `
     var marker = null;
     var accCircle = null;
     
-    window.updateMapLocation = function(lat, lng, acc) {
+    window.updateMarkerColor = function(color) {
+      var pulse = document.querySelector('.pulse-marker');
+      if (pulse) {
+        pulse.style.background = color || '#3B82F6';
+        pulse.style.boxShadow = '0 0 0 0 ' + (color || '#3B82F6');
+      }
+    };
+
+    window.updateMapLocation = function(lat, lng, acc, color) {
+      var markerBg = color || '#3B82F6';
       if (!marker) {
-        var pulseIcon = L.divIcon({ className: 'pulse-marker', iconSize: [14, 14], iconAnchor: [7, 7] });
+        var pulseIcon = L.divIcon({ className: 'pulse-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
         marker = L.marker([lat, lng], { icon: pulseIcon, draggable: true }).addTo(map);
-        if (acc) accCircle = L.circle([lat, lng], { radius: acc, color: '#3B82F6', fillOpacity: 0.1, weight: 1 }).addTo(map);
+        if (acc) accCircle = L.circle([lat, lng], { radius: acc, color: markerBg, fillOpacity: 0.1, weight: 1 }).addTo(map);
         
         marker.on('dragend', function(e) {
           var pos = marker.getLatLng();
@@ -176,6 +185,13 @@ export default function IncidentReportScreen({ navigation }) {
       if (mapTimeoutRef.current) clearTimeout(mapTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (webViewRef.current) {
+      const visuals = getCategoryVisuals(selectedType);
+      webViewRef.current.injectJavaScript(`if (window.updateMarkerColor) { window.updateMarkerColor('${visuals.color}'); } true;`);
+    }
+  }, [selectedType]);
 
   useEffect(() => {
     (async () => {
