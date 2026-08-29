@@ -68,9 +68,9 @@ export default function IncidentVerificationQueue() {
   // Track new incident IDs for pulse effect
   const [newIncidentIds, setNewIncidentIds] = useState(new Set());
 
-  const fetchIncidents = useCallback(async (filters = {}) => {
+  const fetchIncidents = useCallback(async (filters = {}, silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const params = { limit: 200, ...filters };
       const [incRes, typesRes] = await Promise.all([
         api.get('/incidents', { params }),
@@ -80,9 +80,11 @@ export default function IncidentVerificationQueue() {
       setIncidentTypes(typesRes.data || []);
     } catch (err) {
       console.error('Failed to fetch data:', err);
-      toast.error('Failed to load incidents');
+      if (!silent) toast.error('Failed to load incidents');
     } finally {
-      setTimeout(() => setLoading(false), 500); // Add slight delay for smoother transition
+      if (!silent) {
+        setTimeout(() => setLoading(false), 300);
+      }
     }
   }, []);
 
@@ -96,8 +98,8 @@ export default function IncidentVerificationQueue() {
     };
     fetchUnits();
 
-    // Fast 5-second background auto-sync to ensure queue updates without manual refresh
-    const autoSyncInterval = setInterval(() => fetchIncidents(searchFilters), 5000);
+    // Silent background auto-sync (no full page loading flicker)
+    const autoSyncInterval = setInterval(() => fetchIncidents(searchFilters, true), 10000);
     return () => clearInterval(autoSyncInterval);
   }, [fetchIncidents, searchFilters]);
 

@@ -25,8 +25,8 @@ const getCategoryVisuals = (name, colorHint) => {
 
   if (n.includes('fire')) { Icon = Flame; color = Colors.orange; bg = Colors.orangeLight; }
   else if (n.includes('med') || n.includes('health') || n.includes('sick')) { Icon = Stethoscope; color = '#E11D48'; bg = '#FFF1F2'; }
-  else if (n.includes('accid') || n.includes('crash') || n.includes('road')) { Icon = Car; color = Colors.primaryDark; bg = Colors.primaryFaint; }
-  else if (n.includes('crime') || n.includes('police') || n.includes('theft')) { Icon = AlertTriangle; color = '#D97706'; bg = Colors.amberLight; }
+  else if (n.includes('accid') || n.includes('crash') || n.includes('road')) { Icon = Car; color = '#D97706'; bg = Colors.amberLight; }
+  else if (n.includes('crime') || n.includes('police') || n.includes('theft')) { Icon = AlertTriangle; color = '#DC2626'; bg = '#FEF2F2'; }
   else if (n.includes('infra') || n.includes('flood') || n.includes('calamity')) { Icon = AlertTriangle; color = '#7C3AED'; bg = '#F5F3FF'; }
 
   // Use color hint from DB if matches our theme
