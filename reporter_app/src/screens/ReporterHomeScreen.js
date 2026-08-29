@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSocketContext } from '../context/SocketContext';
 import { incidentAPI } from '../api';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
+import { OfflineQueueService } from '../services/offlineQueueService';
 
 const TYPE_ICONS = {
   'FIRE': Flame,
@@ -33,6 +33,9 @@ export default function ReporterHomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Attempt auto-syncing any offline queued reports on screen load
+    OfflineQueueService.syncQueue();
+
     const fetchIncidents = async () => {
       try {
         const res = await incidentAPI.getAll({ limit: 50 });

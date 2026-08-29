@@ -14,6 +14,8 @@ import {
   Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { OfflineQueueService } from '../services/offlineQueueService';
 import api, { incidentAPI } from '../api';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
 
@@ -356,12 +358,27 @@ export default function IncidentReportScreen({ navigation }) {
     if (!types.length) {
       try {
         const res = await api.get('/incident-types');
-        types = res.data || [];
-        setIncidentTypes(types);
-      } catch { Alert.alert('Error', 'Could not load incident types.'); return; }
+        types = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        if (types.length) setIncidentTypes(types);
+      } catch { /* proceed with current types */ }
     }
-    const typeId = types.find(t => t.name?.toLowerCase() === selectedType?.toLowerCase())?.type_id;
-    if (!typeId) { Alert.alert('Error', 'Incident type not found.'); return; }
+
+    const matchedType = types.find(t => t.name?.toLowerCase() === selectedType?.toLowerCase());
+    let typeId = matchedType?.type_id || matchedType?.id;
+
+    if (!typeId) {
+      // Fallback: fetch directly to ensure we get a valid DB type_id
+      try {
+        const res = await api.get('/incident-types');
+        const freshList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        const found = freshList.find(t => t.name?.toLowerCase() === selectedType?.toLowerCase());
+        typeId = found?.type_id || found?.id || freshList[0]?.type_id || freshList[0]?.id;
+      } catch (e) {
+        console.error('Failed emergency type lookup:', e);
+      }
+    }
+
+    if (!typeId) { Alert.alert('Error', 'Incident type not found. Please refresh and try again.'); return; }
     if (!isValidPhone) { setPhoneTouched(true); Alert.alert('Error', 'Use format +639XXXXXXXXX.'); return; }
 
     setLoading(true);
@@ -369,6 +386,12 @@ export default function IncidentReportScreen({ navigation }) {
     // setShowMap(false); 
 
     try {
+      // Check network status before submitting
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        throw new Error('OFFLINE');
+      }
+
       // Small delay to let WebView unmount fully before heavy API work
       await new Promise(r => setTimeout(r, 500));
 
@@ -416,6 +439,32 @@ export default function IncidentReportScreen({ navigation }) {
 
     } catch (err) {
       if (isMounted.current) {
+        // Handle Offline Queueing if network is down or request fails due to connectivity
+        if (err.message === 'OFFLINE' || !err.response) {
+          try {
+            await OfflineQueueService.saveToQueue({
+              incident_type_id: typeId,
+              description: generatedDescription,
+              latitude: location.lat,
+              longitude: location.lng,
+              map_pin_address: locationAddress,
+              landmark: landmark || undefined,
+              severity,
+              reporter_name: fullName || undefined,
+              reporter_phone: contactNumber,
+              photos
+            });
+            Alert.alert('Saved Offline in Queue', 'No internet connection detected. Your emergency report has been saved locally and will auto-sync once reconnected.');
+            setPhotos([]);
+            setSelectedType('');
+            setLoading(false);
+            navigation.replace('ReportSuccess');
+            return;
+          } catch (queueErr) {
+            console.error('Queue save failed:', queueErr);
+          }
+        }
+
         const errorMsg = err.response?.data?.message || 'Failed to submit. Check connection.';
         Alert.alert('Submission Error', errorMsg);
         setLoading(false);
