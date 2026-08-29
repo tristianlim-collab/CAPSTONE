@@ -166,17 +166,27 @@ export default function IncidentReportScreen({ navigation }) {
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [showMap, setShowMap] = useState(true);
 
+  const DEFAULT_TYPES = [
+    { type_id: '1', name: 'Vehicular Accident' },
+    { type_id: '2', name: 'Fire Emergency' },
+    { type_id: '3', name: 'Medical Emergency' },
+    { type_id: '4', name: 'Crime / Security' },
+    { type_id: '5', name: 'Natural Disaster' },
+    { type_id: '6', name: 'Other Emergency' },
+  ];
+
   useEffect(() => {
     isMounted.current = true;
     (async () => {
       try {
         const res = await api.get('/incident-types');
+        const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
         if (isMounted.current) {
-          setIncidentTypes(Array.isArray(res.data) ? res.data : []);
+          setIncidentTypes(list.length > 0 ? list : DEFAULT_TYPES);
         }
       } catch (e) {
         console.error('Failed to fetch types:', e);
-        if (isMounted.current) setIncidentTypes([]);
+        if (isMounted.current) setIncidentTypes(DEFAULT_TYPES);
       }
     })();
 
