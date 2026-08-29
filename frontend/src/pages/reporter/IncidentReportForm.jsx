@@ -445,13 +445,41 @@ export default function IncidentReportForm() {
 
         {/* EMERGENCY TYPE SECTION */}
         <div className="mb-6">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-orange-500" /> Emergency Type <span className="text-red-500">*</span>
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              {selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road') ? (
+                <Car size={16} className="text-amber-600" />
+              ) : selectedType.toLowerCase().includes('fire') ? (
+                <Flame size={16} className="text-orange-500" />
+              ) : selectedType.toLowerCase().includes('med') ? (
+                <Stethoscope size={16} className="text-rose-600" />
+              ) : (
+                <AlertTriangle size={16} className="text-orange-500" />
+              )}
+              Emergency Type <span className="text-red-500">*</span>
+            </h3>
+            {selectedType && (
+              <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
+                  ? 'bg-amber-50 text-amber-600 border-amber-300'
+                  : selectedType.toLowerCase().includes('fire')
+                  ? 'bg-orange-50 text-orange-600 border-orange-300'
+                  : selectedType.toLowerCase().includes('med')
+                  ? 'bg-rose-50 text-rose-600 border-rose-300'
+                  : 'bg-blue-50 text-blue-600 border-blue-300'
+              }`}>
+                {selectedType.toUpperCase()}
+              </span>
+            )}
+          </div>
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm appearance-none cursor-pointer"
+            className={`w-full px-4 py-3 rounded-xl border bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 shadow-sm appearance-none cursor-pointer ${
+              selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
+                ? 'border-amber-400 focus:ring-amber-500/20 focus:border-amber-500'
+                : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
+            }`}
             style={{
               backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
