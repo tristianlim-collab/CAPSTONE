@@ -21,7 +21,6 @@ export default function LoginScreen({ navigation }) {
       setErrorMsg('Please enter email and password');
       return;
     }
-    setErrorMsg('');
     setLoading(true);
     try {
       await login(email, password);
