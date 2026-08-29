@@ -539,23 +539,38 @@ export default function IncidentReportScreen({ navigation }) {
 
         {/* Emergency Type */}
         <View style={styles.section}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <AlertTriangle size={16} color="#F97316" />
-            <Text style={styles.sectionLabel}>EMERGENCY TYPE <Text style={{ color: '#EF4444' }}>*</Text></Text>
-          </View>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedType}
-              onValueChange={(itemValue) => setSelectedType(itemValue)}
-              style={styles.picker}
-              dropdownIconColor="#475569"
-            >
-              <Picker.Item label="-- Select Emergency Type --" value="" color="#94A3B8" />
-              {incidentTypes.map(type => (
-                <Picker.Item key={type.type_id} label={type.name} value={type.name} color="#1E293B" />
-              ))}
-            </Picker>
-          </View>
+          {(() => {
+            const visuals = getCategoryVisuals(selectedType);
+            const TypeIcon = visuals.Icon;
+            return (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <TypeIcon size={18} color={selectedType ? visuals.color : '#F97316'} />
+                    <Text style={styles.sectionLabel}>EMERGENCY TYPE <Text style={{ color: '#EF4444' }}>*</Text></Text>
+                  </View>
+                  {selectedType ? (
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: visuals.bg, borderWidth: 1, borderColor: visuals.color }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: visuals.color }}>{selectedType.toUpperCase()}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={[styles.pickerContainer, selectedType && { borderColor: visuals.color, borderWidth: 1.5 }]}>
+                  <Picker
+                    selectedValue={selectedType}
+                    onValueChange={(itemValue) => setSelectedType(itemValue)}
+                    style={styles.picker}
+                    dropdownIconColor={visuals.color}
+                  >
+                    <Picker.Item label="-- Select Emergency Type --" value="" color="#94A3B8" />
+                    {incidentTypes.map(type => (
+                      <Picker.Item key={type.type_id} label={type.name} value={type.name} color="#1E293B" />
+                    ))}
+                  </Picker>
+                </View>
+              </>
+            );
+          })()}
         </View>
 
         {/* Severity */}
