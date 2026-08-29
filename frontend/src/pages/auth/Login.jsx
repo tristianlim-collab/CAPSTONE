@@ -35,7 +35,7 @@ const Login = () => {
     } catch (err) {
       const message = err.response?.data?.message || 'Invalid email or password';
       setErrorMsg(message);
-      toast.error(message);
+      toast.error(message, { duration: 10000 });
     } finally {
       setLoading(false);
     }
