@@ -14,9 +14,8 @@ import {
   Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 import { OfflineQueueService } from '../services/offlineQueueService';
-import api, { incidentAPI } from '../api';
+import api, { incidentAPI, SOCKET_URL } from '../api';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
 
 const getCategoryVisuals = (name, colorHint) => {
@@ -386,12 +385,6 @@ export default function IncidentReportScreen({ navigation }) {
     // setShowMap(false); 
 
     try {
-      // Check network status before submitting
-      const netState = await NetInfo.fetch();
-      if (!netState.isConnected) {
-        throw new Error('OFFLINE');
-      }
-
       // Small delay to let WebView unmount fully before heavy API work
       await new Promise(r => setTimeout(r, 500));
 

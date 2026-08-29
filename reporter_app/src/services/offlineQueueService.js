@@ -1,8 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
-import api, { incidentAPI } from '../api';
+import api, { incidentAPI, SOCKET_URL } from '../api';
 
 const OFFLINE_QUEUE_KEY = 'OFFLINE_PENDING_REPORTS_QUEUE';
+
+const isOnline = async () => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`${SOCKET_URL}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
 
 export const OfflineQueueService = {
   // Get all pending reports in queue
@@ -38,8 +49,8 @@ export const OfflineQueueService = {
   // Sync queued reports to backend when connection is restored
   syncQueue: async () => {
     try {
-      const state = await NetInfo.fetch();
-      if (!state.isConnected) return;
+      const online = await isOnline();
+      if (!online) return;
 
       const queue = await OfflineQueueService.getQueue();
       if (queue.length === 0) return;
