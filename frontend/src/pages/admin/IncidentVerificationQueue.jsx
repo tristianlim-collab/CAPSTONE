@@ -202,9 +202,14 @@ export default function IncidentVerificationQueue() {
     if (!selectedIncident) return;
     setSubmitting(true);
     try {
+      const res = await api.post(`/incidents/${selectedIncident.incident_id}/verify`, {
+        action: 'APPROVE',
+        manual_unit_ids: selectedUnitIds.length > 0 ? selectedUnitIds : undefined
+      });
       const updatedIncident = res.data?.incident || { ...selectedIncident, status: 'RESPONDING' };
       const newAssignments = res.data?.assignments || [];
 
+      toast.success('Incident verified and dispatched successfully');
       setIncidents(prev => prev.map(i => i.incident_id === selectedIncident.incident_id ? { ...i, ...updatedIncident, assignments: newAssignments } : i));
       setSelectedIncident(prev => ({ ...prev, ...updatedIncident, assignments: newAssignments }));
       setActionModal({ open: false, action: null, message: '' });
@@ -399,8 +404,17 @@ export default function IncidentVerificationQueue() {
         <div className="xl:col-span-7 space-y-4">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <IncidentListSkeleton count={4} />
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                {[1, 2, 3].map(n => (
+                  <div key={n} className="p-6 bg-slate-100 dark:bg-slate-800/60 rounded-3xl animate-pulse flex items-center gap-5 border border-slate-200/50 dark:border-slate-800">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-300 dark:bg-slate-700 shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded-lg w-1/3" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700/60 rounded-lg w-3/4" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700/40 rounded-lg w-1/2" />
+                    </div>
+                  </div>
+                ))}
               </motion.div>
             ) : filteredIncidents.length === 0 ? (
               <motion.div

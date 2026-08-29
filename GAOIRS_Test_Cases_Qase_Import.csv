@@ -1,0 +1,268 @@
+id,title,description,preconditions,postconditions,tags,priority,severity,type,behavior,automation,status,is_flaky,layer,steps_type,steps_actions,steps_result,steps_data,milestone_id,milestone,suite_id,suite_parent_id,suite,suite_without_cases,parameters,is_muted
+,,,,,,,,,,,,,,,,,,,,1,,Suite 1: User Authentication & Access Control,1,,
+1,UC-001 - TC01: Citizen User Registration with Valid Details,Verify that a new citizen can successfully register an account using valid personal and credential information.,System is running. Citizen is on the Registration screen of the Mobile Reporter App.,"New citizen account created in database with role 'citizen', hashed password, and activation status.","authentication,registration,citizen,mobile",high,critical,functional,positive,to-be-automated,actual,no,e2e,classic,"1. Launch GAOIRS Reporter App
+2. Navigate to Register Screen
+3. Fill in Full Name, Email, Contact Number, Barangay, and Password
+4. Tap 'Register' button","1. App opens successfully
+2. Registration form rendered
+3. Input fields populated without validation errors
+4. Account created, confirmation displayed, redirected to Login","1. N/A
+2. N/A
+3. Name: Juan Cruz, Email: juan.cruz@gmail.com, Phone: 09171234567, Barangay: Poblacion, Pass: Pass@123
+4. N/A",1,Release 1.0,1,,Suite 1: User Authentication & Access Control,,,no
+2,UC-001 - TC02: User Authentication / Login across System Roles,"Verify that Admin, Responder, and Citizen users can log in using valid credentials and receive role-based JWT tokens.","User accounts exist in database for Admin, Responder, and Citizen roles.","User authenticated, JWT token issued, user routed to role-specific dashboard.","authentication,login,jwt,rbac",critical,blocker,smoke,positive,automated,actual,no,api,classic,"1. Send POST request to /api/auth/login with valid email and password
+2. Verify HTTP response status and JWT payload
+3. Verify UI navigation to role dashboard","1. Request received by backend
+2. Status 200 OK returned with JWT access token and user role object
+3. User redirected to appropriate dashboard","1. Email: admin@gaoirs.gov.ph / responder@bfp.gov.ph, Password: Secret123!
+2. N/A
+3. N/A",1,Release 1.0,1,,Suite 1: User Authentication & Access Control,,,no
+3,UC-001 - TC03: User Login with Invalid Credentials,Verify that login attempts with incorrect passwords or unregistered email addresses are rejected with appropriate error messages.,User is on the login page of Admin Web Dashboard or Mobile Reporter App.,"Authentication fails, no token issued, error message displayed.","authentication,security,negative",high,major,functional,negative,to-be-automated,actual,no,ui,classic,"1. Enter unregistered email or wrong password
+2. Click/Tap Login button","1. Credentials entered in input fields
+2. System rejects request with 401 Unauthorized and displays 'Invalid email or password'","1. Email: invalid@user.com, Password: WrongPassword123
+2. N/A",1,Release 1.0,1,,Suite 1: User Authentication & Access Control,,,no
+4,UC-001 - TC04: Access Protected Endpoint Without Authorization Token,Verify that unauthorized requests to protected API endpoints without a valid Bearer token are blocked by security middleware.,Backend API server is running.,HTTP 401 Unauthorized / 403 Forbidden status returned.,"security,authorization,api",high,critical,security,negative,automated,actual,no,api,classic,"1. Send GET request to /api/incidents or /api/users without Authorization header
+2. Inspect API response","1. API intercepts request
+2. Returns status 401 Unauthorized with error message 'No token provided'","1. Endpoint: GET /api/incidents, Headers: None
+2. N/A",1,Release 1.0,1,,Suite 1: User Authentication & Access Control,,,no
+,,,,,,,,,,,,,,,,,,,,2,,Suite 2: Incident Reporting & Submission,1,,
+5,UC-002 - TC05: Submit Complete Incident Report with Location & Evidence,"Verify that a citizen can complete and submit a full emergency incident report with incident type, GPS coordinates, description, and photo evidence.",Citizen is logged into Mobile Reporter App with active GPS and camera permissions.,"Incident created in DB status 'Reported', images stored, real-time socket event fired.","incident-reporting,mobile,gps,evidence",critical,blocker,smoke,positive,to-be-automated,actual,no,e2e,classic,"1. Open Submit Incident form in Mobile App
+2. Select Incident Type (e.g. Fire Incident)
+3. Capture/Tag current GPS coordinates
+4. Enter incident description
+5. Attach photo evidence
+6. Tap 'Submit Incident Report'","1. Form opens
+2. Incident type selected and icon updated
+3. GPS coordinates (Lat: 10.244, Long: 123.848) acquired and previewed on map
+4. Description entered
+5. Photo preview rendered
+6. Report submitted successfully, unique incident code generated","1. N/A
+2. Type: Fire
+3. GPS: 10.2448, 123.8481
+4. Desc: House fire near Barangay Hall
+5. File: photo1.jpg
+6. N/A",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+6,UC-003 - TC06: Predefined Incident Type Selection & Visual Indicator Update,"Verify that selecting different incident types updates the form styling, category markers, and response agency mapping.",User is on the Incident Type selection screen.,"Selected incident type stored in form state, corresponding color badge applied.","incident-type,ui,categorization",medium,normal,functional,positive,to-be-automated,actual,no,ui,classic,"1. Open Incident Type dropdown/picker
+2. Select 'Road Accident / Vehicular'
+3. Observe map marker color and icon","1. Options displayed (Fire, Medical, Crime, Road Accident, Flood, Public Disturbance)
+2. Selection saved
+3. Form color-code changes to yellow/amber for Road Accident","1. List of types
+2. Selection: Road Accident
+3. Visual marker preview",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+7,UC-004 - TC07: Tag GPS Coordinates & Manual Map Pin Adjustment,Verify that automatic device GPS coordinate retrieval and manual drag-and-drop map pin repositioning update location data accurately.,"Device location service enabled, interactive map preview rendered on report form.","Confirmed GPS coordinates (latitude, longitude, barangay) saved to report payload.","gps,geofencing,location,map",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Tap 'Detect My Location'
+2. Drag location marker pin to exact incident spot on interactive map
+3. Confirm location","1. GPS fetches latitude/longitude
+2. Map pin moves smoothly to new position, reverse geocodes Barangay name
+3. Coordinates updated in form state","1. Auto GPS
+2. Pin shift: +0.0005 lat
+3. Barangay: Bulacao",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+8,UC-005 - TC08: Attach Photo Evidence with Format & File Size Validation,Verify that the system accepts valid JPEG/PNG photos within size limits and rejects unsupported file formats or oversized files.,User is at Step 5 (Upload Photo Evidence) of report creation.,Valid photos uploaded and previewed; invalid files generate error popups.,"evidence,upload,validation,media",medium,normal,functional,positive,to-be-automated,actual,no,ui,classic,"1. Click 'Upload Photo'
+2. Choose a valid .JPG photo (< 5MB)
+3. Attempt to upload a .TXT file or file > 20MB","1. File picker opens
+2. Valid photo attached and thumbnail thumbnail displayed
+3. Validation error 'Invalid file type / File size exceeds 10MB limit' displayed","1. File selection
+2. File: scene.jpg (2.1MB)
+3. File: invalid.txt",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+9,UC-002 - TC09: Submit Incident Report with Missing Required Fields,Verify that submitting an incident report without required fields (e.g. missing description or location) triggers form validation errors.,User is on the Incident Submission form.,"Form submission blocked, field highlight and validation message shown.","validation,negative,form",high,major,functional,negative,to-be-automated,actual,no,ui,classic,"1. Leave Incident Description and Location blank
+2. Click 'Submit Incident Report'","1. Fields remain empty
+2. System prevents submission and displays 'Please provide incident description and valid location'","1. Blank fields
+2. N/A",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+10,UC-002 - TC10: Offline Incident Queueing & Auto-Sync upon Network Restoration,Verify that reports created without active internet are stored in local SQLite queue and automatically synced to backend once reconnected.,Mobile device network connectivity is toggled off (Airplane mode).,Report stored locally with pending badge; uploaded automatically when connection resumes.,"offline,sync,mobile,resilience",high,critical,reliability,positive,to-be-automated,actual,no,e2e,classic,"1. Disconnect device network
+2. Submit an incident report
+3. Verify local queue storage message
+4. Re-enable network connection","1. Device offline
+2. App displays 'Saved offline in queue'
+3. Item visible in Pending Offline Queue
+4. System detects online status, transmits queue to /api/incidents/sync, updates status to Submitted","1. Offline state
+2. Report payload
+3. Queue item ID
+4. Online trigger",1,Release 1.0,2,,Suite 2: Incident Reporting & Submission,,,no
+,,,,,,,,,,,,,,,,,,,,3,,Suite 3: Citizen Incident Tracking & Notifications,1,,
+11,UC-007 - TC11: Receive Submission Confirmation with Unique Incident Code,"Verify that upon successful report submission, the user receives an immediate confirmation dialog containing a unique reference code.",Citizen has submitted an incident report.,Unique incident reference code (e.g. INC-2026-0891) displayed and stored in user report history.,"confirmation,incident-code,citizen",high,normal,functional,positive,to-be-automated,actual,no,ui,classic,"1. Complete incident submission
+2. Observe response modal
+3. Note down generated Incident Code","1. Submission completes
+2. Modal displays 'Report Received Successfully!'
+3. Unique Incident Code INC-XXXX-XXXX displayed with option to view in My Reports","1. N/A
+2. Confirmation dialog
+3. Code: INC-2026-0891",1,Release 1.0,3,,Suite 3: Citizen Incident Tracking & Notifications,,,no
+12,UC-006 - TC12: Track Incident Real-Time Status Timeline in Citizen Portal,Verify that citizens can view their submitted reports list and inspect the step-by-step progress timeline.,Citizen is logged into app and has submitted at least one incident report.,Report details and status timeline (Reported -> Verified -> Responding -> Resolved) correctly displayed.,"tracking,timeline,citizen,status",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Navigate to 'My Reports' tab
+2. Tap on an active incident record
+3. Review status timeline and timestamps","1. List of submitted reports loaded
+2. Incident detail page opens
+3. Status progression timeline rendered with active stage highlighted and timestamps listed","1. User ID
+2. Incident ID: INC-2026-0891
+3. Status steps",1,Release 1.0,3,,Suite 3: Citizen Incident Tracking & Notifications,,,no
+13,UC-007 - TC13: Real-Time Socket & Push Notification Delivery on Status Change,"Verify that when an admin or responder updates incident status, the citizen receives a real-time push/socket notification.",Citizen has an active incident. Admin/Responder changes status to 'Responding'.,"Notification banner received on citizen device, status updated instantly without manual refresh.","notification,socket,push,realtime",high,major,functional,positive,automated,actual,no,e2e,classic,"1. Keep citizen app open on incident tracking view
+2. Update status from admin dashboard
+3. Observe citizen app interface","1. App connected to WebSocket server
+2. Status update emitted via Socket.io / FCM push
+3. Citizen app displays notification toast 'Your report status is now: Responding'","1. Socket event: incident_status_updated
+2. Status: Responding
+3. Timestamp",1,Release 1.0,3,,Suite 3: Citizen Incident Tracking & Notifications,,,no
+,,,,,,,,,,,,,,,,,,,,4,,Suite 4: Incident Verification & Management,1,,
+14,UC-013 - TC14: Admin Verification Queue Inspection & Incident Detail Review,"Verify that administrators can access the incoming incident queue, view full details, inspect attached photos, and check reporter details.",Admin user logged into GAOIRS Web Dashboard. New incident has status 'Reported'.,"Incident modal opens, displaying map pin, reporter name/phone, photo evidence carousel, and action buttons.","admin,verification,incident-management",critical,blocker,smoke,positive,to-be-automated,actual,no,ui,classic,"1. Open Admin Dashboard -> Incident Management
+2. Select an incident in 'Awaiting Verification' queue
+3. Review description, GPS location, and evidence photos","1. Incident list displayed
+2. Incident detail modal opens smoothly
+3. All report metadata, map location, and high-res evidence images loaded","1. N/A
+2. Incident ID: INC-1029
+3. Details payload",1,Release 1.0,4,,Suite 4: Incident Verification & Management,,,no
+15,"UC-013 - TC15: Search and Filter Incidents by Type, Status, Barangay, and Date",Verify that incident data table updates dynamically when applying search keywords or filter dropdown combinations.,"Multiple incident records exist across various barangays, statuses, and types.",Data table filters instantly to show matching incident records.,"filter,search,datatable,admin",medium,normal,functional,positive,to-be-automated,actual,no,ui,classic,"1. Go to Incident Management table
+2. Select Filter: Barangay = 'Poblacion', Status = 'Verified', Type = 'Fire'
+3. Enter search term 'Commercial'","1. Table loaded with all records
+2. Filters applied to dataset
+3. Table updates showing only matching incident entries","1. Filter params: barangay=Poblacion&status=Verified&type=Fire
+2. Search query: Commercial
+3. Results count",1,Release 1.0,4,,Suite 4: Incident Verification & Management,,,no
+16,UC-013 - TC16: Mark Incident as Verified or False Alarm / Cancelled,Verify that administrator can change incident verification status and add required administrative notes.,Administrator is reviewing an unverified incident report.,Incident status updated to 'VERIFIED' or 'CANCELLED' in database; status log recorded.,"verification,admin,status-change",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Open incident detail modal
+2. Click 'Verify Report' or 'Mark as False Alarm'
+3. Enter admin notes
+4. Save status update","1. Modal active
+2. Status button selected
+3. Notes entered
+4. Database updated, toast notification 'Incident verified successfully' shown","1. Incident ID
+2. Action: Verify
+3. Notes: Dispatched patrol confirmed smoke
+4. Status: VERIFIED",1,Release 1.0,4,,Suite 4: Incident Verification & Management,,,no
+,,,,,,,,,,,,,,,,,,,,5,,Suite 5: Response Unit Dispatch & Recommendation,1,,
+17,UC-014 - TC17: Automated Geofenced Nearest Responder Recommendation Calculation,Verify that the system calculates distance using PostGIS coordinates and recommends the nearest available response unit based on incident type.,Incident verified at specific GPS coordinate. Response units have defined locations and statuses in database.,System displays ranked recommendation list of nearest available units (BFP/DRRMO/PNP).,"dispatch,geofencing,postgis,algorithm",critical,blocker,functional,positive,automated,actual,no,api,classic,"1. Select verified incident needing dispatch
+2. Click 'Recommend Responder'
+3. Verify backend ST_Distance calculation response","1. Incident selected
+2. Dispatch panel calculates straight-line / route distance
+3. Nearest available unit recommended at top of list with distance in KM","1. Incident GPS: 10.245, 123.847
+2. Unit 1: BFP Station 1 (1.2km - Available)
+3. Unit 2: BFP Station 2 (4.5km - Available)",1,Release 1.0,5,,Suite 5: Response Unit Dispatch & Recommendation,,,no
+18,UC-014 - TC18: Confirm Recommended Unit & Dispatch Emergency Response Team,"Verify that administrator can confirm unit dispatch, triggering real-time alerts to the selected response unit.",Admin is on Dispatch tab for a verified incident.,"Dispatch order recorded, incident status changed to 'Responding', alert sent via Socket/SMS/Email.","dispatch,alert,admin,response-unit",critical,blocker,smoke,positive,to-be-automated,actual,no,e2e,classic,"1. Select recommended Response Unit (e.g. BFP Engine 1)
+2. Click 'Confirm Dispatch'
+3. Observe dispatch event execution","1. Unit selected
+2. Dispatch API called (/api/assignments/dispatch)
+3. Real-time alert dispatched to unit tablet, incident status set to 'Responding'","1. Unit ID: UNIT-BFP-01
+2. Incident ID: INC-1029
+3. Dispatch timestamp logged",1,Release 1.0,5,,Suite 5: Response Unit Dispatch & Recommendation,,,no
+19,UC-014 - TC19: Manual Overridden Dispatch Selection for Heavy Workload,Verify that administrator can manually override recommendation and assign a secondary unit if primary unit is occupied.,Primary recommended unit status is 'Busy' or 'On Incident'.,Administrator manually selects alternate available unit; dispatch succeeds.,"dispatch,override,admin",medium,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Open dispatch selection list
+2. Override top recommendation
+3. Select secondary unit from list
+4. Confirm dispatch","1. Recommendation list shows primary unit busy
+2. Admin selects secondary unit
+3. Secondary unit receives assignment","1. Primary: Busy
+2. Override toggle: True
+3. Selected Unit: DRRMO Team B
+4. Dispatch confirmed",1,Release 1.0,5,,Suite 5: Response Unit Dispatch & Recommendation,,,no
+20,UC-008 - TC20: Response Unit Receives Automated Alert & Acknowledges Incident,Verify that response unit personnel receive dispatch notification on their device and can acknowledge receipt.,Response unit is logged into Response Dashboard. Admin has dispatched an incident.,"Response unit receives audible alert, reviews incident summary, and clicks 'Acknowledge'.","acknowledgement,response-unit,alert",high,critical,functional,positive,to-be-automated,actual,no,e2e,classic,"1. Receive dispatch alert notification on Responder tablet
+2. Tap alert to open incident assignment view
+3. Click 'Acknowledge Incident'","1. Push/Socket notification triggers popup
+2. Incident location map, type, and severity rendered
+3. Status updated to 'Acknowledged', acknowledgment timestamp logged","1. Incident payload
+2. Details: Fire at Subd. Block 4
+3. Action: Acknowledge",1,Release 1.0,5,,Suite 5: Response Unit Dispatch & Recommendation,,,no
+,,,,,,,,,,,,,,,,,,,,6,,"Suite 6: Field Response, Status Tracking & Evidence Upload",1,,
+21,UC-009 - TC21: Update Incident Status during Operational Response,Verify that response units can update active incident status (Responding -> Arrived on Scene -> Under Control).,Responder has acknowledged incident assignment.,Incident status updated in DB and broadcast live to Admin Dashboard and Citizen App.,"responder,status-update,field-ops",high,major,functional,positive,to-be-automated,actual,no,e2e,classic,"1. Open active incident on Responder app
+2. Select status 'Arrived on Scene'
+3. Add operational remark (e.g. 'Setting up fire hoses')
+4. Tap 'Update Status'","1. Active incident record open
+2. Status selected from dropdown
+3. Remarks entered
+4. Update succeeds, timestamp recorded, status log created","1. Incident ID: INC-1029
+2. New Status: On Scene
+3. Remarks: Fire line established
+4. Update timestamp",1,Release 1.0,6,,"Suite 6: Field Response, Status Tracking & Evidence Upload",,,no
+22,UC-012 - TC22: Upload Official Post-Incident Response Report & Aftermath Evidence,"Verify that response units can attach official summary reports, PDF documentation, and aftermath photos to the incident record.",Incident status is 'Under Control' or 'Resolved'. Responder is on post-incident report form.,"Files uploaded, attached to Evidence table, linked to incident record.","evidence,post-report,upload,responder",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Click 'Upload Response Evidence/Report'
+2. Select aftermath photos and official PDF report
+3. Click 'Submit Files'","1. File picker opens
+2. Files selected
+3. Files uploaded to server/Cloudinary, thumbnails displayed in report record","1. Files: report_doc.pdf, scene_after.jpg
+2. Upload endpoint: /api/post-reports/upload
+3. Response confirmation",1,Release 1.0,6,,"Suite 6: Field Response, Status Tracking & Evidence Upload",,,no
+23,UC-010 - TC23: Formally Resolve and Close Incident Record,Verify that response unit can mark incident as 'Resolved' with final resolution summary and cost/casualty details.,On-site operations completed.,"Incident status updated to 'Resolved', resolution timestamp recorded, incident moved to resolved list.","resolution,close-incident,responder",critical,blocker,functional,positive,to-be-automated,actual,no,e2e,classic,"1. Navigate to incident resolution form
+2. Enter resolution summary, casualty numbers, and property damage estimate
+3. Select status 'Resolved'
+4. Click 'Close Incident'","1. Form displayed
+2. Resolution data populated
+3. Status updated to 'Resolved'
+4. Incident closed, notification sent to Admin and Reporter","1. Casualties: 0, Injured: 2
+2. Summary: Fire extinguished successfully
+3. Status: RESOLVED",1,Release 1.0,6,,"Suite 6: Field Response, Status Tracking & Evidence Upload",,,no
+,,,,,,,,,,,,,,,,,,,,7,,Suite 7: Interactive Geospatial Mapping & Geofencing,1,,
+24,UC-011 - TC24: Render Interactive Geospatial Map with Color-Coded Incident Markers,Verify that Leaflet map loads correctly with custom color markers representing different incident categories.,User is logged in and navigates to Map View.,"Interactive map renders with tiles, zoom controls, and incident markers color-coded by category (Red=Fire, Amber=Accident, Blue=Crime).","map,leaflet,gis,markers",high,major,smoke,positive,to-be-automated,actual,no,ui,classic,"1. Navigate to Interactive Map screen
+2. Observe map tile loading and marker rendering
+3. Verify marker colors against legend","1. Map container initializes with correct center coordinates
+2. Incident pins rendered at exact lat/long positions
+3. Red markers for Fire, Blue for Medical/Crime","1. Map view
+2. GeoJSON pins
+3. Legend items",1,Release 1.0,7,,Suite 7: Interactive Geospatial Mapping & Geofencing,,,no
+25,UC-011 - TC25: Apply Barangay Geofencing Boundaries to Filter Incidents,Verify that selecting a barangay zone filters map markers to display only incidents within that polygon boundary.,Geofence polygon boundaries defined for all Talisay City barangays in database.,Map highlights selected barangay boundary line and hides markers outside the polygon.,"geofencing,gis,barangay,boundary",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Open Barangay Geofence filter dropdown
+2. Select 'Barangay Poblacion'
+3. Observe map update","1. Dropdown populated with barangays
+2. Polygon boundary overlay rendered on map
+3. Map markers filtered to show only those falling within Poblacion boundary","1. Barangay: Poblacion
+2. GeoJSON Polygon
+3. Filtered markers",1,Release 1.0,7,,Suite 7: Interactive Geospatial Mapping & Geofencing,,,no
+26,UC-011 - TC26: Interact with Map Marker Popup to View Full Incident Quick Summary,Verify that clicking on any incident pin on the map opens a popup with summary details and a direct link to full report.,Incidents are displayed on interactive map.,"Marker click opens popup displaying incident title, code, status badge, reporter timestamp, and 'View Details' button.","map,popup,ui,gis",medium,normal,functional,positive,to-be-automated,actual,no,ui,classic,"1. Click on an active incident marker pin on map
+2. Inspect popup card information
+3. Click 'View Full Details' link","1. Marker pin selected
+2. Popup window opens smoothly over map pin
+3. Details match incident record; clicking link redirects to detailed incident view","1. Marker click
+2. Popup data: INC-1029, Fire, Active
+3. Redirect URL",1,Release 1.0,7,,Suite 7: Interactive Geospatial Mapping & Geofencing,,,no
+,,,,,,,,,,,,,,,,,,,,8,,Suite 8: Real-Time Analytics & ML Trend Forecasting,1,,
+27,UC-016 - TC27: View Real-Time Analytics Dashboard Summary Metrics & Charts,"Verify that Analytics Dashboard displays accurate summary cards (total incidents, avg response time, resolution rate) and distribution charts.",Historical incident data exists in database. User has Analytics access permission.,"Dashboard loads total counts, response time metrics, pie charts by incident type, and bar charts by barangay.","analytics,dashboard,metrics,charts",high,major,smoke,positive,to-be-automated,actual,no,ui,classic,"1. Navigate to Analytics Dashboard
+2. Inspect KPI summary cards
+3. Review Incident Type distribution pie chart and Barangay ranking bar chart","1. Analytics page loaded
+2. Cards display aggregated statistics (e.g. Total: 142, Avg Response: 8.5 mins)
+3. Charts render accurately using real backend data","1. Analytics route: /admin/analytics
+2. API response payload
+3. Rendered charts",1,Release 1.0,8,,Suite 8: Real-Time Analytics & ML Trend Forecasting,,,no
+28,UC-016 - TC28: Render Spatial Incident Heatmap and Hotspot Analysis Visualizations,Verify that spatial heatmap layer renders incident density clusters highlighting high-risk hotspot zones.,Map view has Heatmap layer toggle enabled.,"Heatmap layer overlays thermal gradient (Red = high density hotspot, Yellow/Green = low density) over map.","heatmap,hotspot,analytics,gis",high,major,functional,positive,to-be-automated,actual,no,ui,classic,"1. Select 'Heatmap View' tab on Analytics page
+2. Set intensity radius and date range filter
+3. Observe geospatial heatmap rendering","1. Heatmap layer initializes
+2. Thermal color gradient overlays high incident density areas
+3. Hotspots clearly visible over specific barangays","1. Heatmap toggle: On
+2. Date range: Last 30 days
+3. Density clusters",1,Release 1.0,8,,Suite 8: Real-Time Analytics & ML Trend Forecasting,,,no
+29,UC-016 - TC29: Execute 7-Day SARIMA Machine Learning Incident Trend Forecasting Model,Verify that calling the ML analytics service generates a 7-day predicted incident volume line graph with confidence interval bands.,ML Python service running on port 5000 / integrated API endpoint. Historical incident data available.,"ML forecast returned JSON payload, rendered as predicted trend line with shaded confidence interval.","ml,forecasting,sarima,analytics,ai",critical,blocker,functional,positive,automated,actual,no,api,classic,"1. Click 'Generate Trend Forecast'
+2. Trigger call to /api/analytics/forecast or ML service endpoint
+3. Inspect 7-day predicted output graph and accuracy rate","1. Request sent to ML Service
+2. SARIMA model executes time-series prediction
+3. 7-day forecasted line graph rendered with predicted values per day and confidence bounds","1. ML Endpoint: GET /ml-forecast/incidents
+2. Model params: SARIMA(1,1,1)(1,1,1)7
+3. Output: 7 daily predictions + confidence bands",1,Release 1.0,8,,Suite 8: Real-Time Analytics & ML Trend Forecasting,,,no
+30,UC-016 - TC30: Dynamic Real-Time Analytics Chart Refresh on New Incident Ingestion,"Verify that when a new incident is submitted, connected analytics charts update live via WebSocket without requiring manual page reload.",Admin is viewing Analytics Dashboard. System receives a new incident submission.,"Summary card count increments, charts re-render with new data point in real-time.","socket,realtime,analytics,live-update",medium,normal,functional,positive,automated,actual,no,e2e,classic,"1. Keep Analytics Dashboard open
+2. Trigger a new incident creation via API or Mobile app
+3. Observe live chart update","1. Dashboard open
+2. New incident ingested
+3. Socket event 'analytics_update' received; total count card increments by +1 and pie chart updates","1. Initial count: 142
+2. Socket event trigger
+3. Updated count: 143",1,Release 1.0,8,,Suite 8: Real-Time Analytics & ML Trend Forecasting,,,no
+,,,,,,,,,,,,,,,,,,,,9,,"Suite 9: System Administration, RBAC & Report Generation",1,,
+31,"UC-015 - TC31: Generate and Export Incident Summary Reports in PDF, Excel, and CSV Formats","Verify that authorized users can select report parameters, apply filters, and download generated reports in PDF, XLSX, or CSV formats.",User has report generation privileges. Incident data exists for selected date range.,"Report compiled on backend, file download triggered, record saved in Generated Reports log.","export,reports,pdf,excel,csv",high,major,functional,positive,to-be-automated,actual,no,e2e,classic,"1. Navigate to Report Generation page
+2. Select Report Type: 'Monthly Incident Summary'
+3. Select Filters: Date Range = 'Current Month', Export Format = 'PDF'
+4. Click 'Generate & Download Report'","1. Report options selected
+2. Filters applied
+3. Format chosen
+4. Server generates PDF document, browser initiates file download (e.g. Incident_Summary_2026_08.pdf)","1. Report Type: Summary
+2. Format: PDF
+3. Date range: 2026-08-01 to 2026-08-31
+4. Output file",1,Release 1.0,9,,"Suite 9: System Administration, RBAC & Report Generation",,,no
+32,"UC-017 - TC32: Manage User Accounts (Create, Update, Activate, Deactivate)","Verify that administrators can create new user accounts, update profile roles/barangays, and toggle active/inactive account status.",Administrator logged in with full system administration privileges.,User account created/modified in database; welcome email with credentials sent to user.,"user-management,admin,accounts,rbac",critical,blocker,functional,positive,to-be-automated,actual,no,ui,classic,"1. Navigate to User Management section
+2. Click 'Add New User'
+3. Fill in Name, Email, Contact, Role ('responder'), and assigned Response Unit
+4. Click 'Save User'
+5. Toggle user account status to 'Deactivated'","1. User table loaded
+2. Add user modal opens
+3. Details entered
+4. User account created, listed in table
+5. User status updated to Inactive; deactivated user cannot log in","1. User details
+2. Role: responder
+3. Unit: BFP Station 1
+4. Status: Deactive",1,Release 1.0,9,,"Suite 9: System Administration, RBAC & Report Generation",,,no
+33,UC-018 - TC33: Configure Incident Categories & Role-Based Access Control (RBAC) Settings,"Verify that administrator can add/edit incident types (name, color, icon) and configure RBAC permission matrix system-wide.",Administrator logged in with System Configuration access.,"Incident types updated, permission matrix saved, changes enforced across system APIs.","system-config,rbac,incident-types,admin",high,critical,functional,positive,to-be-automated,actual,no,ui,classic,"1. Open System Configuration -> Incident Types
+2. Add new category 'Chemical Leak' with color '#FF0055' and icon 'hazard'
+3. Navigate to RBAC Settings panel
+4. Update permission checkboxes for 'responder' role
+5. Click 'Save Configuration'","1. Config panel open
+2. New incident type added and saved
+3. RBAC matrix updated
+4. Permissions saved; system immediately enforces updated role permissions","1. Category: Chemical Leak, Color: #FF0055, Icon: hazard
+2. Role permissions payload
+3. Save configuration",1,Release 1.0,9,,"Suite 9: System Administration, RBAC & Report Generation",,,no

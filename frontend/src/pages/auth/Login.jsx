@@ -33,8 +33,9 @@ const Login = () => {
         navigate('/reporter/home');
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Invalid email or password');
-      toast.error('Login failed');
+      const message = err.response?.data?.message || 'Invalid email or password';
+      setErrorMsg(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
