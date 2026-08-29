@@ -32,7 +32,7 @@ const backendIp = getBackendIp();
 
 // In production (standalone APK build), use live Render backend. In local dev, auto-detect IP.
 const isDev = __DEV__;
-const PROD_URL = 'https://gaoirs.onrender.com';
+const PROD_URL = 'https://gaoirs-backend.onrender.com';
 
 // Connect directly to live Render backend so mobile app and Vercel admin panel share real-time socket events
 const API_URL = `${PROD_URL}/api`;
