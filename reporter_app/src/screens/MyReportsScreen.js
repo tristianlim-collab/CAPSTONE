@@ -16,18 +16,28 @@ export default function MyReportsScreen({ navigation }) {
   const loadReports = useCallback(async () => {
     try {
       setLoading(true);
-      // Load incident IDs saved on this device when reports were submitted
+      // 1. Try loading report IDs saved locally on this device
       const stored = await AsyncStorage.getItem('my_report_ids');
       const ids = stored ? JSON.parse(stored) : [];
-      if (ids.length === 0) { setReports([]); return; }
-      // Fetch each report by its ID (includes all statuses — REPORTED to RESOLVED)
-      const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
-      const fetched = results
-        .filter(r => r.status === 'fulfilled' && r.value?.data)
-        .map(r => r.value.data);
-      setReports(fetched);
+
+      if (ids.length > 0) {
+        const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
+        const fetched = results
+          .filter(r => r.status === 'fulfilled' && r.value?.data)
+          .map(r => r.value.data);
+        if (fetched.length > 0) {
+          setReports(fetched);
+          return;
+        }
+      }
+
+      // 2. Fallback: fetch all incidents directly from API endpoint
+      const res = await incidentAPI.getAll({ limit: 50 });
+      const apiIncidents = res.data?.data || res.data || [];
+      setReports(Array.isArray(apiIncidents) ? apiIncidents : []);
     } catch (e) {
       console.error('Fetch reports failed:', e);
+      setReports([]);
     } finally {
       setLoading(false);
     }
