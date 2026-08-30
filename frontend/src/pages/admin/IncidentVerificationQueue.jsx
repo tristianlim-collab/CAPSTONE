@@ -109,15 +109,14 @@ export default function IncidentVerificationQueue() {
   }, [fetchIncidents]);
 
   useEffect(() => {
-    const unsub1 = on('incident_awaiting_verification', (data) => {
+    const handleIncomingReport = (data) => {
       const inc = data.incident || data;
+      if (!inc || !inc.incident_id) return;
       setIncidents(prev => {
         if (prev.find(i => i.incident_id === inc.incident_id)) return prev;
         return [inc, ...prev];
       });
-      // Add to new incident pulse set
       setNewIncidentIds(prev => new Set(prev).add(inc.incident_id));
-      // Remove pulse after 10 seconds
       setTimeout(() => {
         setNewIncidentIds(prev => {
           const next = new Set(prev);
@@ -125,7 +124,14 @@ export default function IncidentVerificationQueue() {
           return next;
         });
       }, 10000);
-    });
+      toast('🚨 New Incident Report Received!', {
+        icon: '⚠️',
+        style: { borderRadius: '12px', background: '#0F172A', color: '#fff' }
+      });
+    };
+
+    const unsub0 = on('new_incident', handleIncomingReport);
+    const unsub1 = on('incident_awaiting_verification', handleIncomingReport);
     const unsub2 = on('incident_verified', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...i, status: 'RESPONDING', assignments: data.assignments } : i));
       setSelectedIncident(prev => prev?.incident_id === (data.incident?.incident_id || data.incident_id) ? { ...prev, status: 'RESPONDING', assignments: data.assignments } : prev);
@@ -137,7 +143,7 @@ export default function IncidentVerificationQueue() {
     const unsub4 = on('incident_status_updated', (data) => {
       setIncidents(prev => prev.map(i => i.incident_id === data.incident_id ? { ...i, status: data.status, ...(data.incident || {}) } : i));
     });
-    return () => { unsub1?.(); unsub2?.(); unsub3?.(); unsub4?.(); };
+    return () => { unsub0?.(); unsub1?.(); unsub2?.(); unsub3?.(); unsub4?.(); };
   }, [on]);
 
   useEffect(() => {
