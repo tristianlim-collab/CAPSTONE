@@ -40,7 +40,7 @@ export const SOCKET_URL = PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: 60000, // 60s timeout to allow Render free server cold-start and photo uploads
   headers: {
     'Content-Type': 'application/json',
   },
