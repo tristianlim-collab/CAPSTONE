@@ -11,6 +11,7 @@ import {
   MapPin, Clock, AlertTriangle, ShieldCheck,
   Flame, Activity, Stethoscope, Car
 } from 'lucide-react-native';
+import { Colors, FontSizes, Spacing, BorderRadius } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { useSocketContext } from '../context/SocketContext';
 import { incidentAPI } from '../api';
