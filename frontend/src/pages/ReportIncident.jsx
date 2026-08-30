@@ -157,6 +157,18 @@ const ReportIncident = () => {
       // Get incident_id from response
       const incidentId = incidentResponse.data?.incident_id;
 
+      if (incidentId) {
+        try {
+          const stored = localStorage.getItem('my_report_ids');
+          const ids = stored ? JSON.parse(stored) : [];
+          if (!ids.includes(incidentId)) {
+            localStorage.setItem('my_report_ids', JSON.stringify([incidentId, ...ids]));
+          }
+        } catch (e) {
+          console.error('Failed to save report id locally:', e);
+        }
+      }
+
       if (!incidentId) {
         console.error('No incident_id in response:', incidentResponse.data);
         throw new Error('Failed to get incident ID from server');

@@ -13,8 +13,25 @@ const MyReports = () => {
   useEffect(() => {
     const fetchReports = async () => {
       try {
+        setLoading(true);
+        // Try fetching saved local report IDs first
+        const stored = localStorage.getItem('my_report_ids');
+        const ids = stored ? JSON.parse(stored) : [];
+
+        if (ids.length > 0) {
+          const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
+          const fetched = results
+            .filter(r => r.status === 'fulfilled' && r.value?.data)
+            .map(r => r.value.data);
+          if (fetched.length > 0) {
+            setReports(fetched);
+            return;
+          }
+        }
+
+        // Fallback: fetch list from backend
         const res = await incidentAPI.getAll({ limit: 100 });
-        setReports(res.data?.data || []);
+        setReports(res.data?.data || res.data || []);
       } catch (err) {
         console.error('Failed to fetch reports:', err);
       } finally {
