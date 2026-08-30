@@ -68,7 +68,13 @@ export default function MyReportsScreen({ navigation }) {
     }
   }, []);
 
-  useEffect(() => { loadReports(); }, [loadReports]);
+  useEffect(() => { 
+    OfflineQueueService.syncQueue().then(() => loadReports()); 
+    const interval = setInterval(() => {
+      OfflineQueueService.syncQueue().then(() => loadReports());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [loadReports]);
 
   // Real-time status sync via socket
   useEffect(() => {
