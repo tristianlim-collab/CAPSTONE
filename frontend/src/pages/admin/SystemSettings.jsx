@@ -14,6 +14,7 @@ const SystemSettings = () => {
 
   // Show/Hide password toggle
   const [showSecrets, setShowSecrets] = useState({});
+  const [selectedRole, setSelectedRole] = useState(null);
 
   useEffect(() => {
     fetchConfigs();
@@ -212,7 +213,7 @@ const SystemSettings = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {roles.map((r, i) => (
-                  <div key={i} className={`bg-white rounded-2xl p-5 border-t-4 border-${r.color}-500 shadow-sm border-x border-b border-x-slate-200 border-b-slate-200 hover:shadow-md transition-shadow cursor-pointer group`}>
+                  <div key={i} className={`bg-white rounded-2xl p-5 border-t-4 border-${r.color}-500 shadow-sm border-x border-b border-x-slate-200 border-b-slate-200 hover:shadow-md transition-shadow group`}>
                     <div className="flex justify-between items-start mb-4">
                       <div className={`p-2.5 rounded-xl bg-${r.color}-50 shrink-0 group-hover:scale-110 transition-transform`}>
                         {r.icon}
@@ -232,7 +233,12 @@ const SystemSettings = () => {
                       ))}
                     </div>
                     <div className="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center">
-                      <button className={`text-sm font-semibold text-${r.color}-600 hover:text-${r.color}-700`}>Edit Role</button>
+                      <button
+                        onClick={() => setSelectedRole(r)}
+                        className={`text-sm font-semibold text-${r.color}-600 hover:text-${r.color}-700 flex items-center gap-1`}
+                      >
+                        Edit Role & Permissions
+                      </button>
                       <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Duplicate Role">
                         <Copy size={16} />
                       </button>
@@ -240,6 +246,41 @@ const SystemSettings = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Role Edit Modal */}
+              {selectedRole && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                    <div className="flex justify-between items-center border-b pb-3">
+                      <h4 className="font-bold text-lg text-slate-800">Edit Permissions: {selectedRole.name}</h4>
+                      <button onClick={() => setSelectedRole(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                    </div>
+
+                    <div className="space-y-3 py-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase">Configurable Permissions</p>
+                      {['Assign Units', 'Update Incidents', 'View Analytics', 'Export Reports', 'System Administration'].map((perm, idx) => (
+                        <label key={idx} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer">
+                          <input type="checkbox" defaultChecked={selectedRole.permissions.includes(perm) || idx < 3} className="w-4 h-4 text-indigo-600 rounded" />
+                          <span className="text-sm font-medium text-slate-700">{perm}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 border-t">
+                      <button onClick={() => setSelectedRole(null)} className="px-4 py-2 text-sm text-slate-600 font-medium hover:bg-slate-100 rounded-lg">Cancel</button>
+                      <button
+                        onClick={() => {
+                          toast.success(`Permissions for ${selectedRole.name} updated!`);
+                          setSelectedRole(null);
+                        }}
+                        className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm"
+                      >
+                        Save Permissions
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
