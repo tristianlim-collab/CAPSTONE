@@ -275,11 +275,23 @@ export const exportIncidentsPDF = async (req, res) => {
 
     let executablePath = commonPaths.find(p => fs.existsSync(p));
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    const launchOptions = {
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--single-process'
+      ],
+    };
+
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60000 });
     const pdfBuffer = await page.pdf({
@@ -602,11 +614,23 @@ export const exportPostReportsPDF = async (req, res) => {
 
     let executablePath = commonPaths.find(p => fs.existsSync(p));
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    const launchOptions = {
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--single-process'
+      ],
+    };
+
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60000 });
     const pdfBuffer = await page.pdf({
