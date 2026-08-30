@@ -401,6 +401,18 @@ export default function IncidentReportScreen({ navigation }) {
       });
       const incidentId = incRes.data?.incident_id;
 
+      if (incidentId) {
+        try {
+          const stored = await AsyncStorage.getItem('my_report_ids');
+          const ids = stored ? JSON.parse(stored) : [];
+          if (!ids.includes(incidentId)) {
+            await AsyncStorage.setItem('my_report_ids', JSON.stringify([incidentId, ...ids]));
+          }
+        } catch (e) {
+          console.error('Failed saving incident id locally:', e);
+        }
+      }
+
       if (incidentId && photos.length > 0) {
         for (const photo of photos) {
           try {
