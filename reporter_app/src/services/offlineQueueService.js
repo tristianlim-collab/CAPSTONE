@@ -6,8 +6,8 @@ const OFFLINE_QUEUE_KEY = 'OFFLINE_PENDING_REPORTS_QUEUE';
 const isOnline = async () => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${SOCKET_URL}/health`, { signal: controller.signal });
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${SOCKET_URL}/api/health`, { signal: controller.signal });
     clearTimeout(timeoutId);
     return res.ok;
   } catch {
@@ -72,6 +72,18 @@ export const OfflineQueueService = {
           });
 
           const incidentId = incRes.data?.incident_id;
+
+          if (incidentId) {
+            try {
+              const stored = await AsyncStorage.getItem('my_report_ids');
+              const ids = stored ? JSON.parse(stored) : [];
+              if (!ids.includes(incidentId)) {
+                await AsyncStorage.setItem('my_report_ids', JSON.stringify([incidentId, ...ids]));
+              }
+            } catch (e) {
+              console.error('Failed saving synced incident id locally:', e);
+            }
+          }
 
           if (incidentId && item.photos && item.photos.length > 0) {
             for (const photo of item.photos) {
