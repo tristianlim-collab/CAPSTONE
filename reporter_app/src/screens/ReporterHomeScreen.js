@@ -37,6 +37,11 @@ export default function ReporterHomeScreen({ navigation }) {
     // Attempt auto-syncing any offline queued reports on screen load
     OfflineQueueService.syncQueue();
 
+    // Auto-sync every 15 seconds in case Wi-Fi/Internet comes back while user is inside the app
+    const syncInterval = setInterval(() => {
+      OfflineQueueService.syncQueue();
+    }, 15000);
+
     const fetchIncidents = async () => {
       try {
         const res = await incidentAPI.getAll({ limit: 50 });
@@ -49,6 +54,8 @@ export default function ReporterHomeScreen({ navigation }) {
       }
     };
     fetchIncidents();
+
+    return () => clearInterval(syncInterval);
   }, []);
 
   useEffect(() => {
