@@ -23,20 +23,18 @@ const getBackendIp = () => {
     return debuggerHost.split(':')[0];
   }
 
-  // 4. Fallback (Current machine IP: 192.168.245.129)
-  // For Android Emulator, you can also try '10.0.2.2' if this fails
-  return '192.168.245.129';
+  // 4. Fallback (Current Wi-Fi Machine IP: 192.168.241.129)
+  return '192.168.241.129';
 };
 
 const backendIp = getBackendIp();
-
-// In production (standalone APK build), use live Render backend. In local dev, auto-detect IP.
 const isDev = __DEV__;
 const PROD_URL = 'https://gaoirs-backend.onrender.com';
 
-// Connect directly to live Render backend so mobile app and Vercel admin panel share real-time socket events
-const API_URL = `${PROD_URL}/api`;
-export const SOCKET_URL = PROD_URL;
+// In Expo Go dev mode (__DEV__), route directly to your PC's local backend (http://192.168.241.129:3001) over Wi-Fi
+// In standalone APK build, route to live Render URL
+const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
+export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
