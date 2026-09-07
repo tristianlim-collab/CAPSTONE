@@ -16,8 +16,25 @@ const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'
 const Analytics = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0 });
   const [responseTime, setResponseTime] = useState(0);
-  const [byTypeData, setByTypeData] = useState([]);
-  const [byBarangayData, setByBarangayData] = useState([]);
+  const [byTypeData, setByTypeData] = useState([
+    { name: 'Fire Incident', count: 142 },
+    { name: 'Flood/Typhoon', count: 85 },
+    { name: 'Vehicular Accident', count: 64 },
+    { name: 'Infrastructure Damage', count: 48 },
+    { name: 'Medical Emergency', count: 32 },
+    { name: 'Landslide', count: 21 },
+    { name: 'Other Emergency', count: 18 }
+  ]);
+  const [byBarangayData, setByBarangayData] = useState([
+    { name: 'Dos Hermanas', count: 58 },
+    { name: 'San Isidro', count: 52 },
+    { name: 'Zone 16, Bubog', count: 49 },
+    { name: 'Efigenio Lizares', count: 44 },
+    { name: 'Concepcion', count: 41 },
+    { name: 'Katilingban', count: 38 },
+    { name: 'Zone 19', count: 35 },
+    { name: 'Bulanon', count: 32 }
+  ]);
   const [loading, setLoading] = useState(true);
   const [training, setTraining] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
