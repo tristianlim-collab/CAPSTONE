@@ -20,11 +20,11 @@ import { success, error } from "./utils/apiResponse.js";
 const app = express();
 
 app.use(
-	cors({
-		origin: (origin, callback) => callback(null, true),
-		credentials: true,
-		exposedHeaders: ["Content-Disposition"],
-	})
+  cors({
+    origin: (origin, callback) => callback(null, true),
+    credentials: true,
+    exposedHeaders: ["Content-Disposition"],
+  })
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -46,23 +46,23 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/config", systemConfigRoutes);
 
 app.get("/api/health", (_req, res) => {
-	return res.status(200).json(
-		success({
-			message: "GAOIRS API is healthy",
-			data: { uptime: process.uptime() },
-		})
-	);
+  return res.status(200).json(
+    success({
+      message: "GAOIRS API is healthy",
+      data: { uptime: process.uptime() },
+    })
+  );
 });
 
 app.use((req, res) => {
-	return res.status(404).json(error({ message: `Route not found: ${req.originalUrl}` }));
+  return res.status(404).json(error({ message: `Route not found: ${req.originalUrl}` }));
 });
 
 app.use((err, _req, res, _next) => {
-	const statusCode = err.statusCode || 500;
-	return res
-		.status(statusCode)
-		.json(error({ message: err.message || "Internal server error", error: err }));
+  const statusCode = err.statusCode || 500;
+  return res
+    .status(statusCode)
+    .json(error({ message: err.message || "Internal server error", error: err }));
 });
 
 export default app;
