@@ -12,6 +12,7 @@ import {
   AreaChart
 } from 'recharts';
 import { TrendingUp, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { analyticsAPI } from '../../api';
 
 const TrendForecast = ({ days = 7, onError = null }) => {
   const [forecast, setForecast] = useState(null);
