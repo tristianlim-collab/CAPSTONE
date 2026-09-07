@@ -48,8 +48,15 @@ const KDEHeatmap = () => {
       setError(null);
 
       const response = await analyticsAPI.getKDE();
-      // result.data.data because of the way success wrapper works
-      setData(response.data.data.data); 
+      // Safely access data array regardless of API wrapper depth
+      const kdePayload = response.data?.data?.data || response.data?.data || response.data;
+      if (Array.isArray(kdePayload)) {
+        setData(kdePayload);
+      } else if (kdePayload && Array.isArray(kdePayload.data)) {
+        setData(kdePayload.data);
+      } else {
+        setData([]);
+      } 
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {

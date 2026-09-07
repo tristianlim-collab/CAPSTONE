@@ -42,20 +42,8 @@ const TrendForecast = ({ days = 7, onError = null }) => {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      // Get forecast
-      const forecastRes = await fetch(
-        `/api/analytics/forecast/${days}?model=prophet`,
-        { headers }
-      );
-
-      if (!forecastRes.ok) {
-        throw new Error('Failed to fetch forecast');
-      }
-
-      const forecastData = await forecastRes.json();
-
-      const comparisonRes = await fetch('/api/analytics/models/comparison', { headers });
-      const comparisonData = await comparisonRes.json();
+      const forecastData = await analyticsAPI.getForecast(days, 'prophet').then(res => res.data);
+      const comparisonData = await analyticsAPI.getModelComparison().then(res => res.data).catch(() => null);
 
       if (comparisonData?.data) {
         setChampion(comparisonData.data.champion || 'Prophet');
