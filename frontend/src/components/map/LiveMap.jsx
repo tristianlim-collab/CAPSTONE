@@ -21,11 +21,10 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function AutoZoomToLatestIncident({ incidents, enabled }) {
   const map = useMap();
-  const hasHydrated = useRef(false);
   const previousLatestId = useRef(null);
 
   useEffect(() => {
-    if (!enabled || incidents.length === 0) return;
+    if (!enabled || !incidents || incidents.length === 0) return;
 
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id;
@@ -35,24 +34,24 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
     if (!hasValidCoordinates) return;
 
-    if (!hasHydrated.current) {
-      hasHydrated.current = true;
-      previousLatestId.current = latestId;
-      return;
-    }
-
+    // Zoom on first load or when a new latest incident arrives
     if (previousLatestId.current !== latestId) {
+      const isNewIncident = previousLatestId.current !== null;
+      previousLatestId.current = latestId;
+
       map.flyTo([lat, lng], 16, {
         duration: 2.0,
         easeLinearity: 0.25,
         noMoveStart: true
       });
-      previousLatestId.current = latestId;
-      toast('🔴 New incident reported! Map zoomed to location.', {
-        icon: '🚨',
-        style: { fontWeight: 'bold', borderLeft: '4px solid #EF4444' },
-        duration: 5000
-      });
+
+      if (isNewIncident) {
+        toast('🔴 New incident reported! Map zoomed to location.', {
+          icon: '🚨',
+          style: { fontWeight: 'bold', borderLeft: '4px solid #EF4444' },
+          duration: 5000
+        });
+      }
     }
   }, [enabled, incidents, map]);
 
@@ -180,23 +179,17 @@ export default function LiveMap({
 
     // Socket.io Subscriptions
     const unsub1 = on('new_incident', (incident) => {
-      setIncidents(prev => {
-        if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
-        return [incident, ...prev];
-      });
-      // Auto-select new incident for LGU zones
-      setSelectedIncidentId(incident.incident_id);
+      if (incident?.latitude && incident?.longitude) {
+        setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
+        setSelectedIncidentId(incident.incident_id);
+      }
     });
 
     // Listen for new reports awaiting verification (this is what the backend actually emits)
     const unsub3 = on('incident_awaiting_verification', (data) => {
       const incident = data.incident || data;
       if (incident?.latitude && incident?.longitude) {
-        setIncidents(prev => {
-          if (prev.some(i => i.incident_id === incident.incident_id)) return prev;
-          return [incident, ...prev];
-        });
-        // Auto-select new incident for LGU zones
+        setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
         setSelectedIncidentId(incident.incident_id);
       }
     });

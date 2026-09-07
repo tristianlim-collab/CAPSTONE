@@ -689,9 +689,6 @@ export default function IncidentReportScreen({ navigation }) {
 
         {/* Personal Info */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { marginBottom: 12 }]}>PERSONAL INFO</Text>
-          <TextInput style={styles.input} placeholder="Full Name" placeholderTextColor="#94A3B8"
-            value={fullName} onChangeText={setFullName} />
           <TextInput
             style={[styles.input, phoneTouched && !isValidPhone && { borderColor: '#EF4444' }]}
             placeholder="+639XXXXXXXXX"
@@ -709,6 +706,8 @@ export default function IncidentReportScreen({ navigation }) {
           {phoneTouched && !isValidPhone && (
             <Text style={{ color: '#EF4444', fontSize: 11, marginTop: -8, marginBottom: 8 }}>Use +639XXXXXXXXX</Text>
           )}
+          <TextInput style={styles.input} placeholder="FULL NAME (OPTIONAL)" placeholderTextColor="#94A3B8"
+            value={fullName} onChangeText={setFullName} />
         </View>
         <View style={{ height: 120 }} />
       </ScrollView>

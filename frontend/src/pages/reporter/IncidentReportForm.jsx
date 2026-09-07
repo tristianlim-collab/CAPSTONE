@@ -531,17 +531,9 @@ export default function IncidentReportForm() {
           )}
         </div>
 
-        {/* OPTIONAL PERSONAL INFO */}
+        {/* PERSONAL INFO */}
         <div className="mb-6">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3">Optional Personal Info</h3>
           <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
-            />
             <input
               type="tel"
               placeholder="+639XXXXXXXXX"
@@ -572,6 +564,13 @@ export default function IncidentReportForm() {
             {showPhoneError && (
               <p className="text-xs text-red-600 -mt-1">Contact number is required. Use +639XXXXXXXXX</p>
             )}
+            <input
+              type="text"
+              placeholder="FULL NAME (OPTIONAL)"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+            />
           </div>
         </div>
 

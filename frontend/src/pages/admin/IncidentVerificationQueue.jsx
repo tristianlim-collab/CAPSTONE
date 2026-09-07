@@ -82,9 +82,7 @@ export default function IncidentVerificationQueue() {
       console.error('Failed to fetch data:', err);
       if (!silent) toast.error('Failed to load incidents');
     } finally {
-      if (!silent) {
-        setTimeout(() => setLoading(false), 300);
-      }
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -98,8 +96,8 @@ export default function IncidentVerificationQueue() {
     };
     fetchUnits();
 
-    // Silent background auto-sync (no full page loading flicker)
-    const autoSyncInterval = setInterval(() => fetchIncidents(searchFilters, true), 10000);
+    // Silent background auto-sync every 30 seconds (real-time updates are handled instantly via WebSockets)
+    const autoSyncInterval = setInterval(() => fetchIncidents(searchFilters, true), 30000);
     return () => clearInterval(autoSyncInterval);
   }, [fetchIncidents, searchFilters]);
 
