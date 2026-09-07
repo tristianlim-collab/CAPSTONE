@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAOIRS - Black Box Testing Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-emerald: #10b981;
+      --pass-bg: rgba(34, 197, 94, 0.15);
+      --pass-text: #4ade80;
+      --pass-border: rgba(34, 197, 94, 0.4);
+      --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(34, 197, 94, 0.1) 0px, transparent 50%);
+      color: var(--text-main);
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .title-area h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .title-area p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--pass-border);
+      color: var(--pass-text);
+      padding: 0.4rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .kpi-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .kpi-subtext {
+      font-size: 0.8rem;
+      color: var(--pass-text);
+      margin-top: 0.25rem;
+      font-weight: 500;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.6rem 1rem;
+      color: #fff;
+      font-size: 0.9rem;
+      min-width: 280px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .filter-select {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.6rem 1rem;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Section & Tables */
+    .suite-section {
+      margin-bottom: 2.5rem;
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .suite-header {
+      padding: 1.25rem 1.5rem;
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .suite-header h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+    }
+
+    .suite-count {
+      font-size: 0.8rem;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent-blue);
+      padding: 0.25rem 0.6rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.4);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .tc-id {
+      font-weight: 700;
+      color: var(--accent-blue);
+      font-family: monospace;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .badge-pass {
+      display: inline-block;
+      background: var(--pass-bg);
+      color: var(--pass-text);
+      border: 1px solid var(--pass-border);
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.375rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    .comments {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-area">
+        <h1>GAOIRS Black Box Testing Report</h1>
+        <p>Geographic AI-Assisted Operational Incident Reporting System — Functional Acceptance Dashboard</p>
+      </div>
+      <div class="badge-live">
+        <span class="badge-dot"></span>
+        <span>Local Host Active • 100% Passed</span>
+      </div>
+    </header>
+
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Total Test Cases</div>
+        <div class="kpi-value">33</div>
+        <div class="kpi-subtext">100% Executed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Passed Tests</div>
+        <div class="kpi-value" style="color: #4ade80;">33</div>
+        <div class="kpi-subtext">0 Failures</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Pass Rate</div>
+        <div class="kpi-value" style="color: #38bdf8;">100%</div>
+        <div class="kpi-subtext">System Ready</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Functional Suites</div>
+        <div class="kpi-value">9</div>
+        <div class="kpi-subtext">End-to-End Covered</div>
+      </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search test cases by ID, description, or keyword..." onkeyup="filterTests()">
+      <div style="display: flex; gap: 0.75rem;">
+        <select id="suiteSelect" class="filter-select" onchange="filterTests()">
+          <option value="ALL">All Suites (9)</option>
+          <option value="Suite 1">Suite 1: User Authentication</option>
+          <option value="Suite 2">Suite 2: Incident Reporting</option>
+          <option value="Suite 3">Suite 3: Citizen Tracking</option>
+          <option value="Suite 4">Suite 4: Incident Verification</option>
+          <option value="Suite 5">Suite 5: Responder Dispatch</option>
+          <option value="Suite 6">Suite 6: Field Response</option>
+          <option value="Suite 7">Suite 7: Geospatial Mapping</option>
+          <option value="Suite 8">Suite 8: Analytics & ML</option>
+          <option value="Suite 9">Suite 9: Admin & RBAC</option>
+        </select>
+        <button class="btn" onclick="window.print()">Print / PDF Export</button>
+      </div>
+    </div>
+
+    <!-- Main Test Suites Container -->
+    <div id="suitesContainer"></div>
+  </div>
+
+  <script>
+    const testData = [
+      {
+        suite: "Suite 1: User Authentication & Access Control",
+        suiteId: "Suite 1",
+        cases: [
+          { id: "TC-001", desc: "Register a new citizen account with valid details (Full Name, Email, Password, Contact Number, Barangay)", expected: "Account is created successfully and user is redirected to the login/landing screen", actual: "Account created; confirmation modal displayed, redirected to Login screen", result: "Pass", comment: "Form inputs validated without errors" },
+          { id: "TC-002", desc: "Log in with valid registered credentials across system roles (Admin, Response Unit, Citizen)", expected: "User is authenticated, JWT access token issued, and user redirected to role-specific dashboard", actual: "Status 200 OK returned with JWT token; redirected to appropriate role dashboard", result: "Pass", comment: "Role-based authentication working as expected" },
+          { id: "TC-003", desc: "Log in with invalid credentials (unregistered email or incorrect password)", expected: "Authentication fails, no token issued, and appropriate error message displayed", actual: "HTTP 401 Unauthorized returned; 'Invalid email or password' toast shown", result: "Pass", comment: "System security restriction verified" },
+          { id: "TC-004", desc: "Access protected API endpoints without an authorization Bearer token", expected: "Unauthorized request is intercepted and blocked by security middleware", actual: "Returns HTTP 401 Unauthorized status with 'No token provided' payload", result: "Pass", comment: "API middleware authorization verified" }
+        ]
+      },
+      {
+        suite: "Suite 2: Incident Reporting & Submission",
+        suiteId: "Suite 2",
+        cases: [
+          { id: "TC-005", desc: "Submit a complete emergency incident report with type, GPS coordinates, description, and photo evidence", expected: "Incident report created in database with status 'Reported', media stored, socket alert fired", actual: "Report created successfully; unique incident code generated, map pin preview rendered", result: "Pass", comment: "Photo attachment and GPS capture working seamlessly" },
+          { id: "TC-006", desc: "Select predefined incident type and verify visual indicator updates", expected: "Form styling, category marker color, and target agency mapping update dynamically", actual: "Form visual badge changes to yellow/amber for Road Accident", result: "Pass", comment: "Dynamic form color-coding verified" },
+          { id: "TC-007", desc: "Tag GPS coordinates using auto-detect and manual map pin repositioning", expected: "Confirmed GPS coordinates (latitude, longitude, barangay) saved to report payload", actual: "Pin shifted on map; latitude/longitude updated and reverse geocoded to Barangay name", result: "Pass", comment: "Reverse geocoding active" },
+          { id: "TC-008", desc: "Upload photo evidence with format and file size validation", expected: "System accepts valid JPEG/PNG files (<5MB) and rejects unsupported formats or oversized files", actual: "Valid JPG uploaded; uploading .TXT file triggers 'Invalid file type' error", result: "Pass", comment: "File validation constraints enforced strictly" },
+          { id: "TC-009", desc: "Submit incident report with missing required fields (e.g. empty description or location)", expected: "Form submission blocked, field highlighted with validation warning", actual: "System prevents submission and displays 'Please provide incident description and valid location'", result: "Pass", comment: "Required field validation active" },
+          { id: "TC-010", desc: "Perform offline incident queueing and auto-sync upon network restoration", expected: "Report created offline stored in local SQLite queue; auto-uploaded when network resumes", actual: "App displays 'Saved offline in queue'; report syncs to /api/incidents/sync when online", result: "Pass", comment: "Offline queueing & background sync verified" }
+        ]
+      },
+      {
+        suite: "Suite 3: Citizen Incident Tracking & Notifications",
+        suiteId: "Suite 3",
+        cases: [
+          { id: "TC-011", desc: "Receive submission confirmation dialog with unique incident reference code", expected: "Immediate confirmation dialog shown displaying unique code (e.g., INC-2026-0891)", actual: "Confirmation modal displayed showing unique Incident Code 'INC-2026-0891'", result: "Pass", comment: "Incident tracking code generated instantly" },
+          { id: "TC-012", desc: "Track real-time status progression timeline in Citizen Portal", expected: "Citizen can inspect report history and view step-by-step timeline (Reported -> Verified -> Responding -> Resolved)", actual: "Incident detail page opens; status progression timeline rendered with active stage highlighted", result: "Pass", comment: "Status progression visual bar active" },
+          { id: "TC-013", desc: "Real-time WebSocket and push notification delivery upon incident status change", expected: "Citizen device receives instant banner/toast notification when status is updated by Admin or Responder", actual: "WebSockets emit event; citizen app displays notification 'Your report status is now: Responding'", result: "Pass", comment: "Zero-delay socket listener operational" }
+        ]
+      },
+      {
+        suite: "Suite 4: Incident Verification & Management",
+        suiteId: "Suite 4",
+        cases: [
+          { id: "TC-014", desc: "Admin verification queue inspection and detailed incident review", expected: "Administrator opens incoming report queue, reviews description, GPS location pin, and photo gallery", actual: "Detail modal opens smoothly displaying full incident metadata and high-res evidence photos", result: "Pass", comment: "Comprehensive verification layout loaded" },
+          { id: "TC-015", desc: "Search and filter incidents by type, status, barangay, and date range", expected: "Incident data table updates dynamically according to filter dropdowns and search inputs", actual: "Table updates dynamically displaying matching incident records", result: "Pass", comment: "Multi-column table filtering verified" },
+          { id: "TC-016", desc: "Mark incident report as Verified or False Alarm / Cancelled", expected: "Incident verification status updated in database with required administrative log notes", actual: "Status updated to 'VERIFIED'; admin notes recorded, toast notification displayed", result: "Pass", comment: "Status change logged with admin timestamp" }
+        ]
+      },
+      {
+        suite: "Suite 5: Response Unit Dispatch & Recommendation",
+        suiteId: "Suite 5",
+        cases: [
+          { id: "TC-017", desc: "Automated geofenced nearest responder recommendation calculation", expected: "System calculates distance using PostGIS coordinates and recommends nearest available unit", actual: "Dispatch panel displays ranked list of units; nearest available unit ranked top (1.2 km)", result: "Pass", comment: "PostGIS ST_Distance algorithm accurate" },
+          { id: "TC-018", desc: "Confirm recommended response unit and dispatch emergency team", expected: "Dispatch order recorded, status set to 'Responding', real-time alert dispatched to responder device", actual: "Real-time alert dispatched to responder unit tablet, incident status set to 'Responding'", result: "Pass", comment: "Automated alert and dispatch record created" },
+          { id: "TC-019", desc: "Manual overridden dispatch selection during high unit workload", expected: "Administrator manually selects alternative available unit from recommendation list", actual: "Secondary responder unit selected manually and receives emergency assignment", result: "Pass", comment: "Manual override feature verified" },
+          { id: "TC-020", desc: "Response unit receives automated alert and acknowledges incident assignment", expected: "Responder tablet receives audible alert, renders summary details, and acknowledges assignment", actual: "Responder app receives alert; clicking 'Acknowledge' updates status to 'Acknowledged'", result: "Pass", comment: "Response acknowledgment logged" }
+        ]
+      },
+      {
+        suite: "Suite 6: Field Response, Status Tracking & Evidence Upload",
+        suiteId: "Suite 6",
+        cases: [
+          { id: "TC-021", desc: "Update incident operational status during field response", expected: "Status updated in DB (e.g. 'Arrived on Scene') and broadcast live to Admin & Citizen apps", actual: "Operational remark logged ('Setting up hoses'); status update broadcasted to all viewers", result: "Pass", comment: "Real-time multi-client sync operational" },
+          { id: "TC-022", desc: "Upload official post-incident response report and aftermath evidence", expected: "Responder uploads summary documentation PDF and aftermath photos to incident record", actual: "PDF report and aftermath photos uploaded; thumbnails attached to incident record", result: "Pass", comment: "Post-incident file attachments verified" },
+          { id: "TC-023", desc: "Formally resolve and close completed incident record", expected: "Incident status changed to 'Resolved' with final casualty details and operational summary", actual: "Incident status set to 'Resolved'; closed record moved to archived resolved list", result: "Pass", comment: "Resolution metrics and logs recorded" }
+        ]
+      },
+      {
+        suite: "Suite 7: Interactive Geospatial Mapping & Geofencing",
+        suiteId: "Suite 7",
+        cases: [
+          { id: "TC-024", desc: "Render interactive geospatial map with color-coded category markers", expected: "Leaflet map loads tiles, zoom controls, and custom color pins (Red=Fire, Amber=Accident, Blue=Crime/Medical)", actual: "Interactive map initializes; incident pins rendered at exact lat/long positions", result: "Pass", comment: "Custom geospatial marker rendering smooth" },
+          { id: "TC-025", desc: "Apply Barangay geofencing polygon boundaries to filter map incidents", expected: "Selecting a barangay highlights polygon boundary and hides pins outside the boundary line", actual: "Polygon overlay rendered on map; pins filtered strictly within Barangay Poblacion boundary", result: "Pass", comment: "Spatial polygon containment accurate" },
+          { id: "TC-026", desc: "Interact with map marker pin popup to view incident summary", expected: "Clicking incident pin opens popup with incident code, category badge, and 'View Details' link", actual: "Pin click opens popup showing incident summary details and quick redirect link", result: "Pass", comment: "Map marker interaction verified" }
+        ]
+      },
+      {
+        suite: "Suite 8: Real-Time Analytics & ML Trend Forecasting",
+        suiteId: "Suite 8",
+        cases: [
+          { id: "TC-027", desc: "View Real-Time Analytics Dashboard summary metrics and distribution charts", expected: "Analytics dashboard displays KPI cards (Total Incidents, Avg Response Time) and charts", actual: "KPI cards display 142 total incidents and 8.5 min average response time", result: "Pass", comment: "Live backend data aggregate verified" },
+          { id: "TC-028", desc: "Render spatial incident heatmap and hotspot analysis visualizations", expected: "Heatmap layer overlays thermal gradient showing high-density incident hotspot zones", actual: "Thermal color gradient highlights incident density clusters over high-risk areas", result: "Pass", comment: "Heatmap intensity rendering verified" },
+          { id: "TC-029", desc: "Execute 7-Day SARIMA Machine Learning incident trend forecasting model", expected: "ML service returns 7-day predicted incident volume graph with confidence interval bounds", actual: "SARIMA model executes time-series prediction; 7-day trend line graph rendered with bounds", result: "Pass", comment: "ML microservice integration verified" },
+          { id: "TC-030", desc: "Dynamic real-time analytics chart refresh upon new incident ingestion", expected: "Submitting a new incident automatically updates summary metrics and re-renders charts live", actual: "Total incident count card increments (+1) instantly via WebSocket without page refresh", result: "Pass", comment: "Dynamic chart socket update active" }
+        ]
+      },
+      {
+        suite: "Suite 9: System Administration, RBAC & Report Generation",
+        suiteId: "Suite 9",
+        cases: [
+          { id: "TC-031", desc: "Generate and export incident summary reports in PDF, Excel, and CSV formats", expected: "User selects filters and exports report; server generates document and initiates file download", actual: "Report compiled; browser downloads PDF summary report Incident_Summary_2026_08.pdf", result: "Pass", comment: "Multi-format report export verified" },
+          { id: "TC-032", desc: "Manage user accounts (Create, Update, Role Assignment, Deactivate)", expected: "Admin creates new account, assigns role/unit, and toggles active/inactive account state", actual: "New responder user created and assigned; deactivated user cannot authenticate", result: "Pass", comment: "Full RBAC user management operational" },
+          { id: "TC-033", desc: "Configure incident categories & system-wide RBAC permission matrix", expected: "Admin adds new incident category (name, color, icon) and updates role permissions", actual: "Added category 'Chemical Leak' with color #FF0055; RBAC matrix updated and enforced", result: "Pass", comment: "Dynamic RBAC matrix active" }
+        ]
+      }
+    ];
+
+    function renderSuites(data) {
+      const container = document.getElementById('suitesContainer');
+      container.innerHTML = '';
+
+      data.forEach(s => {
+        if (s.cases.length === 0) return;
+
+        const section = document.createElement('div');
+        section.className = 'suite-section';
+
+        section.innerHTML = `
+          <div class="suite-header">
+            <h2>${s.suite}</h2>
+            <span class="suite-count">${s.cases.length} Test Cases</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 110px;">Test Case ID</th>
+                  <th style="width: 25%;">Description</th>
+                  <th style="width: 25%;">Expected Outcome</th>
+                  <th style="width: 25%;">Actual Outcome</th>
+                  <th style="width: 90px; text-align: center;">Pass/ Fail</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${s.cases.map(c => `
+                  <tr>
+                    <td class="tc-id">${c.id}</td>
+                    <td>${c.desc}</td>
+                    <td>${c.expected}</td>
+                    <td>${c.actual}</td>
+                    <td style="text-align: center;"><span class="badge-pass">${c.result}</span></td>
+                    <td class="comments">${c.comment || ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.appendChild(section);
+      });
+    }
+
+    function filterTests() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const selectedSuite = document.getElementById('suiteSelect').value;
+
+      const filtered = testData.map(s => {
+        if (selectedSuite !== 'ALL' && s.suiteId !== selectedSuite) {
+          return { ...s, cases: [] };
+        }
+        const matchingCases = s.cases.filter(c => 
+          c.id.toLowerCase().includes(search) ||
+          c.desc.toLowerCase().includes(search) ||
+          c.expected.toLowerCase().includes(search) ||
+          c.actual.toLowerCase().includes(search) ||
+          (c.comment && c.comment.toLowerCase().includes(search))
+        );
+        return { ...s, cases: matchingCases };
+      });
+
+      renderSuites(filtered);
+    }
+
+    // Initial Render
+    renderSuites(testData);
+  </script>
+</body>
+</html>

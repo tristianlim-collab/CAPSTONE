@@ -39,6 +39,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitejs/plugin-react-swc": "^4.3.0",
     "autoprefixer": "^10.4.20",
+    "playwright-qase-reporter": "^2.7.0",
     "postcss": "^8.4.47",
     "vite": "^8.0.8"
   }

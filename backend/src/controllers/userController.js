@@ -72,12 +72,40 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
-    await prisma.user.delete({ where: { user_id: userId } });
+
+    // Prevent deleting active self account
+    if (req.user?.id === userId) {
+      return res.status(400).json({ message: 'You cannot delete your own logged-in admin account.' });
+    }
+
+    const userToDelete = await prisma.user.findUnique({ where: { user_id: userId } });
+    if (!userToDelete) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Try hard deletion by unlinking optional relations first
+    try {
+      await prisma.$transaction([
+        prisma.incident.updateMany({ where: { reported_by: userId }, data: { reported_by: null } }),
+        prisma.evidence.updateMany({ where: { uploaded_by: userId }, data: { uploaded_by: null } }),
+        prisma.notification.updateMany({ where: { assigned_by: userId }, data: { assigned_by: null } }),
+        prisma.systemConfig.updateMany({ where: { updated_by: userId }, data: { updated_by: null } }),
+        prisma.user.delete({ where: { user_id: userId } })
+      ]);
+    } catch (dbError) {
+      // If hard delete is prevented by audit logs, status logs, or assignments history,
+      // fallback to soft deletion (deactivating user account) to maintain system audit integrity
+      console.warn('Hard delete prevented by audit constraints. Soft deleting user account:', dbError.message);
+      await prisma.user.update({
+        where: { user_id: userId },
+        data: { is_active: false }
+      });
+    }
 
     // Emit socket event for deletion
     socketService.emitUserDeleted(userId);
 
-    res.json({ message: 'User deleted successfully' });
+    res.json({ message: 'User deleted or deactivated successfully' });
 
     // Log the deletion
     await logAuditEvent({
@@ -85,12 +113,13 @@ export const deleteUser = async (req, res) => {
       action: 'DELETED_USER',
       resource: 'USER',
       resource_id: userId,
-      details: `Deleted user account with ID: ${userId}`,
+      details: `Deleted or deactivated user account with ID: ${userId}`,
       ip_address: req.ip
     });
 
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting user' });
+    console.error('deleteUser error:', error);
+    res.status(500).json({ message: error.message || 'Error deleting user' });
   }
 };
 

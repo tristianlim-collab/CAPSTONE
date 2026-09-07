@@ -160,6 +160,7 @@ const EvidenceGallery = ({ evidence, onExpand }) => {
 
 const QuickVerifyActions = ({ incident, onVerify }) => {
   const [submitting, setSubmitting] = useState(false);
+  const [verifiedAction, setVerifiedAction] = useState(null);
   const [nearestUnit, setNearestUnit] = useState(null);
   const [loadingUnit, setLoadingUnit] = useState(false);
 
@@ -185,7 +186,7 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
     }
   }, [incident.incident_id, incident.status, incident.incident_type]);
 
-  if (!onVerify || incident.status !== 'REPORTED') return null;
+  if (!onVerify || incident.status !== 'REPORTED' || verifiedAction) return null;
 
   const handleApprove = async (e) => {
     e.preventDefault();
@@ -193,6 +194,9 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
     setSubmitting(true);
     try {
       await onVerify(incident.incident_id, 'APPROVE');
+      setVerifiedAction('APPROVED');
+    } catch (err) {
+      // Keep buttons visible if request failed
     } finally {
       setSubmitting(false);
     }
@@ -204,6 +208,9 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
     setSubmitting(true);
     try {
       await onVerify(incident.incident_id, 'REJECT');
+      setVerifiedAction('REJECTED');
+    } catch (err) {
+      // Keep buttons visible if request failed
     } finally {
       setSubmitting(false);
     }

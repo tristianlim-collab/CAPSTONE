@@ -98,13 +98,13 @@ const UserManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to permanently delete this user?")) {
+    if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        await userAPI.delete(id);
-        toast.success('User deleted successfully');
+        const res = await userAPI.delete(id);
+        toast.success(res.data?.message || 'User deleted successfully');
         fetchUsers();
       } catch (err) {
-        toast.error('Failed to delete user');
+        toast.error(err.response?.data?.message || 'Failed to delete user');
       }
     }
   };

@@ -144,13 +144,16 @@ export default {
         assignments,
         incident
       };
-      // Broadcast globally for reporters
+      // Broadcast globally for reporters and dashboards
       io.emit('incident_verified', payload);
+      io.to('admin').emit('incident_status_updated', payload);
+      io.emit('incident_status_updated', payload);
       
       // Notify responders in the specific municipality
       if (incident.barangay?.municipality) {
         const room = `municipality-${incident.barangay.municipality.toLowerCase()}`;
         io.to(room).emit('new_incident', incident);
+        io.to(room).emit('incident_status_updated', payload);
       }
     } catch (err) {
       console.error('Socket emitIncidentVerified failed:', err.message);
@@ -166,9 +169,11 @@ export default {
       const payload = {
         incident_id: incident.incident_id,
         incident_code: incident.incident_code,
-        status: incident.status
+        status: incident.status,
+        incident
       };
       io.emit('incident_rejected', payload);
+      io.to('admin').emit('incident_status_updated', payload);
       io.emit('incident_status_updated', payload);
     } catch (err) {
       console.error('Socket emitIncidentRejected failed:', err.message);

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAOIRS - White Box Testing Detailed Report (Jest Automated Suite)</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #ffffff;
+      color: #000000;
+      margin: 40px auto;
+      padding: 0 20px;
+      max-width: 1200px;
+      line-height: 1.4;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+
+    .summary-box {
+      margin-bottom: 30px;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 15px 0;
+      font-size: 13px;
+    }
+
+    .summary-box p {
+      margin: 4px 0;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 35px;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      font-size: 13px;
+    }
+
+    th {
+      font-weight: bold;
+      text-align: left;
+      padding: 8px 10px;
+      border-top: 2px solid #000000;
+      border-bottom: 1px solid #000000;
+      background-color: #ffffff;
+      vertical-align: bottom;
+    }
+
+    td {
+      padding: 10px;
+      vertical-align: top;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    tr:last-child td {
+      border-bottom: 2px solid #000000;
+    }
+
+    .tc-id {
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .pass {
+      font-weight: normal;
+      text-align: center;
+    }
+
+    .comments {
+      font-size: 12px;
+      color: #222;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+
+      .section-title {
+        page-break-after: avoid;
+      }
+
+      table {
+        page-break-inside: auto;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>GAOIRS White Box Testing Detailed Report</h1>
+
+  <div class="summary-box">
+    <p><strong>Testing Tool:</strong> Jest with Node.js ESM</p>
+    <p><strong>Tester:</strong> GAOIRS Capstone Development Team</p>
+    <p><strong>Date:</strong> September 6, 2026</p>
+    <p><strong>Environment:</strong> Local Development (localhost:3001)</p>
+    <p><strong>Database:</strong> Supabase PostgreSQL </p>
+    <p><strong>Total Duration:</strong> 20.874 seconds</p>
+    <p><strong>Executive Results:</strong> 13 Test Suites | 49 Test Cases | 49 Passed | 0 Failed | 100.0% Pass Rate</p>
+  </div>
+
+  <!-- Suite 1 -->
+  <div class="section-title">1. Authentication Middleware Suite (authMiddleware.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-001</td>
+        <td>Check behavior when Authorization header is completely missing from HTTP request</td>
+        <td>Return HTTP 401 Unauthorized status with missing token error response</td>
+        <td>HTTP 401 returned; payload error message: 'Access denied: No authorization token provided'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 14ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-002</td>
+        <td>Verify error handling when Authorization header lacks 'Bearer ' string prefix</td>
+        <td>Return HTTP 401 error blocking invalid token format</td>
+        <td>HTTP 401 returned; malformed bearer prefix caught before token verification</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-003</td>
+        <td>Verify error handling when JWT token verification fails or token is expired</td>
+        <td>Catch JsonWebTokenError / TokenExpiredError and return 401 Unauthorized</td>
+        <td>HTTP 401 returned; invalid or expired token caught cleanly by catch block</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-004</td>
+        <td>Execute request pipeline with valid signed Bearer token payload</td>
+        <td>Call next() middleware handler and attach decoded payload object to req.user</td>
+        <td>`next()` executed; decoded payload attached to `req.user` with valid claims</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 39ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 2 -->
+  <div class="section-title">2. Supabase Storage Helper Utility Suite (supabaseClient.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-005</td>
+        <td>Extract internal bucket storage path from full Supabase CDN URL string</td>
+        <td>Extract relative path string accurately from full URL endpoint</td>
+        <td>Extracted path matches exact relative key inside incident-photos bucket</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 16ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-006</td>
+        <td>Process short relative storage path string without throwing exception</td>
+        <td>Handle short path safely without string out-of-bounds error</td>
+        <td>Function returns path cleanly without throwing exception</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-007</td>
+        <td>Extract path elements from arbitrary third-party or CDN URL</td>
+        <td>Return last two path elements cleanly for media bucket reference</td>
+        <td>Path parsed into standard bucket/filename format correctly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 3 -->
+  <div class="section-title">3. File & Media Upload Controller Suite (uploadController.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-008</td>
+        <td>Execute uploadIncidentPhoto controller when req.file binary object is missing</td>
+        <td>Return HTTP 400 Bad Request with missing file message</td>
+        <td>HTTP 400 returned; response message: 'No photo file provided for upload'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 16ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-009</td>
+        <td>Process valid image file buffer upload to storage bucket</td>
+        <td>Upload file to storage and return HTTP 200 with public image URL</td>
+        <td>File stored; HTTP 200 returned with valid public image CDN URL payload</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 4 -->
+  <div class="section-title">4. Cloudinary Image Buffer Helper Service Suite (cloudinaryService.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-010</td>
+        <td>Call image buffer helper function with undefined or null image buffer input</td>
+        <td>Return null safely without throwing uncaught runtime exception</td>
+        <td>Function returns null cleanly when buffer argument is undefined</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 34ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-011</td>
+        <td>Format binary buffer into base64 data URI string for image processing</td>
+        <td>Return string matching data:image/jpeg;base64 encoding format</td>
+        <td>Base64 data URI constructed accurately with valid MIME prefix</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 4ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 5 -->
+  <div class="section-title">5. Incident Code Format Generator Suite (incidentCode.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-012</td>
+        <td>Generate incident code string for initial system report (count = 0)</td>
+        <td>Generate zero-padded string code INC-YYYY-001 with current year</td>
+        <td>Generated code matches exact pattern: INC-2026-001</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 26ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-013</td>
+        <td>Generate incremented incident code when 42 reports exist in database</td>
+        <td>Generate zero-padded string code INC-YYYY-043</td>
+        <td>Generated code matches exact pattern: INC-2026-043</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-014</td>
+        <td>Generate incident code for 3-digit count overflow (count = 104)</td>
+        <td>Generate un-truncated 3-digit code INC-YYYY-105 gracefully</td>
+        <td>Generated code matches exact pattern: INC-2026-105</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 16ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 6 -->
+  <div class="section-title">6. System Audit Logging Controller Suite (auditController.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-015</td>
+        <td>Call logAuditEvent helper with null or missing optional log parameters</td>
+        <td>Handle missing parameter gracefully without throwing reference error</td>
+        <td>Audit log event created with default fallback parameters</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 49ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-016</td>
+        <td>Query listAuditLogs with pagination parameters</td>
+        <td>Return HTTP 200 OK with paginated list of audit records and total count</td>
+        <td>HTTP 200 returned; audit records array formatted cleanly with pagination metadata</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-017</td>
+        <td>Fetch listDistinctActions for audit filter dropdown menu</td>
+        <td>Map distinct action string names from database into flat array</td>
+        <td>HTTP 200 returned with array of distinct action strings (e.g. LOGIN, VERIFY_INCIDENT)</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 3ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 7 -->
+  <div class="section-title">7. Barangay Management Controller Suite (barangayController.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-018</td>
+        <td>Query getAll barangays with page=1 and limit=10 pagination parameters</td>
+        <td>Calculate offset correctly and return paginated barangay list</td>
+        <td>Paginated barangay list returned with accurate skip value (0) and limit (10)</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 20ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-019</td>
+        <td>Query getById for non-existent barangay ID</td>
+        <td>Return HTTP 404 Not Found status with clear error message</td>
+        <td>HTTP 404 returned; payload message: 'Barangay record not found'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-020</td>
+        <td>Execute create controller with valid barangay name and GeoJSON boundary</td>
+        <td>Create database record and return HTTP 201 Created</td>
+        <td>HTTP 201 returned; record created with unique ID and GeoJSON boundary payload</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 14ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-021</td>
+        <td>Execute update controller modifying barangay boundary coordinates</td>
+        <td>Update existing record in database and return updated GeoJSON object</td>
+        <td>Database updated; response payload contains updated polygon coordinates</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-022</td>
+        <td>Execute deleteItem controller for barangay ID</td>
+        <td>Remove record from database and return deletion confirmation message</td>
+        <td>Record deleted; HTTP 200 returned with 'Barangay deleted successfully'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 8 -->
+  <div class="section-title">8. Pagination Helper Utility Suite (pagination.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-023</td>
+        <td>Call pagination helper with empty request query object ({})</td>
+        <td>Return default page = 1, limit = 10, skip = 0</td>
+        <td>Parsed options match default values (page: 1, limit: 10, skip: 0)</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 6ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-024</td>
+        <td>Calculate skip value for query page = 3 and limit = 15</td>
+        <td>Calculate skip = (3 - 1) * 15 = 30 accurately</td>
+        <td>Calculated skip equals 30; limit equals 15</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 3ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-025</td>
+        <td>Enforce minimum page bound when page parameter is 0 or negative</td>
+        <td>Enforce minimum page = 1 cleanly</td>
+        <td>Page set to 1; negative input neutralized</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-026</td>
+        <td>Cap maximum limit value when query requests 500 items</td>
+        <td>Cap limit to maximum threshold of 100 items to prevent memory overhead</td>
+        <td>Requested limit 500 capped to 100</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-027</td>
+        <td>Calculate total pages metadata for total count = 45 and limit = 10</td>
+        <td>Return totalPages = 5 in pagination metadata object</td>
+        <td>Metadata totalPages calculated as 5 accurately</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 9 -->
+  <div class="section-title">9. JWT Token Generation Utility Suite (generateToken.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-028</td>
+        <td>Generate signed JWT token for citizen user payload</td>
+        <td>Return signed 3-part JWT string containing user ID and role claims</td>
+        <td>JWT token generated; decodes into payload containing expected userId and role</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 26ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-029</td>
+        <td>Generate signed JWT token for responder user with assigned unit ID</td>
+        <td>Embed responder unit ID claim inside token payload</td>
+        <td>JWT token generated; decoded payload contains user role and assigned response unit ID</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 5ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-030</td>
+        <td>Handle missing optional payload fields cleanly during token sign</td>
+        <td>Generate valid token without undefined or NaN claim properties</td>
+        <td>Token signed cleanly; claims omit missing optional fields cleanly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 3ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 10 -->
+  <div class="section-title">10. Role-Based Access Control (RBAC) Middleware Suite (roleMiddleware.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-031</td>
+        <td>Execute role guard when req.user object is completely undefined</td>
+        <td>Return HTTP 401 Unauthorized status blocking unauthenticated access</td>
+        <td>HTTP 401 returned; error payload: 'Unauthorized: User session not found'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 4ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-032</td>
+        <td>Execute role guard when user role does not match required route role</td>
+        <td>Return HTTP 403 Forbidden status blocking unauthorized role</td>
+        <td>HTTP 403 returned; error payload: 'Forbidden: Insufficient role permissions'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-033</td>
+        <td>Execute role guard for user possessing ADMIN role accessing admin route</td>
+        <td>Call next() middleware allowing route handler execution</td>
+        <td>`next()` called successfully; request allowed to proceed</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-034</td>
+        <td>Execute role guard for user possessing RESPONSE_UNIT role accessing dispatch route</td>
+        <td>Call next() middleware allowing route handler execution</td>
+        <td>`next()` called successfully; request allowed to proceed</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-035</td>
+        <td>Execute role guard for user possessing REPORTER role accessing citizen flow</td>
+        <td>Call next() middleware allowing route handler execution</td>
+        <td>`next()` called successfully; request allowed to proceed</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 11 -->
+  <div class="section-title">11. API Response Helper Utility Suite (apiResponse.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-036</td>
+        <td>Format default success API response payload object</td>
+        <td>Return JSON object with success: true, message: 'Success', and data payload</td>
+        <td>Object formatted with success: true and default message string</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 5ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-037</td>
+        <td>Format custom payload success response with custom status message</td>
+        <td>Return JSON object containing custom message and nested data object</td>
+        <td>Custom message and data payload attached cleanly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-038</td>
+        <td>Format default error API response payload object</td>
+        <td>Return JSON object with success: false and default error message</td>
+        <td>Object formatted with success: false and default error string</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-039</td>
+        <td>Format custom error response containing detailed validation error array</td>
+        <td>Return JSON object with error payload array and HTTP status code</td>
+        <td>Validation error array attached cleanly to response object</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 12 -->
+  <div class="section-title">12. Sensitive Data Encryption Utility Suite (encryptionUtil.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-040</td>
+        <td>Encrypt plain text sensitive string using AES-256-GCM cipher</td>
+        <td>Return encrypted string payload containing initialization vector and authentication tag</td>
+        <td>Cipher text returned containing IV, auth tag, and encrypted data string</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 8ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-041</td>
+        <td>Decrypt encrypted text back into original plain text string</td>
+        <td>Return exact original plain text string matching input before encryption</td>
+        <td>Decryption successful; output string matches original input exactly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-042</td>
+        <td>Attempt decryption on malformed or corrupted cipher text string</td>
+        <td>Return null safely without throwing uncaught decryption exception</td>
+        <td>Function catches MAC verification error and returns null safely</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 29ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 13 -->
+  <div class="section-title">13. Incident Management & Dispatch Controller Suite (incidentController.test.js)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">WB-043</td>
+        <td>Create incident with GPS coordinates outside NIR coverage area (e.g. Manila coordinates)</td>
+        <td>Reject submission with HTTP 400 Bad Request blocking out-of-bounds report</td>
+        <td>HTTP 400 returned; payload error: 'Location outside Negros Island Region (NIR) boundary'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2397ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-044</td>
+        <td>Execute getIncidents controller with filters and pagination</td>
+        <td>Return HTTP 200 OK with paginated array of incident records</td>
+        <td>HTTP 200 returned; incidents array returned with total count and pagination metadata</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-045</td>
+        <td>Execute getIncidentById for non-existent incident ID string</td>
+        <td>Return HTTP 404 Not Found status with clear error message</td>
+        <td>HTTP 404 returned; payload message: 'Incident record not found'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-046</td>
+        <td>Attempt incident verification as non-ADMIN user (e.g. REPORTER role)</td>
+        <td>Block request with HTTP 403 Forbidden authorization error</td>
+        <td>HTTP 403 returned; non-admin verification attempt intercepted cleanly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 2ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-047</td>
+        <td>Submit invalid verification action string (e.g. action = 'INVALID_ACTION')</td>
+        <td>Reject request with HTTP 400 Bad Request validation error</td>
+        <td>HTTP 400 returned; invalid verification action string rejected</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-048</td>
+        <td>Attempt incident editing as non-ADMIN user role</td>
+        <td>Block request with HTTP 403 Forbidden authorization error</td>
+        <td>HTTP 403 returned; non-admin edit attempt intercepted cleanly</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 1ms</td>
+      </tr>
+      <tr>
+        <td class="tc-id">WB-049</td>
+        <td>Execute updateIncidentStatus setting status to RESPONDING</td>
+        <td>Update status in database, emit Socket.io event, and return updated record</td>
+        <td>Database updated to RESPONDING; socket event emitted; updated record returned</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Jest execution time: 0ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+
+</html>

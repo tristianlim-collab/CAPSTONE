@@ -610,6 +610,200 @@ def build_qase_csv():
     )
     tc_counter += 1
 
+    # Additional Test Cases (TC34 - TC45) for comprehensive coverage:
+
+    # Suite 1 Addition:
+    add_tc(
+        tc_counter,
+        "UC-001 - TC34: User Password Reset & Reset Token Verification Flow",
+        "Verify that users can request a password reset email and complete the password change using a secure verification token.",
+        "User account exists in database. User is on login screen.",
+        "Password updated in DB with fresh hash, reset token invalidated, user can log in with new password.",
+        "authentication,password-reset,security",
+        "high", "major", "functional", "positive", "to-be-automated", "ui",
+        "1. Click 'Forgot Password' on Login screen\n2. Enter registered email address\n3. Click reset link received in email\n4. Enter and confirm new password",
+        "1. Password reset request modal opens\n2. System generates token and sends reset link via SMTP\n3. Password reset form renders with valid token\n4. Password updated, toast shown, user redirected to login",
+        "1. Email: citizen@gmail.com\n2. Reset Token: hex-64-bit-string\n3. New Password: NewPassword123!",
+        1, s1_name
+    )
+    tc_counter += 1
+
+    # Suite 1 Addition:
+    add_tc(
+        tc_counter,
+        "UC-001 - TC35: JWT Session Expiration & Auto Refresh Token Exchange",
+        "Verify that expired short-lived access tokens automatically refresh via valid refresh tokens without forcing user logout.",
+        "User is logged in and actively interacting with app when access token expires.",
+        "Backend verifies refresh token, issues new access token seamlessly, application session continues uninterrupted.",
+        "jwt,session,auth,security",
+        "medium", "major", "security", "positive", "automated", "api",
+        "1. Issue request with expired Bearer access token\n2. Verify interceptor sends POST to /api/auth/refresh\n3. Verify original API call retried with new token",
+        "1. Backend returns 401 token expired error\n2. Refresh endpoint validates refresh token and returns new JWT access token\n3. Original request completes successfully",
+        "1. Expired Token\n2. Refresh Token\n3. Updated Access Token",
+        1, s1_name
+    )
+    tc_counter += 1
+
+    # Suite 2 Addition:
+    add_tc(
+        tc_counter,
+        "UC-005 - TC36: Multiple Media Evidence Upload (Multiple Photos & Short Video)",
+        "Verify that citizens can upload up to 5 photos and 1 short video clip as evidence during incident submission.",
+        "Citizen on Incident Submission Step 4.",
+        "All media uploaded to cloud storage, URLs saved in incident evidence array.",
+        "media,upload,evidence,mobile",
+        "medium", "normal", "functional", "positive", "to-be-automated", "ui",
+        "1. Tap 'Attach Media'\n2. Select 3 JPEG photos and 1 10-second MP4 video\n3. Submit report",
+        "1. File picker opens\n2. Thumbnails rendered for all 4 items with upload progress bars\n3. Submission uploads files and attaches links to report",
+        "1. Files: photo1.jpg, photo2.jpg, photo3.jpg, clip.mp4\n2. Submission payload",
+        2, s2_name
+    )
+    tc_counter += 1
+
+    # Suite 2 Addition:
+    add_tc(
+        tc_counter,
+        "UC-002 - TC37: Anonymous Incident Reporting Option for Sensitive Incidents",
+        "Verify that citizens can opt to submit reports anonymously without recording their personal identification details.",
+        "Citizen is submitting a Crime or Public Disturbance incident report.",
+        "Incident recorded with is_anonymous=true and citizen user ID hidden from public responder views.",
+        "anonymous,privacy,incident-reporting",
+        "high", "major", "functional", "positive", "to-be-automated", "ui",
+        "1. Check 'Report Anonymously' checkbox on form\n2. Complete incident details and location\n3. Click Submit",
+        "1. Anonymous checkbox toggled ON\n2. Form validates without requiring personal profile disclosure\n3. Incident created; reporter details masked in admin/responder views",
+        "1. Toggle: Checked\n2. Type: Crime\n3. Reporter Name: Anonymous",
+        2, s2_name
+    )
+    tc_counter += 1
+
+    # Suite 3 Addition:
+    add_tc(
+        tc_counter,
+        "UC-007 - TC38: FCM Push Token Registration and Invalidation on Logout",
+        "Verify that Firebase Cloud Messaging (FCM) device push tokens are properly registered on login and invalidated upon user logout.",
+        "User logged into Mobile App on Android/iOS device.",
+        "Device token stored in user table on login; removed/cleared on logout to prevent unauthorized notifications.",
+        "fcm,push-notifications,mobile,security",
+        "high", "major", "functional", "positive", "automated", "api",
+        "1. Log in to Mobile Reporter App\n2. Check DB for fcm_token field\n3. Log out of Mobile App\n4. Re-check DB fcm_token field",
+        "1. Login succeeds\n2. Device FCM token sent to POST /api/users/fcm-token and saved\n3. User logs out\n4. Token cleared from database",
+        "1. FCM Token: fcm_token_sample_abc123\n2. Logout action",
+        3, s3_name
+    )
+    tc_counter += 1
+
+    # Suite 4 Addition:
+    add_tc(
+        tc_counter,
+        "UC-013 - TC39: Incident Priority Level Adjustment & Emergency Escalation Alert",
+        "Verify that admins can manually escalate an incident priority (e.g. Medium -> Critical), triggering priority notification alerts.",
+        "Incident status is 'Verified'. Admin is reviewing incident details.",
+        "Incident priority updated in database; emergency escalation audio/banner alert triggered across dispatch units.",
+        "admin,priority,escalation,alert",
+        "high", "critical", "functional", "positive", "to-be-automated", "ui",
+        "1. Open incident details modal\n2. Change Priority dropdown from 'Medium' to 'CRITICAL'\n3. Enter escalation reason 'Fire spreading to adjacent structures'\n4. Click Save Priority",
+        "1. Modal loaded\n2. Priority changed\n3. Reason entered\n4. Priority updated in DB; red flashing escalation banner appears on dispatch dashboard",
+        "1. Incident ID: INC-1029\n2. New Priority: CRITICAL\n3. Reason: Spreading fire",
+        4, s4_name
+    )
+    tc_counter += 1
+
+    # Suite 5 Addition:
+    add_tc(
+        tc_counter,
+        "UC-014 - TC40: Multi-Agency Coordinated Dispatch for High-Severity Incidents",
+        "Verify that administrators can simultaneously dispatch multiple response units from different agencies (e.g., BFP + DRRMO + PNP).",
+        "Incident verified with severity 'CRITICAL'. Multiple agency units available.",
+        "Multiple dispatch assignments created in database; notifications sent to all selected response unit teams.",
+        "dispatch,multi-agency,coordination,admin",
+        "critical", "blocker", "functional", "positive", "to-be-automated", "e2e",
+        "1. Open Dispatch panel for Critical incident\n2. Multi-select BFP Fire Unit 1, DRRMO Ambulance Unit 2, and PNP Patrol Unit 3\n3. Click 'Dispatch All Selected Teams'",
+        "1. Dispatch panel renders agency tabs\n2. Units selected across 3 agencies\n3. System creates 3 dispatch assignment records and broadcasts real-time alerts to all 3 units",
+        "1. Incident ID: INC-1045\n2. Units: BFP-01, DRRMO-02, PNP-03",
+        5, s5_name
+    )
+    tc_counter += 1
+
+    # Suite 6 Addition:
+    add_tc(
+        tc_counter,
+        "UC-009 - TC41: Responder Field Status Updates under Weak Network Connectivity",
+        "Verify that responder operational status changes queue locally when cell signal is lost and upload upon network recovery.",
+        "Responder unit tablet loses cellular signal while on scene.",
+        "Status update saved to local offline SQLite database; uploaded automatically when signal restores.",
+        "field-ops,offline,responder,reliability",
+        "high", "major", "reliability", "positive", "to-be-automated", "e2e",
+        "1. Toggle offline mode on responder tablet\n2. Change status to 'Arrived on Scene'\n3. Re-enable network signal",
+        "1. Tablet offline\n2. Status change queued with timestamp\n3. Network reconnected; app automatically syncs status to backend and updates admin dashboard",
+        "1. Offline state\n2. Status: Arrived on Scene\n3. Reconnect event",
+        6, s6_name
+    )
+    tc_counter += 1
+
+    # Suite 7 Addition:
+    add_tc(
+        tc_counter,
+        "UC-011 - TC42: Spatial Proximity Radius Filtering around Emergency Facilities",
+        "Verify that users can filter incidents occurring within a specified distance radius (e.g. 2km) from hospitals or fire stations.",
+        "Interactive map rendered with emergency facility icons (Hospitals, Fire Stations, Police Outposts).",
+        "Map highlights radius circle buffer and lists only incidents within the proximity radius.",
+        "map,spatial,radius,postgis,gis",
+        "medium", "normal", "functional", "positive", "to-be-automated", "ui",
+        "1. Click on 'Talisay City Fire Station' icon on map\n2. Select 'Show Incidents within 2.0 km'\n3. Review filtered map pins",
+        "1. Station marker selected\n2. 2.0km blue buffer circle drawn on map\n3. Pins outside 2km buffer hidden; matching incident list displayed in sidebar",
+        "1. Center: Fire Station GPS\n2. Radius: 2000m\n3. Filtered pins",
+        7, s7_name
+    )
+    tc_counter += 1
+
+    # Suite 8 Addition:
+    add_tc(
+        tc_counter,
+        "UC-016 - TC43: Analytics Summary Report Export to PDF with Rendered Visual Charts",
+        "Verify that exporting the Analytics Dashboard produces a formatted PDF report containing rendered statistical charts and KPI cards.",
+        "Analytics Dashboard has loaded response time charts, incident category breakdown, and barangay rankings.",
+        "PDF file generated on backend using headless renderer (Puppeteer/jspdf) and downloaded to client.",
+        "analytics,export,pdf,puppeteer",
+        "high", "major", "functional", "positive", "to-be-automated", "e2e",
+        "1. Open Analytics Dashboard\n2. Click 'Export Analytics PDF'\n3. Open downloaded PDF report file",
+        "1. Dashboard rendered with charts\n2. PDF generation API triggered (/api/reports/analytics-pdf)\n3. PDF file downloads containing embedded chart images and summary tables",
+        "1. Report format: PDF\n2. Date range: Current Month\n3. Output: Analytics_Report_2026-08.pdf",
+        8, s8_name
+    )
+    tc_counter += 1
+
+    # Suite 9 Addition:
+    add_tc(
+        tc_counter,
+        "UC-017 - TC44: Administrative User Action Audit Logging and Security Inspection",
+        "Verify that all sensitive admin operations (user role changes, configuration updates, report deletions) produce immutable audit log entries.",
+        "Administrator user performs administrative configuration actions.",
+        "Audit log entry created in DB table `audit_logs` with admin user_id, action name, target_id, IP address, and timestamp.",
+        "audit-log,security,admin,compliance",
+        "high", "critical", "security", "positive", "automated", "api",
+        "1. Admin updates a responder user's role to Admin\n2. Open Admin -> System Audit Logs page\n3. Inspect top log entry",
+        "1. Role change request submitted\n2. Audit log entry recorded in database\n3. Audit log table shows 'USER_ROLE_UPDATE' with admin ID, timestamp, and changed payload",
+        "1. Action: USER_ROLE_UPDATE\n2. Admin ID: 1\n3. Target User ID: 15",
+        9, s9_name
+    )
+    tc_counter += 1
+
+    # Suite 9 Addition:
+    add_tc(
+        tc_counter,
+        "UC-018 - TC45: System Configuration AES Encryption for Sensitive Credentials",
+        "Verify that sensitive configuration secrets (SMTP password, Twilio API keys) are encrypted using AES-256 in database.",
+        "Administrator saves SMTP and Twilio API key settings in System Settings.",
+        "Database stores encrypted cipher strings for sensitive keys and unmasks them only in authorized backend memory.",
+        "encryption,security,system-config,aes256",
+        "high", "critical", "security", "positive", "automated", "api",
+        "1. Enter SMTP password 'SuperSecret123!' in System Settings\n2. Save settings\n3. Query database table `system_configs` directly",
+        "1. Form submitted\n2. Encryption utility encrypts string before DB insert\n3. DB record shows encrypted hash string (not raw plaintext password)",
+        "1. Key: SMTP_PASSWORD\n2. Raw: SuperSecret123!\n3. Stored DB Value: enc:v1:a8f9e7...",
+        9, s9_name
+    )
+    tc_counter += 1
+
 
     # Write out to CSV file with proper quoting
     test_file = 'GAOIRS_Test_Cases_Qase_Import.csv'

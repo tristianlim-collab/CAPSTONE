@@ -51,13 +51,31 @@ export default function AdminDashboard() {
       }
     });
 
+    const unsub_verified = on('incident_verified', (data) => {
+      const fullIncident = data.incident || {};
+      const targetId = data.incident_id || fullIncident.incident_id;
+      setRecentIncidents(prev => prev.map(inc =>
+        inc.incident_id === targetId ? { ...inc, ...fullIncident, status: data.status || 'RESPONDING' } : inc
+      ));
+      fetchDashboardData();
+    });
+
+    const unsub_rejected = on('incident_rejected', (data) => {
+      const targetId = data.incident_id || data.incident?.incident_id;
+      setRecentIncidents(prev => prev.map(inc =>
+        inc.incident_id === targetId ? { ...inc, status: 'FALSE_ALARM' } : inc
+      ));
+      setStats(s => ({ ...s, active: Math.max(0, s.active - 1), resolved: s.resolved + 1 }));
+      fetchDashboardData();
+    });
+
     const unsub3 = on('incident_deleted', (data) => {
       setRecentIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
       setStats(s => ({ ...s, total: Math.max(0, s.total - 1), active: Math.max(0, s.active - 1) }));
       toast('ℹ️ Incident deleted', { duration: 5000 });
     });
 
-    return () => { unsub1(); unsub_awaiting(); unsub2(); unsub3(); };
+    return () => { unsub1(); unsub_awaiting(); unsub2(); unsub_verified(); unsub_rejected(); unsub3(); };
   }, [on]);
 
   const fetchDashboardData = async () => {
@@ -81,8 +99,17 @@ export default function AdminDashboard() {
     try {
       const payload = { action };
       if (message) payload.message = message;
-      await api.post(`/incidents/${incidentId}/verify`, payload);
+      const res = await api.post(`/incidents/${incidentId}/verify`, payload);
       toast.success(action === 'APPROVE' ? 'Incident approved & dispatched!' : 'Incident rejected');
+      
+      const updatedInc = res.data?.incident;
+      const newStatus = action === 'APPROVE' ? 'RESPONDING' : 'FALSE_ALARM';
+      
+      setRecentIncidents(prev => prev.map(inc =>
+        inc.incident_id === incidentId ? { ...inc, ...(updatedInc || {}), status: updatedInc?.status || newStatus } : inc
+      ));
+      
+      await fetchDashboardData();
     } catch (err) {
       console.error('Verify error:', err);
       toast.error(err.response?.data?.message || 'Failed to verify incident');

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAOIRS - Black Box Testing Detailed Report</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #ffffff;
+      color: #000000;
+      margin: 40px auto;
+      padding: 0 20px;
+      max-width: 1200px;
+      line-height: 1.4;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 25px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 35px;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      font-size: 13px;
+    }
+
+    th {
+      font-weight: bold;
+      text-align: left;
+      padding: 8px 10px;
+      border-top: 2px solid #000000;
+      border-bottom: 1px solid #000000;
+      background-color: #ffffff;
+      vertical-align: bottom;
+    }
+
+    td {
+      padding: 10px;
+      vertical-align: top;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    tr:last-child td {
+      border-bottom: 2px solid #000000;
+    }
+
+    .tc-id {
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .pass {
+      font-weight: normal;
+      text-align: center;
+    }
+
+    .comments {
+      font-size: 12px;
+      color: #222;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+
+      .section-title {
+        page-break-after: avoid;
+      }
+
+      table {
+        page-break-inside: auto;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>GAOIRS Black Box Testing Detailed Report</h1>
+
+  <!-- Suite 1 -->
+  <div class="section-title">User Authentication & Access Control</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-001</td>
+        <td>Register a new citizen account with valid details (Full Name, Email, Password, Contact Number, Barangay)
+        </td>
+        <td>Account is created successfully and user is redirected to the login/landing screen</td>
+        <td>Account created; confirmation modal displayed, redirected to Login screen</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Form inputs validated without errors</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-002</td>
+        <td>Log in with valid registered credentials across system roles (Admin, Response Unit, Citizen)</td>
+        <td>User is authenticated, JWT access token issued, and user redirected to role-specific dashboard</td>
+        <td>Status 200 OK returned with JWT token; redirected to appropriate role dashboard</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Role-based authentication working as expected</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-003</td>
+        <td>Log in with invalid credentials (unregistered email or incorrect password)</td>
+        <td>Authentication fails, no token issued, and appropriate error message displayed</td>
+        <td>HTTP 401 Unauthorized returned; 'Invalid email or password' toast shown</td>
+        <td class="pass">Pass</td>
+        <td class="comments">System security restriction verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-004</td>
+        <td>Access protected API endpoints without an authorization Bearer token</td>
+        <td>Unauthorized request is intercepted and blocked by security middleware</td>
+        <td>Returns HTTP 401 Unauthorized status with 'No token provided' payload</td>
+        <td class="pass">Pass</td>
+        <td class="comments">API middleware authorization verified</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 2 -->
+  <div class="section-title">Incident Reporting & Submission</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-005</td>
+        <td>Submit a complete emergency incident report with type, GPS coordinates, description, and photo evidence</td>
+        <td>Incident report created in database with status 'Reported', media stored, socket alert fired</td>
+        <td>Report created successfully; unique incident code generated, map pin preview rendered</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Photo attachment and GPS capture working seamlessly</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-006</td>
+        <td>Select predefined incident type and verify visual indicator updates</td>
+        <td>Form styling, category marker color, and target agency mapping update dynamically</td>
+        <td>Form visual badge changes to yellow/amber for Road Accident</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Dynamic form color-coding verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-007</td>
+        <td>Tag GPS coordinates using auto-detect and manual map pin repositioning</td>
+        <td>Confirmed GPS coordinates (latitude, longitude, barangay) saved to report payload</td>
+        <td>Pin shifted on map; latitude/longitude updated and reverse geocoded to Barangay name</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Reverse geocoding active</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-008</td>
+        <td>Upload photo evidence with format and file size validation</td>
+        <td>System accepts valid JPEG/PNG files (&lt;5MB) and rejects unsupported formats or oversized files</td>
+        <td>Valid JPG uploaded; uploading .TXT file triggers 'Invalid file type' error</td>
+        <td class="pass">Pass</td>
+        <td class="comments">File validation constraints enforced strictly</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-009</td>
+        <td>Submit incident report with missing required fields (e.g. empty description or location)</td>
+        <td>Form submission blocked, field highlighted with validation warning</td>
+        <td>System prevents submission and displays 'Please provide incident description and valid location'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Required field validation active</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-010</td>
+        <td>Perform offline incident queueing and auto-sync upon network restoration</td>
+        <td>Report created offline stored in local SQLite queue; auto-uploaded when network resumes</td>
+        <td>App displays 'Saved offline in queue'; report syncs to /api/incidents/sync when online</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Offline queueing & background sync verified</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 3 -->
+  <div class="section-title">Citizen Incident Tracking & Notifications</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-011</td>
+        <td>Receive submission confirmation dialog with unique incident reference code</td>
+        <td>Immediate confirmation dialog shown displaying unique code (e.g., INC-2026-0891)</td>
+        <td>Confirmation modal displayed showing unique Incident Code 'INC-2026-0891'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Incident tracking code generated instantly</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-012</td>
+        <td>Track real-time status progression timeline in Citizen Portal</td>
+        <td>Citizen can inspect report history and view step-by-step timeline (Reported -&gt; Verified -&gt; Responding
+          -&gt; Resolved)</td>
+        <td>Incident detail page opens; status progression timeline rendered with active stage highlighted</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Status progression visual bar active</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-013</td>
+        <td>Real-time WebSocket and push notification delivery upon incident status change</td>
+        <td>Citizen device receives instant banner/toast notification when status is updated by Admin or Responder</td>
+        <td>WebSockets emit event; citizen app displays notification 'Your report status is now: Responding'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Zero-delay socket listener operational</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 4 -->
+  <div class="section-title">Incident Verification & Management</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-014</td>
+        <td>Admin verification queue inspection and detailed incident review</td>
+        <td>Administrator opens incoming report queue, reviews description, GPS location pin, and photo gallery</td>
+        <td>Detail modal opens smoothly displaying full incident metadata and high-res evidence photos</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Comprehensive verification layout loaded</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-015</td>
+        <td>Search and filter incidents by type, status, barangay, and date range</td>
+        <td>Incident data table updates dynamically according to filter dropdowns and search inputs</td>
+        <td>Table updates dynamically displaying matching incident records</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Multi-column table filtering verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-016</td>
+        <td>Mark incident report as Verified or False Alarm / Cancelled</td>
+        <td>Incident verification status updated in database with required administrative log notes</td>
+        <td>Status updated to 'VERIFIED'; admin notes recorded, toast notification displayed</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Status change logged with admin timestamp</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 5 -->
+  <div class="section-title">Response Unit Dispatch & Recommendation</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-017</td>
+        <td>Automated geofenced nearest responder recommendation calculation</td>
+        <td>System calculates distance using PostGIS coordinates and recommends nearest available unit</td>
+        <td>Dispatch panel displays ranked list of units; nearest available unit ranked top (1.2 km)</td>
+        <td class="pass">Pass</td>
+        <td class="comments">PostGIS ST_Distance algorithm accurate</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-018</td>
+        <td>Confirm recommended response unit and dispatch emergency team</td>
+        <td>Dispatch order recorded, status set to 'Responding', real-time alert dispatched to responder device</td>
+        <td>Real-time alert dispatched to responder unit tablet, incident status set to 'Responding'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Automated alert and dispatch record created</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-019</td>
+        <td>Manual overridden dispatch selection during high unit workload</td>
+        <td>Administrator manually selects alternative available unit from recommendation list</td>
+        <td>Secondary responder unit selected manually and receives emergency assignment</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Manual override feature verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-020</td>
+        <td>Response unit receives automated alert and acknowledges incident assignment</td>
+        <td>Responder tablet receives audible alert, renders summary details, and acknowledges assignment</td>
+        <td>Responder app receives alert; clicking 'Acknowledge' updates status to 'Acknowledged'</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Response acknowledgment logged</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 6 -->
+  <div class="section-title">Field Response, Status Tracking & Evidence Upload</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-021</td>
+        <td>Update incident operational status during field response</td>
+        <td>Status updated in DB (e.g. 'Arrived on Scene') and broadcast live to Admin &amp; Citizen apps</td>
+        <td>Operational remark logged ('Setting up hoses'); status update broadcasted to all viewers</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Real-time multi-client sync operational</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-022</td>
+        <td>Upload official post-incident response report and aftermath evidence</td>
+        <td>Responder uploads summary documentation PDF and aftermath photos to incident record</td>
+        <td>PDF report and aftermath photos uploaded; thumbnails attached to incident record</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Post-incident file attachments verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-023</td>
+        <td>Formally resolve and close completed incident record</td>
+        <td>Incident status changed to 'Resolved' with final casualty details and operational summary</td>
+        <td>Incident status set to 'Resolved'; closed record moved to archived resolved list</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Resolution metrics and logs recorded</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 7 -->
+  <div class="section-title">Interactive Geospatial Mapping & Geofencing</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-024</td>
+        <td>Render interactive geospatial map with color-coded category markers</td>
+        <td>Leaflet map loads tiles, zoom controls, and custom color pins (Red=Fire, Amber=Accident, Blue=Crime/Medical)
+        </td>
+        <td>Interactive map initializes; incident pins rendered at exact lat/long positions</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Custom geospatial marker rendering smooth</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-025</td>
+        <td>Apply Barangay geofencing polygon boundaries to filter map incidents</td>
+        <td>Selecting a barangay highlights polygon boundary and hides pins outside the boundary line</td>
+        <td>Polygon overlay rendered on map; pins filtered strictly within Barangay Poblacion boundary</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Spatial polygon containment accurate</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-026</td>
+        <td>Interact with map marker pin popup to view incident summary</td>
+        <td>Clicking incident pin opens popup with incident code, category badge, and 'View Details' link</td>
+        <td>Pin click opens popup showing incident summary details and quick redirect link</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Map marker interaction verified</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 8 -->
+  <div class="section-title">Real-Time Analytics & ML Trend Forecasting</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-027</td>
+        <td>View Real-Time Analytics Dashboard summary metrics and distribution charts</td>
+        <td>Analytics dashboard displays KPI cards (Total Incidents, Avg Response Time) and charts</td>
+        <td>KPI cards display 15 total incidents and 6 min average response time</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Live backend data aggregate verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-028</td>
+        <td>Render spatial incident heatmap and hotspot analysis visualizations</td>
+        <td>Heatmap layer overlays thermal gradient showing high-density incident hotspot zones</td>
+        <td>Thermal color gradient highlights incident density clusters over high-risk areas</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Heatmap intensity rendering verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-029</td>
+        <td>Execute 7-Day SARIMA Machine Learning incident trend forecasting model</td>
+        <td>ML service returns 7-day predicted incident volume graph with confidence interval bounds</td>
+        <td>SARIMA model executes time-series prediction; 7-day trend line graph rendered with bounds</td>
+        <td class="pass">Pass</td>
+        <td class="comments">ML microservice integration verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-030</td>
+        <td>Dynamic real-time analytics chart refresh upon new incident ingestion</td>
+        <td>Submitting a new incident automatically updates summary metrics and re-renders charts live</td>
+        <td>Total incident count card increments (+1) instantly via WebSocket without page refresh</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Dynamic chart socket update active</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Suite 9 -->
+  <div class="section-title">System Administration, RBAC & Report Generation</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Test Case ID</th>
+        <th style="width: 25%;">Description</th>
+        <th style="width: 25%;">Expected Outcome</th>
+        <th style="width: 23%;">Actual Outcome</th>
+        <th style="width: 8%; text-align: center;">Pass/ Fail</th>
+        <th style="width: 9%;">Comments</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tc-id">TC-031</td>
+        <td>Generate and export incident summary reports in PDF, Excel, and CSV formats</td>
+        <td>User selects filters and exports report; server generates document and initiates file download</td>
+        <td>Report compiled; browser downloads PDF summary report Incident_Summary_2026_08.pdf</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Multi-format report export verified</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-032</td>
+        <td>Manage user accounts (Create, Update, Role Assignment, Deactivate)</td>
+        <td>Admin creates new account, assigns role/unit, and toggles active/inactive account state</td>
+        <td>New responder user created and assigned; deactivated user cannot authenticate</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Full RBAC user management operational</td>
+      </tr>
+      <tr>
+        <td class="tc-id">TC-033</td>
+        <td>Configure incident categories &amp; system-wide RBAC permission matrix</td>
+        <td>Admin adds new incident category (name, color, icon) and updates role permissions</td>
+        <td>Added category 'Chemical Leak' with color #FF0055; RBAC matrix updated and enforced</td>
+        <td class="pass">Pass</td>
+        <td class="comments">Dynamic RBAC matrix active</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+
+</html>

@@ -111,6 +111,7 @@ export const postReportAPI = {
 export const analyticsAPI = {
   getSummary: () => api.get('/analytics/summary'),
   getByType: () => api.get('/analytics/by-type'),
+  getByBarangay: () => api.get('/analytics/by-barangay'),
   getTrend: () => api.get('/analytics/trend'),
   getResponseTime: () => api.get('/analytics/response-time'),
   getForecast: (days, model) => api.get(`/analytics/forecast/${days}`, { params: { model } }),

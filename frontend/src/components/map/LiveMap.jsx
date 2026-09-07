@@ -301,6 +301,28 @@ export default function LiveMap({
     setSelectedIncidentId(incidentId);
   }, []);
 
+  // Wrapper to immediately update local map state when an incident is verified/rejected
+  const handleVerifyWrapper = async (incidentId, action, message) => {
+    try {
+      if (onVerify) {
+        await onVerify(incidentId, action, message);
+      }
+      setIncidents(prev => {
+        if (action === 'REJECT') {
+          return prev.filter(inc => inc.incident_id !== incidentId);
+        }
+        return prev.map(inc =>
+          inc.incident_id === incidentId
+            ? { ...inc, status: action === 'APPROVE' ? 'RESPONDING' : inc.status }
+            : inc
+        );
+      });
+    } catch (err) {
+      console.error('Verify error in map:', err);
+      throw err;
+    }
+  };
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden shadow-sm border border-slate-200">
       {/* Map Controls */}
@@ -352,7 +374,7 @@ export default function LiveMap({
             incident={incident}
             colorMode={mode === 'lgu_zones' ? 'lgu' : markerColorMode}
             focusedIncidentCity={incidentCity}
-            onVerify={onVerify}
+            onVerify={handleVerifyWrapper}
             onSelect={handleMarkerSelect}
             isSelected={selectedIncident?.incident_id === incident.incident_id}
           />
