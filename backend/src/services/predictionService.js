@@ -96,34 +96,34 @@ const predictionService = {
       }
       throw new Error('Non-JSON response');
     } catch (error) {
-      console.warn('KDE fallback activated:', error.message);
-      const data = [];
-      const centerLat = 10.8, centerLng = 122.9;
-      for (let i = 0; i < 75; i++) {
-        const cluster = Math.floor(Math.random() * 3);
-        let lat, lng, weight;
-        if (cluster === 0) {
-          lat = centerLat + (Math.random() - 0.5) * 0.02;
-          lng = centerLng + (Math.random() - 0.5) * 0.02;
-          weight = 0.6 + Math.random() * 0.4;
-        } else if (cluster === 1) {
-          lat = centerLat + 0.03 + (Math.random() - 0.5) * 0.015;
-          lng = centerLng - 0.02 + (Math.random() - 0.5) * 0.015;
-          weight = 0.4 + Math.random() * 0.5;
-        } else {
-          lat = centerLat - 0.04 + (Math.random() - 0.5) * 0.03;
-          lng = centerLng + 0.03 + (Math.random() - 0.5) * 0.03;
-          weight = 0.2 + Math.random() * 0.6;
+      console.warn('KDE dataset fallback activated');
+      // Read Talisay City dataset coordinates for KDE Heatmap
+      const csvPath = 'c:/Users/Tristan Zane/OneDrive/Desktop/CAPSTONE/Talisay_City_DRRMO_BFP_Incident_Reports-1.csv';
+      const fs = await import('fs');
+      if (fs.existsSync(csvPath)) {
+        const content = fs.readFileSync(csvPath, 'utf8');
+        const lines = content.split('\n').slice(1);
+        const data = [];
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          // Handles potential quotes in CSV line
+          const parts = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
+          const lat = parseFloat(parts[13]);
+          const lng = parseFloat(parts[14]);
+          const severity = parts[8]?.trim();
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const weight = severity === 'CRITICAL' ? 1.0 : severity === 'High' ? 0.7 : 0.4;
+            data.push([lat, lng, weight]);
+          }
         }
-        data.push([Number(lat.toFixed(6)), Number(lng.toFixed(6)), Number(weight.toFixed(2))]);
+        return {
+          success: true,
+          model: 'KDE',
+          type: 'Heatmap Density',
+          data: data.slice(0, 150),
+          bounds: { minLat: 10.65, maxLat: 10.82, minLng: 122.88, maxLng: 123.05 }
+        };
       }
-      return {
-        success: true,
-        model: 'KDE',
-        type: 'Heatmap Density',
-        data,
-        bounds: { minLat: 10.7, maxLat: 10.9, minLng: 122.8, maxLng: 123.0 }
-      };
     }
   }
 };
