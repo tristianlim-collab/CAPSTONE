@@ -120,7 +120,7 @@ const KDEHeatmap = () => {
           </div>
         ) : (
           <MapContainer 
-            center={[10.8, 122.9]} 
+            center={[10.738, 122.965]} 
             zoom={13} 
             className="w-full h-full grayscale-[0.5] contrast-[1.1]"
             zoomControl={false}
@@ -129,7 +129,7 @@ const KDEHeatmap = () => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {data && <HeatmapLayer points={data} />}
+            {data && <HeatmapLayer points={data.filter(p => p[0] >= 10.68 && p[0] <= 10.82 && p[1] >= 122.925 && p[1] <= 123.05)} />}
           </MapContainer>
         )}
 

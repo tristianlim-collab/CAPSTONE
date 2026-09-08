@@ -111,7 +111,7 @@ const predictionService = {
           const lat = parseFloat(parts[13]);
           const lng = parseFloat(parts[14]);
           const severity = parts[8]?.trim();
-          if (!isNaN(lat) && !isNaN(lng)) {
+          if (!isNaN(lat) && !isNaN(lng) && lat >= 10.68 && lat <= 10.82 && lng >= 122.925 && lng <= 123.05) {
             const weight = severity === 'CRITICAL' ? 1.0 : severity === 'High' ? 0.7 : 0.4;
             data.push([lat, lng, weight]);
           }
@@ -120,8 +120,8 @@ const predictionService = {
           success: true,
           model: 'KDE',
           type: 'Heatmap Density',
-          data: data.slice(0, 150),
-          bounds: { minLat: 10.65, maxLat: 10.82, minLng: 122.88, maxLng: 123.05 }
+          data: data.slice(0, 200),
+          bounds: { minLat: 10.68, maxLat: 10.82, minLng: 122.925, maxLng: 123.05 }
         };
       }
     }

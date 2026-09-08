@@ -275,19 +275,19 @@ const Analytics = () => {
             Incident Type Distribution
           </h3>
           <p className="text-xs text-slate-500 mb-4">Breakdown of reported emergency incidents by category</p>
-          <div className="h-64 w-full flex-1">
+          <div className="h-[280px] w-full">
             {byTypeData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No incident data available</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
                     data={byTypeData}
                     dataKey="count"
                     nameKey="name"
                     cx="50%"
-                    cy="50%"
-                    outerRadius={80}
+                    cy="45%"
+                    outerRadius={75}
                     label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                   >
                     {byTypeData.map((entry, index) => (
@@ -295,7 +295,7 @@ const Analytics = () => {
                     ))}
                   </Pie>
                   <Tooltip formatter={(value, name) => [`${value} incidents`, name]} />
-                  <Legend />
+                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -309,14 +309,14 @@ const Analytics = () => {
             Barangay Incident Ranking
           </h3>
           <p className="text-xs text-slate-500 mb-4">Incident volume ranking across local Barangays</p>
-          <div className="h-64 w-full flex-1">
+          <div className="h-[280px] w-full">
             {byBarangayData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No barangay data available</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byBarangayData.slice(0, 8)} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={byBarangayData.slice(0, 8)} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '11px' }} interval={0} angle={-20} textAnchor="end" />
+                  <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '11px' }} interval={0} angle={-25} textAnchor="end" />
                   <YAxis stroke="#64748b" style={{ fontSize: '11px' }} allowDecimals={false} />
                   <Tooltip formatter={(value) => [`${value} incidents`, 'Total']} />
                   <Bar dataKey="count" fill="#10B981" radius={[6, 6, 0, 0]} />
