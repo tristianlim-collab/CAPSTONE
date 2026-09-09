@@ -12,7 +12,11 @@ const HeatmapLayer = ({ points }) => {
   useEffect(() => {
     if (!points || points.length === 0) return;
 
-    const heatLayer = L.heatLayer(points, {
+    // Filter points to ensure they stay on land (Talisay City land bounds: Lat 10.68 - 10.80, Lng 122.935 - 123.05)
+    const landPoints = points.filter(p => p[0] >= 10.68 && p[0] <= 10.82 && p[1] >= 122.935 && p[1] <= 123.05);
+    const validPoints = landPoints.length > 0 ? landPoints : points;
+
+    const heatLayer = L.heatLayer(validPoints, {
       radius: 25,
       blur: 15,
       maxZoom: 17,
@@ -24,10 +28,6 @@ const HeatmapLayer = ({ points }) => {
         1.0: 'red'
       }
     }).addTo(map);
-
-    // Fit bounds
-    const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
-    map.fitBounds(bounds, { padding: [20, 20] });
 
     return () => {
       map.removeLayer(heatLayer);
@@ -120,7 +120,7 @@ const KDEHeatmap = () => {
           </div>
         ) : (
           <MapContainer 
-            center={[10.738, 122.965]} 
+            center={[10.7421, 122.9688]} 
             zoom={13} 
             className="w-full h-full grayscale-[0.5] contrast-[1.1]"
             zoomControl={false}
@@ -129,7 +129,7 @@ const KDEHeatmap = () => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {data && <HeatmapLayer points={data.filter(p => p[0] >= 10.68 && p[0] <= 10.82 && p[1] >= 122.925 && p[1] <= 123.05)} />}
+            {data && <HeatmapLayer points={data} />}
           </MapContainer>
         )}
 

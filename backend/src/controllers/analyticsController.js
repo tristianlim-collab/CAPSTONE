@@ -2,52 +2,14 @@ import { prisma } from '../config/database.js';
 import { success, error } from "../utils/apiResponse.js";
 import predictionService from '../services/predictionService.js';
 
-
-
-import fs from 'fs';
-import path from 'path';
-
-// Helper to parse dataset CSV if available
-const parseCsvDataset = () => {
-  try {
-    const csvPath = 'c:/Users/Tristan Zane/OneDrive/Desktop/CAPSTONE/Talisay_City_DRRMO_BFP_Incident_Reports-1.csv';
-    if (!fs.existsSync(csvPath)) return [];
-    const content = fs.readFileSync(csvPath, 'utf8');
-    const lines = content.split('\n').slice(1);
-    const records = [];
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const parts = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
-      if (parts.length >= 15) {
-        records.push({
-          type: parts[4]?.replace(/^"|"$/g, '').trim(),
-          barangay: parts[12]?.replace(/^"|"$/g, '').trim(),
-          status: parts[19]?.replace(/^"|"$/g, '').trim(),
-          lat: parseFloat(parts[13]),
-          lng: parseFloat(parts[14]),
-          responseTime: parseInt(parts[15]) || 6
-        });
-      }
-    }
-    return records;
-  } catch (e) {
-    return [];
-  }
-};
-
 export const getSummary = async (_req, res) => {
   try {
-    const [totalDb, activeDb, resolvedDb, users] = await Promise.all([
+    const [total, active, resolved, users] = await Promise.all([
       prisma.incident.count(),
       prisma.incident.count({ where: { status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
       prisma.incident.count({ where: { status: { in: ["RESOLVED", "CLOSED", "FALSE_ALARM"] } } }),
       prisma.user.count(),
     ]);
-
-    const csvData = parseCsvDataset();
-    const total = totalDb + csvData.length;
-    const active = activeDb + csvData.filter(d => ['Ongoing', 'REPORTED', 'VERIFIED'].includes(d.status)).length;
-    const resolved = resolvedDb + csvData.filter(d => ['Resolved', 'Closed', 'False Alarm'].includes(d.status)).length;
 
     return res.status(200).json(success({ data: { total, active, resolved, users }, message: "Analytics summary fetched" }));
   } catch (err) {
@@ -59,18 +21,12 @@ export const getByType = async (_req, res) => {
   try {
     const rows = await prisma.incident.groupBy({ by: ["incident_type_id"], _count: { _all: true } });
     const types = await prisma.incidentType.findMany();
-    const typeMap = new Map(types.map(t => [t.incident_type_id, t.name]));
+    const typeMap = new Map(types.map(t => [t.type_id, t.name]));
 
     const counts = {};
     rows.forEach(r => {
       const name = typeMap.get(r.incident_type_id) || 'Other Emergency';
       counts[name] = (counts[name] || 0) + r._count._all;
-    });
-
-    const csvData = parseCsvDataset();
-    csvData.forEach(item => {
-      const name = item.type || 'Other Emergency';
-      counts[name] = (counts[name] || 0) + 1;
     });
 
     const data = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
@@ -91,12 +47,6 @@ export const getByBarangay = async (_req, res) => {
     rows.forEach(r => {
       const name = bgyMap.get(r.barangay_id) || 'Unspecified';
       counts[name] = (counts[name] || 0) + r._count._all;
-    });
-
-    const csvData = parseCsvDataset();
-    csvData.forEach(item => {
-      const name = item.barangay || 'Unspecified';
-      counts[name] = (counts[name] || 0) + 1;
     });
 
     const data = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
@@ -135,8 +85,14 @@ export const getResponseTime = async (_req, res) => {
 
 export const getHeatmap = async (_req, res) => {
   try {
-    const points = await prisma.incident.findMany({ select: { latitude: true, longitude: true, severity: true } });
-    const data = points.map((p) => [p.latitude, p.longitude, p.severity === "CRITICAL" ? 1 : 0.6]);
+    const points = await prisma.incident.findMany({
+      where: {
+        latitude: { gte: 10.68, lte: 10.82 },
+        longitude: { gte: 122.935, lte: 123.05 }
+      },
+      select: { latitude: true, longitude: true, severity: true }
+    });
+    const data = points.map((p) => [p.latitude, p.longitude, p.severity === "CRITICAL" ? 1.0 : p.severity === "HIGH" ? 0.7 : 0.4]);
     return res.status(200).json(success({ data, message: "Heatmap data fetched" }));
   } catch (err) {
     return res.status(500).json(error({ message: err.message }));
@@ -219,10 +175,28 @@ export const getPredictionHealth = async (_req, res) => {
  */
 export const getKDE = async (_req, res) => {
   try {
-    const kdeData = await predictionService.kde();
+    const points = await prisma.incident.findMany({
+      where: {
+        latitude: { gte: 10.68, lte: 10.82 },
+        longitude: { gte: 122.935, lte: 123.05 }
+      },
+      select: { latitude: true, longitude: true, severity: true }
+    });
+
+    const kdeData = points.map((p) => [
+      p.latitude,
+      p.longitude,
+      p.severity === "CRITICAL" ? 1.0 : p.severity === "HIGH" ? 0.7 : 0.4
+    ]);
 
     return res.status(200).json(success({
-      data: kdeData,
+      data: {
+        success: true,
+        model: 'KDE',
+        type: 'Heatmap Density',
+        data: kdeData,
+        bounds: { minLat: 10.68, maxLat: 10.82, minLng: 122.935, maxLng: 123.05 }
+      },
       message: 'KDE visualization data fetched'
     }));
   } catch (err) {
