@@ -21,15 +21,26 @@ const ResponseIncidents = () => {
 
   // Listen for new incidents in real-time
   useEffect(() => {
-    const unsub1 = on('incident_verified', (data) => {
+    const handleVerified = (data) => {
+      const verifiedInc = data.incident || data;
+      const incId = verifiedInc.incident_id || data.incident_id;
+
       setIncidents(prev => {
-        // Deduplication: don't add if already exists
-        if (prev.find(i => i.incident_id === data.incident_id)) return prev;
-        const incident = data.incident || data;
-        return [{ ...incident, status: 'VERIFIED' }, ...prev];
+        const exists = prev.some(i => i.incident_id === incId);
+        if (exists) {
+          return prev.map(inc =>
+            inc.incident_id === incId
+              ? { ...inc, ...verifiedInc, status: 'VERIFIED' }
+              : inc
+          );
+        }
+        return [{ ...verifiedInc, status: 'VERIFIED' }, ...prev];
       });
       toast('🚨 New verified incident dispatched!', { icon: '📍', style: { fontWeight: 'bold' } });
-    });
+    };
+
+    const unsub1 = on('incident_verified', handleVerified);
+    const unsub1b = on('incident_approved', handleVerified);
 
     const unsub2 = on('incident_status_updated', (data) => {
       setIncidents(prev => prev.map(inc =>
@@ -44,7 +55,7 @@ const ResponseIncidents = () => {
       toast('ℹ️ Incident deleted', { duration: 5000 });
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); };
+    return () => { unsub1(); unsub1b(); unsub2(); unsub3(); };
   }, [on]);
 
   useEffect(() => {

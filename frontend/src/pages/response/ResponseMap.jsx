@@ -466,11 +466,17 @@ const ResponseMap = () => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
 
-    // 5. Verification (Prepend for auto-zoom tracking)
-    const unsub5 = on('incident_verified', (data) => {
-      const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id);
+    // 5. Verification / Approval (Prepend for auto-zoom tracking & map update)
+    const handleVerifiedMap = (data) => {
+      const verifiedInc = data.incident || data;
+      if (!verifiedInc || (!verifiedInc.latitude && !data.latitude)) return;
+
+      const incObj = { ...verifiedInc, status: 'VERIFIED' };
+      const incId = incObj.incident_id || data.incident_id;
+
+      const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id);
       const unitName = user?.unit?.unit_name?.toLowerCase() || '';
-      const incidentAddress = (data.incident?.map_pin_address || '').toLowerCase();
+      const incidentAddress = (incObj.map_pin_address || '').toLowerCase();
 
       const isSilayUnit = unitName.includes('silay');
       const isTalisayUnit = unitName.includes('talisay');
@@ -484,13 +490,16 @@ const ResponseMap = () => {
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
           const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
-          if (isCrossCity && !isAssigned) return prev.filter(i => i.incident_id !== data.incident_id);
+          if (isCrossCity && !isAssigned) return prev.filter(i => i.incident_id !== incId);
 
-          const others = prev.filter(i => i.incident_id !== data.incident_id);
-          return [data.incident, ...others];
+          const others = prev.filter(i => i.incident_id !== incId);
+          return [incObj, ...others];
         });
       }
-    });
+    };
+
+    const unsub5 = on('incident_verified', handleVerifiedMap);
+    const unsub5b = on('incident_approved', handleVerifiedMap);
 
     // 6. Dispatch / Backup Tracker
     const unsub6 = on('unit_dispatch_with_directions', async (data) => {
@@ -543,7 +552,7 @@ const ResponseMap = () => {
       setRouteLoading(false);
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6(); };
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub5b(); unsub6(); };
   }, [on, user]);
 
   const fetchIncidents = async (filterParams = {}) => {

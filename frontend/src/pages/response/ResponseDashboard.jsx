@@ -42,11 +42,26 @@ export default function ResponseDashboard() {
   }, []);
 
   useEffect(() => {
-    const unsub1 = on('incident_verified', (data) => {
+    const handleVerified = (data) => {
+      const verifiedInc = data.incident || data;
+      const incId = verifiedInc.incident_id || data.incident_id;
+
       setIncidents(prev => {
-        if (prev.find(i => i.incident_id === data.incident_id)) return prev;
-        return [data.incident || data, ...prev];
+        const exists = prev.some(i => i.incident_id === incId);
+        if (exists) {
+          const updated = prev.map(inc =>
+            inc.incident_id === incId
+              ? { ...inc, ...verifiedInc, status: 'VERIFIED' }
+              : inc
+          );
+          // Move updated verified incident to the top
+          const target = updated.find(i => i.incident_id === incId);
+          const others = updated.filter(i => i.incident_id !== incId);
+          return target ? [target, ...others] : updated;
+        }
+        return [{ ...verifiedInc, status: 'VERIFIED' }, ...prev];
       });
+
       toast('🚨 New verified incident assigned!', {
         icon: '📍',
         style: {
@@ -57,7 +72,10 @@ export default function ResponseDashboard() {
           border: '1px solid #334155'
         }
       });
-    });
+    };
+
+    const unsub1 = on('incident_verified', handleVerified);
+    const unsub1b = on('incident_approved', handleVerified);
 
     const unsub2 = on('incident_status_updated', (data) => {
       setIncidents(prev => prev.map(inc =>
@@ -96,7 +114,7 @@ export default function ResponseDashboard() {
       toast('🔔 New incoming report detected!', { icon: '📡' });
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    return () => { unsub1(); unsub1b(); unsub2(); unsub3(); unsub4(); };
   }, [on]);
 
   const fetchIncidents = async () => {
