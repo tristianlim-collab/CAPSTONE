@@ -40,9 +40,8 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
       previousLatestId.current = latestId;
 
       map.flyTo([lat, lng], 16, {
-        duration: 2.0,
-        easeLinearity: 0.25,
-        noMoveStart: true
+        duration: 1.8,
+        easeLinearity: 0.25
       });
 
       if (isNewIncident) {
@@ -60,14 +59,21 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
 function FlyToSelectedIncident({ selectedIncident }) {
   const map = useMap();
+  const prevSelectedId = useRef(null);
+
   useEffect(() => {
-    if (selectedIncident?.latitude && selectedIncident?.longitude) {
+    if (!selectedIncident?.latitude || !selectedIncident?.longitude) return;
+    const selectedId = selectedIncident.incident_id;
+
+    if (prevSelectedId.current !== null && prevSelectedId.current !== selectedId) {
       map.flyTo([Number(selectedIncident.latitude), Number(selectedIncident.longitude)], 17, {
         duration: 1.5,
         easeLinearity: 0.25,
       });
     }
+    prevSelectedId.current = selectedId;
   }, [selectedIncident, map]);
+
   return null;
 }
 
@@ -89,15 +95,14 @@ function getIncidentCity(incident) {
   return null;
 }
 
-
-
 export default function LiveMap({
   center = [10.0000, 122.9000],
   zoom = 9.5,
   autoZoomOnNewIncident = true,
   markerColorMode = 'severity',
   onVerify,
-  filters = {}
+  filters = {},
+  externalIncidents = null
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
@@ -105,6 +110,12 @@ export default function LiveMap({
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
+  // Sync external incidents (from AdminDashboard state / socket polling)
+  useEffect(() => {
+    if (externalIncidents && Array.isArray(externalIncidents)) {
+      setIncidents(externalIncidents);
+    }
+  }, [externalIncidents]);
 
   // Bounds for Negros Island Region
   const NIR_BOUNDS = [
@@ -148,25 +159,23 @@ export default function LiveMap({
   };
 
   useEffect(() => {
-    // Fetch initial active incidents with full data
-    const params = {
-      limit: 100,
-      include: 'evidence,reporter,type,barangay'
-    };
+    if (!externalIncidents) {
+      // Fetch initial active incidents with full data
+      const params = {
+        limit: 100,
+        include: 'evidence,reporter,type,barangay'
+      };
 
-    // Add filters to params if they exist
-    if (filters.status) params.status = filters.status;
-    if (filters.type_id) params.type_id = filters.type_id;
-    if (filters.from_date) params.from_date = filters.from_date;
-    if (filters.to_date) params.to_date = filters.to_date;
+      if (filters.status) params.status = filters.status;
+      if (filters.type_id) params.type_id = filters.type_id;
+      if (filters.from_date) params.from_date = filters.from_date;
+      if (filters.to_date) params.to_date = filters.to_date;
 
-    incidentAPI.getAll(params).then(async (res) => {
-      // No need to filter out resolved incidents since API handles it
-      const activeIncidents = res.data?.data || [];
-      setIncidents(activeIncidents);
-
-
-    }).catch(err => console.error("Map fetch error:", err));
+      incidentAPI.getAll(params).then(async (res) => {
+        const activeIncidents = res.data?.data || [];
+        setIncidents(activeIncidents);
+      }).catch(err => console.error("Map fetch error:", err));
+    }
 
     // Fetch active response unit positions
     api.get('/response-units/positions/active')
@@ -178,16 +187,16 @@ export default function LiveMap({
       .catch(err => console.error("Unit position fetch error:", err));
 
     // Socket.io Subscriptions
-    const unsub1 = on('new_incident', (incident) => {
+    const unsub1 = on('new_incident', (data) => {
+      const incident = data?.incident || data;
       if (incident?.latitude && incident?.longitude) {
         setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
         setSelectedIncidentId(incident.incident_id);
       }
     });
 
-    // Listen for new reports awaiting verification (this is what the backend actually emits)
     const unsub3 = on('incident_awaiting_verification', (data) => {
-      const incident = data.incident || data;
+      const incident = data?.incident || data;
       if (incident?.latitude && incident?.longitude) {
         setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
         setSelectedIncidentId(incident.incident_id);
@@ -195,15 +204,15 @@ export default function LiveMap({
     });
 
     const unsub2 = on('incident_status_updated', (updatedData) => {
+      const targetId = updatedData.incident_id || updatedData.incident?.incident_id;
       setIncidents(prev => {
-        if (updatedData.status === 'RESOLVED' || updatedData.status === 'CLOSED' || updatedData.status === 'FALSE_ALARM') {
-          return prev.filter(inc => inc.incident_id !== updatedData.incident_id);
+        if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(updatedData.status)) {
+          return prev.filter(inc => inc.incident_id !== targetId);
         }
-        // Merge the full incident object if provided (e.g. after evidence upload)
         const fullIncident = updatedData.incident || {};
         return prev.map(inc =>
-          inc.incident_id === updatedData.incident_id
-            ? { ...inc, ...fullIncident, status: updatedData.status }
+          inc.incident_id === targetId
+            ? { ...inc, ...fullIncident, status: updatedData.status || inc.status }
             : inc
         );
       });
@@ -211,28 +220,22 @@ export default function LiveMap({
 
     const unsub4 = on('incident_deleted', (data) => {
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
-      // Clear selection if deleted
       setSelectedIncidentId(prev => prev === data.incident_id ? null : prev);
     });
 
-    // Listen for verified incidents
     const unsub5 = on('incident_verified', (data) => {
-      if (data.incident?.latitude && data.incident?.longitude) {
+      const inc = data?.incident || data;
+      if (inc?.latitude && inc?.longitude) {
         setIncidents(prev => {
-          const existing = prev.find(i => i.incident_id === data.incident.incident_id);
+          const existing = prev.find(i => i.incident_id === inc.incident_id);
           if (existing) {
-            // Merge instead of replace to preserve evidence and other data
-            return prev.map(inc => inc.incident_id === data.incident.incident_id
-              ? { ...inc, ...data.incident }
-              : inc
-            );
+            return prev.map(item => item.incident_id === inc.incident_id ? { ...item, ...inc } : item);
           }
-          return [data.incident, ...prev];
+          return [inc, ...prev];
         });
       }
     });
 
-    // Listen for unit location updates
     const unsub6 = on('unit_location_updated', (data) => {
       setUnits(prev => {
         const exists = prev.find(u => u.unit_id === data.unitId);
@@ -243,12 +246,9 @@ export default function LiveMap({
               : u
           );
         }
-        // If a new unit appears, add it
         return [...prev, { unit_id: data.unitId, unit_name: data.unitName, latitude: data.lat, longitude: data.lng, availability_status: 'AVAILABLE' }];
       });
     });
-
-
 
     return () => {
       unsub1();
@@ -258,7 +258,7 @@ export default function LiveMap({
       unsub5();
       unsub6();
     };
-  }, [on]);
+  }, [on, externalIncidents]);
 
   // Refetch incidents when filters change
   useEffect(() => {

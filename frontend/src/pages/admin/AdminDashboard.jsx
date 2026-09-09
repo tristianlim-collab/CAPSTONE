@@ -168,7 +168,7 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-500 font-medium">Click a marker to verify incidents directly</p>
           </div>
           <div className="flex-1 rounded-[20px] overflow-hidden bg-slate-100 relative">
-            <LiveMap zoom={13} center={[10.7421, 122.9688]} autoZoomOnNewIncident={true} markerColorMode="lgu" onVerify={handleVerifyFromMap} filters={filters} />
+            <LiveMap zoom={13} center={[10.7421, 122.9688]} autoZoomOnNewIncident={true} markerColorMode="lgu" onVerify={handleVerifyFromMap} filters={filters} externalIncidents={recentIncidents} />
           </div>
         </div>
 
