@@ -6,11 +6,11 @@ describe('White-Box Unit Testing - Incident Management & Dispatch Controller', (
     const res = {};
     res.statusCode = 200;
     res.jsonBody = null;
-    res.status = function(code) {
+    res.status = function (code) {
       this.statusCode = code;
       return this;
     };
-    res.json = function(data) {
+    res.json = function (data) {
       this.jsonBody = data;
       return this;
     };

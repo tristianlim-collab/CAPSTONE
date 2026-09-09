@@ -1,1 +1,28 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build & Output
+dist/
+build/
+coverage/
+*.log
+
+# Temporary Scratch Files
+extract_pdf.js
+tmp_pdf_text.txt
+*.tmp
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
 /erd.drawio (1).png

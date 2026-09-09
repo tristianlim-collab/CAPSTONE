@@ -3,6 +3,8 @@
     "@prisma/client": "^7.6.0",
     "google-auth-library": "^10.6.2",
     "nodemailer": "^8.0.5",
+    "pdf-parse": "^2.4.5",
+    "pdf2json": "^4.0.3",
     "socket.io": "^4.8.3",
     "twilio": "^5.13.1"
   },

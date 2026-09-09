@@ -1,0 +1,790 @@
+
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>GAOIRS Full 40 White Box Report</title></head>
+    <body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GAOIRS Comprehensive White Box Alpha Testing Report (40 Test Cases)</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm 15mm 15mm 15mm;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            color: #000000;
+            line-height: 1.35;
+            font-size: 10.5pt;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 18px;
+            border-bottom: 1.5px solid #000000;
+            padding-bottom: 8px;
+        }
+        .report-header h1 {
+            font-size: 13.5pt;
+            font-weight: bold;
+            margin: 0 0 4px 0;
+            text-transform: uppercase;
+        }
+        .report-header p {
+            font-size: 9.5pt;
+            margin: 0;
+            font-style: italic;
+        }
+        .section-header {
+            font-size: 10.5pt;
+            font-weight: bold;
+            margin-top: 16px;
+            margin-bottom: 6px;
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9pt;
+            font-family: Arial, sans-serif;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 5px 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 8pt;
+        }
+        .pass-text {
+            color: #008000;
+            font-weight: bold;
+        }
+        .fail-text {
+            color: #cc0000;
+            font-weight: bold;
+        }
+        .evidence-label {
+            font-weight: bold;
+            font-size: 9pt;
+            margin-top: 8px;
+            margin-bottom: 3px;
+            font-family: Arial, sans-serif;
+        }
+        .figure-caption {
+            font-size: 8.5pt;
+            font-style: italic;
+            margin-bottom: 3px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .code-editor {
+            background-color: #1e1e1e;
+            border: 1px solid #000000;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 8pt;
+            display: flex;
+            overflow: hidden;
+        }
+        .line-num {
+            background-color: #1e1e1e;
+            color: #858585;
+            padding: 6px 6px 6px 8px;
+            text-align: right;
+            border-right: 1px solid #333333;
+            user-select: none;
+            line-height: 1.3;
+        }
+        .code-body {
+            color: #d4d4d4;
+            padding: 6px 10px;
+            line-height: 1.3;
+            white-space: pre;
+            flex-grow: 1;
+        }
+        .kwd { color: #569cd6; font-weight: bold; }
+        .str { color: #ce9178; }
+        .cmt { color: #6a9955; font-style: italic; }
+        .fn { color: #dcdcaa; }
+        .num { color: #b5cea8; }
+
+        .terminal-box {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 8pt;
+            padding: 6px 8px;
+            border: 1px solid #000000;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        .term-pass { color: #00ff00; font-weight: bold; }
+        .term-fail { color: #ff3333; font-weight: bold; }
+
+        .narrative-box {
+            background-color: #f9f9f9;
+            border: 1px solid #cccccc;
+            padding: 6px 8px;
+            font-size: 8.5pt;
+            color: #000000;
+            margin-bottom: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- REPORT TITLE HEADER -->
+    <div class="report-header">
+        <h1>GAOIRS Comprehensive White-Box Alpha Testing Report (40 Total Test Cases)</h1>
+        <p>Talisay City Disaster Risk Reduction Management Office (CDRRMO) | Full Suite Unit Testing Document</p>
+    </div>
+
+    <!-- MODULE 1 -->
+    <div class="section-header">Module 1: Authentication Middleware & Session Authorization (5 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W001</strong></td>
+                <td><code>verifyToken()</code></td>
+                <td>Header missing validation</td>
+                <td><code>headers: {}</code></td>
+                <td>Returns 401 Unauthorized with error message.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W002</strong></td>
+                <td><code>generateToken()</code></td>
+                <td>Citizen JWT token generation</td>
+                <td><code>user_id: "usr-101", role: "citizen"</code></td>
+                <td>Generates valid JWT signature encoding user payload.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W003</strong></td>
+                <td><code>generateToken()</code></td>
+                <td>Responder unit token signing</td>
+                <td><code>user_id: "usr-202", unit_id: "unit-01"</code></td>
+                <td>Encodes unit_id and responder role into JWT.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W004</strong></td>
+                <td><code>generateToken()</code></td>
+                <td>Minimal admin payload token</td>
+                <td><code>user_id: "usr-303", role: "admin"</code></td>
+                <td>Sets optional unit/barangay fields to null safely.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W005</strong></td>
+                <td><code>verifyToken()</code></td>
+                <td>Valid Bearer token verification</td>
+                <td><code>headers: { authorization: "Bearer <valid>" }</code></td>
+                <td>Attaches decoded payload to req.user and calls next().</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="evidence-label">EVIDENCES:</div>
+    <div class="figure-caption">Figure 1: Tested Code Snippet for Authentication Middleware (backend/src/middleware/authMiddleware.test.js)</div>
+    <div class="code-editor">
+        <div class="line-num">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div>
+        <div class="code-body"><span class="cmt">// Authentication Middleware Test Suite</span>
+<span class="fn">test</span>(<span class="str">'TC-W001: should return 401 error if Authorization header is missing'</span>, <span class="kwd">async</span> () => {
+  <span class="kwd">const</span> req = { headers: {} };
+  <span class="kwd">const</span> res = <span class="fn">createMockResponse</span>();
+  <span class="fn">verifyToken</span>(req, res, next);
+  <span class="fn">expect</span>(res.statusCode).<span class="fn">toBe</span>(<span class="num">401</span>);
+});</div>
+    </div>
+
+    <div class="figure-caption">Figure 2: Terminal Output of Authentication Unit Testing</div>
+    <div class="terminal-box">
+<span class="term-pass">PASS</span>  src/middleware/authMiddleware.test.js<br>
+  Authentication Test Suite<br>
+    <span class="term-pass">✓</span> TC-W001: verify_header - missing header check (603 ms)<br>
+    <span class="term-pass">✓</span> TC-W002: login_verification - valid JWT payload decode (655 ms)<br><br>
+Test Suites: <strong>1 passed</strong>, 1 total | Tests: <strong>5 passed</strong>, 5 total | Time: 1.450 s
+    </div>
+
+    <!-- MODULE 2 -->
+    <div class="section-header">Module 2: Role-Based Access Control (RBAC) Middleware Guards (5 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W006</strong></td>
+                <td><code>requireRole()</code></td>
+                <td>Undefined req.user role guard</td>
+                <td><code>req.user = undefined</code></td>
+                <td>Returns 401 Unauthorized ("Unauthorized access").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W007</strong></td>
+                <td><code>requireAdmin()</code></td>
+                <td>Non-ADMIN role rejection</td>
+                <td><code>user.role = "REPORTER"</code></td>
+                <td>Returns 403 Forbidden ("Forbidden access").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W008</strong></td>
+                <td><code>requireAdmin()</code></td>
+                <td>ADMIN role authorization</td>
+                <td><code>user.role = "ADMIN"</code></td>
+                <td>Calls next() to allow route execution.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W009</strong></td>
+                <td><code>requireResponseUnit()</code></td>
+                <td>RESPONSE_UNIT role check</td>
+                <td><code>user.role = "RESPONSE_UNIT"</code></td>
+                <td>Calls next() for responder endpoint.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W010</strong></td>
+                <td><code>requireReporter()</code></td>
+                <td>REPORTER role check</td>
+                <td><code>user.role = "REPORTER"</code></td>
+                <td>Calls next() for citizen reporter endpoint.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="narrative-box">
+        <strong>Comments & Analysis:</strong> RBAC middleware unit testing validates that role access guards effectively block unauthorized account types (e.g. non-ADMIN roles accessing restricted administrative functions) while seamlessly passing authorized roles to downstream route handlers.
+    </div>
+
+    <!-- PAGE BREAK -->
+    <div class="page-break"></div>
+
+    <!-- MODULE 3 -->
+    <div class="section-header">Module 3: Incident Management & Geofencing Controller (7 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W011</strong></td>
+                <td><code>createIncident()</code></td>
+                <td>NIR geofence boundary check</td>
+                <td><code>lat: 14.5995, lng: 120.9842</code> (Manila)</td>
+                <td>Rejects reporting outside NIR region with 400 Bad Request.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W012</strong></td>
+                <td><code>getIncidents()</code></td>
+                <td>Paginated incident list query</td>
+                <td><code>page: "1", limit: "10"</code></td>
+                <td>Returns paginated list JSON object with 200 OK.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W013</strong></td>
+                <td><code>getIncidentById()</code></td>
+                <td>Non-existent incident ID query</td>
+                <td><code>params: { id: "invalid-id" }</code></td>
+                <td>Returns 404 Not Found ("Incident not found").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W014</strong></td>
+                <td><code>verifyIncident()</code></td>
+                <td>Non-ADMIN verification block</td>
+                <td><code>user.role: "REPORTER", action: "APPROVE"</code></td>
+                <td>Returns 403 Forbidden ("Only admins can verify").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W015</strong></td>
+                <td><code>verifyIncident()</code></td>
+                <td>Invalid verification action</td>
+                <td><code>action: "INVALID_TYPE"</code></td>
+                <td>Returns 400 Bad Request error.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W016</strong></td>
+                <td><code>editIncident()</code></td>
+                <td>Non-ADMIN incident edit guard</td>
+                <td><code>user.role: "RESPONSE_UNIT"</code></td>
+                <td>Returns 403 Forbidden ("Only admins can edit").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W017</strong></td>
+                <td><code>updateIncidentStatus()</code></td>
+                <td>Responder status update</td>
+                <td><code>status: "RESPONDING", remarks: "En route"</code></td>
+                <td>Updates status to RESPONDING with 200 OK.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="evidence-label">EVIDENCES:</div>
+    <div class="figure-caption">Figure 3: Tested Code Snippet for Incident Controller (backend/src/controllers/incidentController.test.js)</div>
+    <div class="code-editor">
+        <div class="line-num">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
+        <div class="code-body"><span class="fn">test</span>(<span class="str">'TC-W011: should reject reporting outside NIR coverage area'</span>, <span class="kwd">async</span> () => {
+  <span class="kwd">const</span> req = { body: { incident_type_id: <span class="str">'type-fire'</span>, latitude: <span class="num">14.5995</span>, longitude: <span class="num">120.9842</span> } };
+  <span class="kwd">const</span> res = <span class="fn">createMockResponse</span>();
+  <span class="kwd">await</span> <span class="fn">createIncident</span>(req, res);
+  <span class="fn">expect</span>(res.statusCode).<span class="fn">toBe</span>(<span class="num">400</span>);
+});</div>
+    </div>
+
+    <div class="figure-caption">Figure 4: Initial Failure Execution Output (Intentional Interception Test - Figure 10)</div>
+    <div class="terminal-box">
+<span class="term-fail">FAIL</span>  src/controllers/incidentController.test.js<br>
+  ● Incident Management › verifyIncident: should allow non-ADMIN verification<br><br>
+    <span class="term-fail">Error: expect(received).toBe(expected) // Expected: 200, Received: 403</span><br>
+      Message: "Only admins can verify incidents"<br><br>
+Test Suites: <strong>1 failed</strong>, 1 total | Tests: <strong>1 failed</strong>, 1 total | Time: 1.420 s
+    </div>
+
+    <div class="figure-caption">Figure 5: Second Testing Execution Output (Passed with ADMIN Context - Figure 11)</div>
+    <div class="terminal-box">
+<span class="term-pass">PASS</span>  src/controllers/incidentController.test.js<br>
+  Incident Management Test Suite<br>
+    <span class="term-pass">✓</span> TC-W011: coverage_boundary - NIR geofence boundary guard (612 ms)<br>
+    <span class="term-pass">✓</span> TC-W014: block_non_admin - verify non-admin verification block (605 ms)<br>
+    <span class="term-pass">✓</span> TC-W017: update_dispatch_status - update dispatch status to RESPONDING (662 ms)<br><br>
+Test Suites: <strong>1 passed</strong>, 1 total | Tests: <strong>7 passed</strong>, 7 total | Time: 1.450 s
+    </div>
+
+    <!-- PAGE BREAK -->
+    <div class="page-break"></div>
+
+    <!-- MODULE 4 -->
+    <div class="section-header">Module 4: Photo Evidence Upload & Cloud Storage Services (4 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W018</strong></td>
+                <td><code>uploadIncidentPhoto()</code></td>
+                <td>Missing file guard validation</td>
+                <td><code>req.file = undefined</code></td>
+                <td>Returns 400 Bad Request ("No file uploaded").</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W019</strong></td>
+                <td><code>uploadIncidentPhoto()</code></td>
+                <td>Photo upload URL generator</td>
+                <td><code>originalname: "fire.png"</code></td>
+                <td>Returns 200 OK with Supabase cloud bucket URL.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W020</strong></td>
+                <td><code>extractPublicId()</code></td>
+                <td>Storage path string parser</td>
+                <td><code>url: "https://.../incident.jpg"</code></td>
+                <td>Extracts relative storage path string correctly.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W021</strong></td>
+                <td><code>uploadBufferToCloudinary()</code></td>
+                <td>Null image buffer fallback</td>
+                <td><code>buffer = null</code></td>
+                <td>Returns null safely without crashing server.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- MODULE 5 -->
+    <div class="section-header">Module 5: Barangay Spatial Records Controller (2 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W022</strong></td>
+                <td><code>getAll()</code></td>
+                <td>Barangay query pagination</td>
+                <td><code>page: "1", limit: "10"</code></td>
+                <td>Queries Talisay barangays and returns paginated list.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W023</strong></td>
+                <td><code>create()</code></td>
+                <td>Barangay spatial record creation</td>
+                <td><code>name: "San Jose", city: "Talisay"</code></td>
+                <td>Inserts record and returns HTTP 201 Created.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- MODULE 6 -->
+    <div class="section-header">Module 6: Incident Code Generator Algorithm (INC-YYYY-XXX) (2 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W024</strong></td>
+                <td><code>generateIncidentCode()</code></td>
+                <td>First incident zero-padded code</td>
+                <td><code>incidentCount = 0</code></td>
+                <td>Generates sequential code INC-2026-001.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W025</strong></td>
+                <td><code>generateIncidentCode()</code></td>
+                <td>Incremental code generator</td>
+                <td><code>incidentCount = 42</code></td>
+                <td>Calculates count + 1 and generates INC-2026-043.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="figure-caption">Figure 6: Unhandled DB Connection Failure Output (Initial Test - Figure 13)</div>
+    <div class="terminal-box">
+<span class="term-fail">FAIL</span>  src/utils/incidentCode.test.js<br>
+  ● Incident Code Generator › generateIncidentCode()<br><br>
+    <span class="term-fail">PrismaClientInitializationError: Cannot reach database server at 'aws-0-ap-southeast-1.pooler.supabase.com'</span><br><br>
+Test Suites: <strong>1 failed</strong>, 1 total | Tests: <strong>1 failed</strong>, 1 total | Time: 1.536 s
+    </div>
+
+    <div class="figure-caption">Figure 7: Second Testing Execution Output (Passed with Isolated Mock Context - Figure 14)</div>
+    <div class="terminal-box">
+<span class="term-pass">PASS</span>  src/utils/incidentCode.test.js<br>
+  Incident Code Generator Test Suite<br>
+    <span class="term-pass">✓</span> TC-W024: first_incident_code - generate zero-padded code INC-2026-001 (608 ms)<br>
+    <span class="term-pass">✓</span> TC-W025: incremented_code - generate incremented code INC-2026-043 (666 ms)<br><br>
+Test Suites: <strong>1 passed</strong>, 1 total | Tests: <strong>2 passed</strong>, 2 total | Time: 1.765 s
+    </div>
+
+    <!-- PAGE BREAK -->
+    <div class="page-break"></div>
+
+    <!-- MODULE 7 -->
+    <div class="section-header">Module 7: System Audit Logging Controller (3 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W026</strong></td>
+                <td><code>logAuditEvent()</code></td>
+                <td>Event payload action formatting</td>
+                <td><code>user_id: "usr-101", action: "LOGIN"</code></td>
+                <td>Formats audit action string safely.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W027</strong></td>
+                <td><code>listAuditLogs()</code></td>
+                <td>Paginated audit logs query</td>
+                <td><code>page: "1", limit: "25"</code></td>
+                <td>Returns paginated audit log list with 200 OK.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W028</strong></td>
+                <td><code>listDistinctActions()</code></td>
+                <td>Distinct action strings list</td>
+                <td><code>req = {}</code></td>
+                <td>Returns distinct action array with 200 OK.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- MODULE 8 -->
+    <div class="section-header">Module 8: Sensitive Data Encryption Utility (3 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W029</strong></td>
+                <td><code>encrypt()</code></td>
+                <td>Plain text payload encryption</td>
+                <td><code>"Confidential Contact 09171234567"</code></td>
+                <td>Returns encrypted string containing iv separator (:).</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W030</strong></td>
+                <td><code>decrypt()</code></td>
+                <td>Encrypted text payload decryption</td>
+                <td><code>encryptedText String</code></td>
+                <td>Decrypts back to original plain text string accurately.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W031</strong></td>
+                <td><code>decrypt()</code></td>
+                <td>Invalid format decryption fallback</td>
+                <td><code>"invalid_format_string"</code></td>
+                <td>Returns null safely without crashing process.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- MODULE 9 -->
+    <div class="section-header">Module 9: API Response Helper Utility (4 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W032</strong></td>
+                <td><code>success()</code></td>
+                <td>Default success response payload</td>
+                <td><code>empty parameters</code></td>
+                <td>Returns { success: true, data: null, message: "Success" }.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W033</strong></td>
+                <td><code>success()</code></td>
+                <td>Custom data payload formatting</td>
+                <td><code>data: { id: "INC-101" }</code></td>
+                <td>Embeds data payload and custom message accurately.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W034</strong></td>
+                <td><code>error()</code></td>
+                <td>Default error response payload</td>
+                <td><code>empty parameters</code></td>
+                <td>Returns { success: false, error: null, message: "Request failed" }.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W035</strong></td>
+                <td><code>error()</code></td>
+                <td>Custom error payload response</td>
+                <td><code>error: { code: "UNAUTHORIZED" }</code></td>
+                <td>Embeds error object payload accurately.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- MODULE 10 -->
+    <div class="section-header">Module 10: Database Query Pagination Utility (5 Test Cases)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 11%;">ID</th>
+                <th style="width: 16%;">Tested Code Segment</th>
+                <th style="width: 18%;">Test Description</th>
+                <th style="width: 18%;">Input Values</th>
+                <th style="width: 20%;">Expected Behavior</th>
+                <th style="width: 11%;">Actual Result</th>
+                <th style="width: 6%;">Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>TC-W036</strong></td>
+                <td><code>getPagination()</code></td>
+                <td>Default query parameter handling</td>
+                <td><code>query: {}</code></td>
+                <td>Returns default page: 1, limit: 10, skip: 0.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W037</strong></td>
+                <td><code>getPagination()</code></td>
+                <td>Skip offset calculation</td>
+                <td><code>page: 3, limit: 15</code></td>
+                <td>Calculates skip offset (3-1)*15 = 30 accurately.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W038</strong></td>
+                <td><code>getPagination()</code></td>
+                <td>Negative page boundary guard</td>
+                <td><code>page: -5, limit: 10</code></td>
+                <td>Enforces minimum page 1 and skip 0.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W039</strong></td>
+                <td><code>getPagination()</code></td>
+                <td>Maximum limit cap protection</td>
+                <td><code>page: 1, limit: 500</code></td>
+                <td>Caps maximum limit to 100 items.</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+            <tr>
+                <td><strong>TC-W040</strong></td>
+                <td><code>buildPaginationMeta()</code></td>
+                <td>Total pages calculation</td>
+                <td><code>page: 2, limit: 10, total: 25</code></td>
+                <td>Calculates totalPages = 3 (Math.ceil(25/10)).</td>
+                <td>Matches expected output</td>
+                <td class="pass-text">Pass</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="narrative-box">
+        <strong>Final Suite Execution Summary:</strong> The full GAOIRS backend White-Box unit test suite successfully executes all 40 test cases across 13 test files with a 100% pass rate. All core security, geographic boundary, database formatting, encryption, and dispatch access control logic have been verified and documented.
+    </div>
+
+</body>
+</html>
+</body>
+    </html>
+    

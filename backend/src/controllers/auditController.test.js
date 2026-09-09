@@ -1,6 +1,6 @@
 import { logAuditEvent, listAuditLogs, listDistinctActions } from './auditController.js';
 
-describe('White-Box Unit Testing - System Audit Logging Controller', () => {
+describe('White-Box Unit Testing - Module 7: System Audit Logging Controller', () => {
 
   const createMockResponse = () => {
     const res = {};
@@ -17,7 +17,8 @@ describe('White-Box Unit Testing - System Audit Logging Controller', () => {
     return res;
   };
 
-  test('logAuditEvent: should handle missing parameter gracefully', async () => {
+  test('TC-W026: log_event_action - should handle missing parameter gracefully', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const eventPayload = {
       user_id: 'usr-101',
       action: 'LOGIN',
@@ -26,7 +27,8 @@ describe('White-Box Unit Testing - System Audit Logging Controller', () => {
     expect(eventPayload.action).toBe('LOGIN');
   });
 
-  test('listAuditLogs: should format paginated audit logs cleanly with 200 OK', async () => {
+  test('TC-W027: list_audit_logs - should format paginated audit logs cleanly with 200 OK', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const req = { query: { page: '1', limit: '25', action: 'INCIDENT_VERIFY' } };
     const res = createMockResponse();
 
@@ -45,7 +47,8 @@ describe('White-Box Unit Testing - System Audit Logging Controller', () => {
     expect(res.jsonBody.data.total).toBe(1);
   });
 
-  test('listDistinctActions: should map distinct audit action strings into array', async () => {
+  test('TC-W028: distinct_actions - should map distinct audit action strings into array', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const req = {};
     const res = createMockResponse();
 

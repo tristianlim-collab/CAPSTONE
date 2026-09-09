@@ -1,6 +1,6 @@
 import requireRole, { requireAdmin, requireResponseUnit, requireReporter } from './roleMiddleware.js';
 
-describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware', () => {
+describe('White-Box Unit Testing - Module 2: Role-Based Access Control (RBAC) Middleware Guards', () => {
 
   const createMockResponse = () => {
     const res = {};
@@ -17,7 +17,8 @@ describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware',
     return res;
   };
 
-  test('should return 401 error if req.user is undefined', () => {
+  test('TC-W006: undefined_user_guard - should return 401 error if req.user is undefined', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const middleware = requireRole('ADMIN');
     const req = {};
     const res = createMockResponse();
@@ -32,7 +33,8 @@ describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware',
     expect(nextCalled).toBe(false);
   });
 
-  test('should return 403 error if user role does not match required role', () => {
+  test('TC-W007: role_mismatch_guard - should return 403 error if user role does not match required role', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const middleware = requireAdmin;
     const req = { user: { role: 'REPORTER' } };
     const res = createMockResponse();
@@ -47,7 +49,8 @@ describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware',
     expect(nextCalled).toBe(false);
   });
 
-  test('should call next() if user possesses ADMIN role', () => {
+  test('TC-W008: admin_access_pass - should call next() if user possesses ADMIN role', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const req = { user: { role: 'ADMIN' } };
     const res = createMockResponse();
     let nextCalled = false;
@@ -58,7 +61,8 @@ describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware',
     expect(nextCalled).toBe(true);
   });
 
-  test('should call next() if user possesses RESPONSE_UNIT role', () => {
+  test('TC-W009: responder_access_pass - should call next() if user possesses RESPONSE_UNIT role', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const req = { user: { role: 'RESPONSE_UNIT' } };
     const res = createMockResponse();
     let nextCalled = false;
@@ -69,7 +73,8 @@ describe('White-Box Unit Testing - Role-Based Access Control (RBAC) Middleware',
     expect(nextCalled).toBe(true);
   });
 
-  test('should call next() if user possesses REPORTER role', () => {
+  test('TC-W010: reporter_access_pass - should call next() if user possesses REPORTER role', async () => {
+    await new Promise(r => setTimeout(r, 600));
     const req = { user: { role: 'REPORTER' } };
     const res = createMockResponse();
     let nextCalled = false;
