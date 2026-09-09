@@ -23,18 +23,18 @@ const getBackendIp = () => {
     return debuggerHost.split(':')[0];
   }
 
-  // 4. Fallback (Current Wi-Fi Machine IP: 192.168.241.129)
-  return '192.168.241.129';
+  // 4. Fallback (Current Wi-Fi Machine IP: 192.168.176.129)
+  return '192.168.176.129';
 };
 
 const backendIp = getBackendIp();
 const isDev = __DEV__;
 const PROD_URL = 'https://gaoirs-backend.onrender.com';
 
-// In Expo Go dev mode (__DEV__), route directly to your PC's local backend (http://192.168.241.129:3001) over Wi-Fi
-// In standalone APK build, route to live Render URL
-const API_URL = `${PROD_URL}/api`;
-export const SOCKET_URL = PROD_URL;
+// Route Expo Go dev mode directly to your PC's local backend (http://<IP>:3001/api) over Wi-Fi
+// Standalone APK build routes to live Render URL
+const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
+export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,

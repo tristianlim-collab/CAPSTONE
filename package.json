@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "start": "node backend/server.js"
+  },
   "dependencies": {
     "@prisma/client": "^7.6.0",
     "google-auth-library": "^10.6.2",
