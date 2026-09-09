@@ -2,21 +2,26 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FiHome, FiMapPin, FiList, FiLogOut, FiPower } from 'react-icons/fi';
+import SignOutModal from '../common/SignOutModal';
 
 const ResponseLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [onShift, setOnShift] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogoutConfirm = async () => {
+    setLoggingOut(true);
+    await logout();
+    setLoggingOut(false);
+    setShowSignOutModal(false);
     navigate('/login');
   };
 
   const toggleShift = () => {
     setOnShift(!onShift);
-    // TODO: Update backend with shift status
   };
 
   const menuItems = [
@@ -84,7 +89,7 @@ const ResponseLayout = ({ children }) => {
         {/* Logout */}
         <div className="p-4 border-t border-white/10">
           <button
-            onClick={handleLogout}
+            onClick={() => setShowSignOutModal(true)}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors"
           >
             <FiLogOut className="w-5 h-5" />
@@ -97,6 +102,15 @@ const ResponseLayout = ({ children }) => {
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      <SignOutModal
+        isOpen={showSignOutModal}
+        onClose={() => setShowSignOutModal(false)}
+        onConfirm={handleLogoutConfirm}
+        loading={loggingOut}
+        userRole="RESPONSE_UNIT"
+        user={user}
+      />
     </div>
   );
 };

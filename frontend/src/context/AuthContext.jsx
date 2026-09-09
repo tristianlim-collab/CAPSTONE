@@ -54,10 +54,23 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    delete axiosInstance.defaults.headers.common['Authorization'];
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Pre-logout cleanup: If logged in as Response Unit, update duty status to OFFLINE
+      if (user?.unit_id || user?.role === 'RESPONSE_UNIT') {
+        const unitId = user.unit_id || user.unit?.unit_id;
+        if (unitId) {
+          await axiosInstance.put(`/response-units/${unitId}/status`, { status: 'OFFLINE' }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('Pre-logout cleanup error:', err);
+    } finally {
+      localStorage.removeItem('token');
+      delete axiosInstance.defaults.headers.common['Authorization'];
+      setUser(null);
+      toast.success('Signed out successfully.');
+    }
   };
 
   const hasRole = (role) => {

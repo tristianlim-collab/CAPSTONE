@@ -11,6 +11,8 @@ import {
 import NotificationDropdown from '../notifications/NotificationDropdown';
 import { useNotifications } from '../../context/NotificationContext';
 
+import SignOutModal from '../common/SignOutModal';
+
 const ResponseLayout = () => {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -19,9 +21,14 @@ const ResponseLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile, expanded on desktop
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogoutConfirm = async () => {
+    setLoggingOut(true);
+    await logout();
+    setLoggingOut(false);
+    setShowSignOutModal(false);
     navigate('/login');
   };
 
@@ -133,7 +140,7 @@ const ResponseLayout = () => {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowSignOutModal(true)}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all duration-200"
           >
             <LogOut size={16} />
@@ -192,6 +199,16 @@ const ResponseLayout = () => {
           </div>
         </motion.div>
       </main>
+
+      {/* Sign Out Confirmation Modal */}
+      <SignOutModal
+        isOpen={showSignOutModal}
+        onClose={() => setShowSignOutModal(false)}
+        onConfirm={handleLogoutConfirm}
+        loading={loggingOut}
+        userRole="RESPONSE_UNIT"
+        user={user}
+      />
     </div>
   );
 };

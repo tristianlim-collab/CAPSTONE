@@ -5,19 +5,26 @@ import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api';
 import toast from 'react-hot-toast';
 
+import SignOutModal from '../../components/common/SignOutModal';
+
 const ReporterProfile = () => {
   const navigate = useNavigate();
   const { user, logout, checkAuth } = useAuth();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   
   const [formData, setFormData] = useState({ name: '', email: '', contact_number: '' });
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [saving, setSaving] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogoutConfirm = async () => {
+    setLoggingOut(true);
+    await logout();
+    setLoggingOut(false);
+    setShowSignOutModal(false);
     navigate('/login');
   };
 
@@ -140,7 +147,7 @@ const ReporterProfile = () => {
 
         {/* Logout */}
         <button 
-          onClick={handleLogout}
+          onClick={() => setShowSignOutModal(true)}
           className="mt-8 w-full p-4 bg-red-50 text-red-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors active:scale-95"
         >
           <LogOut className="w-5 h-5" />
@@ -214,6 +221,16 @@ const ReporterProfile = () => {
            </div>
         </div>
       )}
+
+      {/* Sign Out Confirmation Modal */}
+      <SignOutModal
+        isOpen={showSignOutModal}
+        onClose={() => setShowSignOutModal(false)}
+        onConfirm={handleLogoutConfirm}
+        loading={loggingOut}
+        userRole="REPORTER"
+        user={user}
+      />
 
     </div>
   );
