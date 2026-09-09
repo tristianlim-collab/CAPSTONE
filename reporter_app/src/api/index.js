@@ -33,8 +33,8 @@ const PROD_URL = 'https://gaoirs-backend.onrender.com';
 
 // In Expo Go dev mode (__DEV__), route directly to your PC's local backend (http://192.168.241.129:3001) over Wi-Fi
 // In standalone APK build, route to live Render URL
-const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
-export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
+const API_URL = `${PROD_URL}/api`;
+export const SOCKET_URL = PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,

@@ -444,8 +444,10 @@ export default function IncidentReportScreen({ navigation }) {
 
     } catch (err) {
       if (isMounted.current) {
-        // Handle Offline Queueing if network is down or request fails due to connectivity
-        if (err.message === 'OFFLINE' || !err.response) {
+        console.error('Submission error details:', err);
+        const isNetworkError = err.message === 'OFFLINE' || !err.response || err.code === 'ERR_NETWORK' || err.message?.toLowerCase().includes('network');
+
+        if (isNetworkError) {
           try {
             await OfflineQueueService.saveToQueue({
               incident_type_id: typeId,
@@ -459,11 +461,14 @@ export default function IncidentReportScreen({ navigation }) {
               reporter_phone: contactNumber,
               photos
             });
-            Alert.alert('Saved Offline in Queue', 'No internet connection detected. Your emergency report has been saved locally and will auto-sync once reconnected.');
+            Alert.alert(
+              'Report Queued Offline',
+              'Server response timed out or network was unstable. Your report has been securely saved on your phone and will automatically send when reconnected.',
+              [{ text: 'OK', onPress: () => navigation.replace('ReportSuccess') }]
+            );
             setPhotos([]);
             setSelectedType('');
             setLoading(false);
-            navigation.replace('ReportSuccess');
             return;
           } catch (queueErr) {
             console.error('Queue save failed:', queueErr);
