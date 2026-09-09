@@ -21,33 +21,40 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function AutoZoomToLatestIncident({ incidents, enabled }) {
   const map = useMap();
-  const previousLatestId = useRef(null);
+  const previousLatestKey = useRef(null);
 
   useEffect(() => {
     if (!enabled || !incidents || incidents.length === 0) return;
 
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id;
+    const latestStatus = latestIncident?.status;
+    const latestKey = `${latestId}_${latestStatus}`;
     const lat = Number(latestIncident?.latitude);
     const lng = Number(latestIncident?.longitude);
     const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
 
     if (!hasValidCoordinates) return;
 
-    // Zoom on first load or when a new latest incident arrives
-    if (previousLatestId.current !== latestId) {
-      const isNewIncident = previousLatestId.current !== null;
-      previousLatestId.current = latestId;
+    // Zoom on first load or when a new latest incident / status update arrives
+    if (previousLatestKey.current !== latestKey) {
+      const isUpdate = previousLatestKey.current !== null;
+      const isApprovedOrVerified = latestStatus === 'VERIFIED' || latestStatus === 'RESPONDING';
+      previousLatestKey.current = latestKey;
 
       map.flyTo([lat, lng], 16, {
         duration: 1.8,
         easeLinearity: 0.25
       });
 
-      if (isNewIncident) {
-        toast('🔴 New incident reported! Map zoomed to location.', {
+      if (isUpdate) {
+        const msg = isApprovedOrVerified
+          ? `🟢 Incident #${latestIncident?.incident_code || ''} Approved! Map zoomed to location.`
+          : '🔴 New incident reported! Map zoomed to location.';
+
+        toast(msg, {
           icon: '🚨',
-          style: { fontWeight: 'bold', borderLeft: '4px solid #EF4444' },
+          style: { fontWeight: 'bold', borderLeft: `4px solid ${isApprovedOrVerified ? '#10B981' : '#EF4444'}` },
           duration: 5000
         });
       }

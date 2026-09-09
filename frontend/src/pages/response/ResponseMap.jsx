@@ -87,17 +87,19 @@ const createUnitIcon = (unit) => {
   });
 };
 
-// Auto-zoom to latest incident when one arrives
+// Auto-zoom to latest incident or newly approved report when one arrives
 function AutoZoomToLatestIncident({ incidents, enabled }) {
   const map = useMap();
   const hasHydrated = useRef(false);
-  const previousLatestId = useRef(null);
+  const previousLatestKey = useRef(null);
 
   useEffect(() => {
-    if (!enabled || incidents.length === 0) return;
+    if (!enabled || !incidents || incidents.length === 0) return;
 
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id;
+    const latestStatus = latestIncident?.status;
+    const latestKey = `${latestId}_${latestStatus}`;
     const lat = Number(latestIncident?.latitude);
     const lng = Number(latestIncident?.longitude);
     const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
@@ -106,18 +108,25 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
     if (!hasHydrated.current) {
       hasHydrated.current = true;
-      previousLatestId.current = latestId;
+      previousLatestKey.current = latestKey;
       return;
     }
 
-    if (previousLatestId.current !== latestId) {
+    if (previousLatestKey.current !== latestKey) {
+      const isApprovedOrVerified = latestStatus === 'VERIFIED' || latestStatus === 'RESPONDING';
+      previousLatestKey.current = latestKey;
+
       map.flyTo([lat, lng], 16, {
         duration: 2.0,
         easeLinearity: 0.25,
         noMoveStart: true
       });
-      previousLatestId.current = latestId;
-      toast('🚨 New incident! Auto-zooming to location...', {
+
+      const message = isApprovedOrVerified
+        ? `🚨 Incident #${latestIncident?.incident_code || ''} Approved! Auto-zooming to location...`
+        : '🚨 New incident! Auto-zooming to location...';
+
+      toast(message, {
         icon: '📍',
         style: { fontWeight: 'bold', borderLeft: '4px solid #f97316' },
         duration: 6000
