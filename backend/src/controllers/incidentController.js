@@ -364,19 +364,19 @@ export const getIncidentById = async (req, res) => {
     if (!incident) return res.status(404).json({ message: 'Incident not found' });
 
     // Fetch related/similar incidents to attach same_report_tag
-    const 24HoursAgo = new Date(new Date(incident.reported_at).getTime() - 24 * 60 * 60 * 1000);
-    const 24HoursAfter = new Date(new Date(incident.reported_at).getTime() + 24 * 60 * 60 * 1000);
+    const twentyFourHoursAgo = new Date(new Date(incident.reported_at).getTime() - 24 * 60 * 60 * 1000);
+    const twentyFourHoursAfter = new Date(new Date(incident.reported_at).getTime() + 24 * 60 * 60 * 1000);
 
     const relatedIncidents = await prisma.incident.findMany({
       where: {
         incident_id: { not: incident.incident_id },
         incident_type_id: incident.incident_type_id,
-        reported_at: { gte: 24HoursAgo, lte: 24HoursAfter },
+        reported_at: { gte: twentyFourHoursAgo, lte: twentyFourHoursAfter },
         OR: [
           { barangay_id: incident.barangay_id },
           {
-            latitude: { gte: incident.latitude - 0.006, lte: incident.latitude + 0.006 },
-            longitude: { gte: incident.longitude - 0.006, lte: incident.longitude + 0.006 }
+            latitude: { gte: (incident.latitude || 0) - 0.006, lte: (incident.latitude || 0) + 0.006 },
+            longitude: { gte: (incident.longitude || 0) - 0.006, lte: (incident.longitude || 0) + 0.006 }
           }
         ]
       },
