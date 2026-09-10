@@ -90,7 +90,6 @@ const createUnitIcon = (unit) => {
 // Auto-zoom to latest incident or newly approved report when one arrives
 function AutoZoomToLatestIncident({ incidents, enabled }) {
   const map = useMap();
-  const hasHydrated = useRef(false);
   const previousLatestKey = useRef(null);
 
   useEffect(() => {
@@ -106,31 +105,23 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
     if (!hasValidCoordinates) return;
 
-    if (!hasHydrated.current) {
-      hasHydrated.current = true;
-      previousLatestKey.current = latestKey;
-      return;
-    }
-
     if (previousLatestKey.current !== latestKey) {
-      const isApprovedOrVerified = latestStatus === 'VERIFIED' || latestStatus === 'RESPONDING';
+      const isUpdate = previousLatestKey.current !== null;
       previousLatestKey.current = latestKey;
 
       map.flyTo([lat, lng], 16, {
-        duration: 2.0,
-        easeLinearity: 0.25,
-        noMoveStart: true
+        duration: 1.8,
+        easeLinearity: 0.25
       });
 
-      const message = isApprovedOrVerified
-        ? `🚨 Incident #${latestIncident?.incident_code || ''} Approved! Auto-zooming to location...`
-        : '🚨 New incident! Auto-zooming to location...';
-
-      toast(message, {
-        icon: '📍',
-        style: { fontWeight: 'bold', borderLeft: '4px solid #f97316' },
-        duration: 6000
-      });
+      if (isUpdate) {
+        const message = `🚨 Approved Incident #${latestIncident?.incident_code || ''}! Auto-zooming to location...`;
+        toast(message, {
+          icon: '📍',
+          style: { fontWeight: 'bold', borderLeft: '4px solid #3b82f6' },
+          duration: 5000
+        });
+      }
     }
   }, [enabled, incidents, map]);
 
@@ -480,7 +471,7 @@ const ResponseMap = () => {
       const verifiedInc = data.incident || data;
       if (!verifiedInc || (!verifiedInc.latitude && !data.latitude)) return;
 
-      const incObj = { ...verifiedInc, status: 'VERIFIED' };
+      const incObj = { ...verifiedInc, status: verifiedInc.status || 'RESPONDING' };
       const incId = incObj.incident_id || data.incident_id;
 
       const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id);
@@ -504,11 +495,13 @@ const ResponseMap = () => {
           const others = prev.filter(i => i.incident_id !== incId);
           return [incObj, ...others];
         });
+        setSelectedIncidentId(incId);
       }
     };
 
     const unsub5 = on('incident_verified', handleVerifiedMap);
     const unsub5b = on('incident_approved', handleVerifiedMap);
+    const unsub5c = on('new_assignment', handleVerifiedMap);
 
     // 6. Dispatch / Backup Tracker
     const unsub6 = on('unit_dispatch_with_directions', async (data) => {
@@ -561,7 +554,7 @@ const ResponseMap = () => {
       setRouteLoading(false);
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub5b(); unsub6(); };
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub5b(); unsub5c(); unsub6(); };
   }, [on, user]);
 
   const fetchIncidents = async (filterParams = {}) => {
