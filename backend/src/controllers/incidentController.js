@@ -262,13 +262,71 @@ export const getIncidents = async (req, res) => {
 
     const total = await prisma.incident.count({ where });
 
+    // Attach Same-Report / Duplicate tagging metadata
+    const taggedIncidents = tagSameReports(incidents);
+
     res.json({
-      data: incidents,
+      data: taggedIncidents,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching incidents', error: error.message });
   }
+};
+
+/**
+ * Helper to compute Same-Report / Duplicate tagging across incidents
+ */
+export const tagSameReports = (incidents) => {
+  if (!Array.isArray(incidents) || incidents.length === 0) return incidents;
+
+  return incidents.map(incA => {
+    const sameGroup = incidents.filter(incB => {
+      if (incB.incident_id === incA.incident_id) return false;
+      const sameType = incB.incident_type_id === incA.incident_type_id;
+      const sameBarangay = (incB.barangay_id && incA.barangay_id && incB.barangay_id === incA.barangay_id);
+      const closeLat = Math.abs((incB.latitude || 0) - (incA.latitude || 0)) <= 0.006;
+      const closeLng = Math.abs((incB.longitude || 0) - (incA.longitude || 0)) <= 0.006;
+      const sameLocation = sameBarangay || (closeLat && closeLng);
+      const timeDiff = Math.abs(new Date(incB.reported_at || Date.now()) - new Date(incA.reported_at || Date.now()));
+      const within24Hours = timeDiff <= 24 * 60 * 60 * 1000;
+      return sameType && sameLocation && within24Hours;
+    });
+
+    if (sameGroup.length > 0) {
+      const allInGroup = [incA, ...sameGroup].sort((a, b) => new Date(a.reported_at) - new Date(b.reported_at));
+      const primary = allInGroup[0];
+      const isPrimary = primary.incident_id === incA.incident_id;
+
+      return {
+        ...incA,
+        same_report_tag: {
+          is_same_report: true,
+          is_primary: isPrimary,
+          group_count: allInGroup.length,
+          primary_code: primary.incident_code,
+          primary_id: primary.incident_id,
+          related_incidents: sameGroup.map(rel => ({
+            incident_id: rel.incident_id,
+            incident_code: rel.incident_code,
+            reported_at: rel.reported_at,
+            reporter_name: rel.reporter?.name || rel.reporter_name || 'Resident',
+            description: rel.description,
+            status: rel.status,
+            severity: rel.severity
+          }))
+        }
+      };
+    }
+
+    return {
+      ...incA,
+      same_report_tag: {
+        is_same_report: false,
+        group_count: 1
+      }
+    };
+  });
 };
 
 export const getIncidentById = async (req, res) => {
@@ -304,7 +362,31 @@ export const getIncidentById = async (req, res) => {
       include: includeObj
     });
     if (!incident) return res.status(404).json({ message: 'Incident not found' });
-    res.json(incident);
+
+    // Fetch related/similar incidents to attach same_report_tag
+    const 24HoursAgo = new Date(new Date(incident.reported_at).getTime() - 24 * 60 * 60 * 1000);
+    const 24HoursAfter = new Date(new Date(incident.reported_at).getTime() + 24 * 60 * 60 * 1000);
+
+    const relatedIncidents = await prisma.incident.findMany({
+      where: {
+        incident_id: { not: incident.incident_id },
+        incident_type_id: incident.incident_type_id,
+        reported_at: { gte: 24HoursAgo, lte: 24HoursAfter },
+        OR: [
+          { barangay_id: incident.barangay_id },
+          {
+            latitude: { gte: incident.latitude - 0.006, lte: incident.latitude + 0.006 },
+            longitude: { gte: incident.longitude - 0.006, lte: incident.longitude + 0.006 }
+          }
+        ]
+      },
+      include: { reporter: { select: { name: true } } }
+    });
+
+    const taggedList = tagSameReports([incident, ...relatedIncidents]);
+    const taggedIncident = taggedList.find(i => i.incident_id === incident.incident_id) || incident;
+
+    res.json(taggedIncident);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching incident', error: error.message });
   }

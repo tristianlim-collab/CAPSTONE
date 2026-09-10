@@ -162,17 +162,25 @@ export default function IncidentVerificationQueue() {
         ...searchFilters
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // Handle JSON error response returned inside blob
+      if (response.data?.type === 'application/json') {
+        const text = await response.data.text();
+        const errObj = JSON.parse(text);
+        throw new Error(errObj.message || 'Export failed');
+      }
+
+      const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Incidents_${new Date().toISOString().split('T')[0]}.${format}`);
+      link.setAttribute('download', `GAOIRS_Incidents_${new Date().toISOString().split('T')[0]}.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success(`${format.toUpperCase()} export complete`);
+      toast.success(`${format.toUpperCase()} export downloaded successfully`);
     } catch (error) {
       console.error('Export failed', error);
-      toast.error(`Failed to export ${format.toUpperCase()}`);
+      toast.error(error.message || `Failed to export ${format.toUpperCase()}`);
     } finally {
       setExporting(false);
       setShowExportDropdown(false);
@@ -464,11 +472,16 @@ export default function IncidentVerificationQueue() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-black text-slate-900 dark:text-white truncate">#{incident.incident_code}</h3>
                             <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-transparent ${getStatusBadge(incident.status)}`}>
                               {incident.status.replace('_', ' ')}
                             </span>
+                            {incident.same_report_tag?.is_same_report && (
+                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                                🔗 Same Report ({incident.same_report_tag.group_count})
+                              </span>
+                            )}
                           </div>
                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSeverityColor(incident.severity)} shadow-sm`}>
                             {incident.severity}
@@ -548,6 +561,44 @@ export default function IncidentVerificationQueue() {
                       <p className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">{selectedIncident.severity}</p>
                     </div>
                   </div>
+
+                  {/* Tagged Same Report Group Warning / Intelligence */}
+                  {selectedIncident.same_report_tag?.is_same_report && (
+                    <div className="p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                          🔗 Tagged Same Report ({selectedIncident.same_report_tag.group_count} Reports Linked)
+                        </p>
+                        {selectedIncident.same_report_tag.is_primary ? (
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
+                            Primary Main Report
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
+                            Linked Report (#{selectedIncident.same_report_tag.primary_code})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                        Multiple reports detected for the same event based on matching incident type, geographic location, and time window.
+                      </p>
+                      {selectedIncident.same_report_tag.related_incidents?.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                          {selectedIncident.same_report_tag.related_incidents.map((rel, idx) => (
+                            <div key={idx} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-amber-200 dark:border-amber-900/40 flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-black text-slate-900 dark:text-white">#{rel.incident_code}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Reporter: {rel.reporter_name}</p>
+                              </div>
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                {rel.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Description */}
                   <div className="space-y-3">
