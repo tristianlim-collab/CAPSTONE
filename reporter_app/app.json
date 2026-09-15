@@ -51,7 +51,8 @@
         {
           "cameraPermission": "Allow GAOIRS to use the camera for evidence reporting."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {
