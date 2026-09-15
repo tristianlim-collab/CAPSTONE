@@ -33,8 +33,8 @@ const PROD_URL = 'https://gaoirs-backend.onrender.com';
 
 // Route Expo Go dev mode directly to your PC's local backend (http://<IP>:3001/api) over Wi-Fi
 // Standalone APK build routes to live Render URL
-const API_URL = isDev ? `http://${backendIp}:3001/api` : `${PROD_URL}/api`;
-export const SOCKET_URL = isDev ? `http://${backendIp}:3001` : PROD_URL;
+const API_URL = `${PROD_URL}/api`;
+export const SOCKET_URL = PROD_URL;
 
 const api = axios.create({
   baseURL: API_URL,
