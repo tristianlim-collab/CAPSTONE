@@ -143,17 +143,6 @@ export default function ReporterHome() {
               {user?.name || 'Citizen'} <span className="text-xl">👋</span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="relative w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 transition-transform active:scale-95">
-              <Bell className="text-white" size={20} />
-              {activeCount > 0 && (
-                <span className="absolute top-2.5 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800"></span>
-              )}
-            </button>
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30 text-sm border-2 border-white/10">
-              {getInitials(user?.name)}
-            </div>
-          </div>
         </div>
 
         {/* Big Report Button */}
