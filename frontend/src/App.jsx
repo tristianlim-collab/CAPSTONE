@@ -93,14 +93,12 @@ const App = () => {
                 <Route path="guide" element={<UserGuide />} />
               </Route>
 
-              {/* Public Reporter Routes (No Login Required for Emergency) */}
+              {/* Reporter Routes */}
               <Route path="/reporter/home" element={<ReporterHome />} />
               <Route path="/reporter/report" element={<IncidentReportForm />} />
               <Route path="/reporter/report/success" element={<ReportSuccess />} />
-              
-              {/* Optional Reporter Auth Routes */}
-              <Route path="/reporter/profile" element={<ProtectedRoute role="REPORTER"><ReporterProfile /></ProtectedRoute>} />
-              <Route path="/reporter/reports" element={<ProtectedRoute role="REPORTER"><MyReports /></ProtectedRoute>} />
+              <Route path="/reporter/reports" element={<MyReports />} />
+              <Route path="/reporter/profile" element={<Navigate to="/reporter/home" replace />} />
               <Route path="/reporter/*" element={<ReporterHome />} />
 
               {/* Default */}

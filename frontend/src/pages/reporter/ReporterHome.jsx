@@ -262,25 +262,18 @@ export default function ReporterHome() {
       {/* Fixed Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
         <div className="max-w-[430px] mx-auto flex justify-around items-center pt-4 pb-6 px-6">
-          <button onClick={() => navigate('/reporter/home')} className="flex flex-col items-center gap-1.5 group w-16">
+          <button onClick={() => navigate('/reporter/home')} className="flex flex-col items-center gap-1.5 group w-20">
             <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
               <Home size={22} className="stroke-[2.5px]" />
             </div>
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Home</span>
           </button>
           
-          <button onClick={() => navigate('/reporter/reports')} className="flex flex-col items-center gap-1.5 group w-16">
+          <button onClick={() => navigate('/reporter/reports')} className="flex flex-col items-center gap-1.5 group w-20">
             <div className="w-10 h-10 rounded-full text-slate-400 group-hover:bg-slate-50 group-hover:text-slate-600 flex items-center justify-center transition-colors">
               <FileText size={22} className="stroke-[2px]" />
             </div>
             <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-widest transition-colors">Reports</span>
-          </button>
-          
-          <button onClick={() => navigate('/reporter/profile')} className="flex flex-col items-center gap-1.5 group w-16">
-            <div className="w-10 h-10 rounded-full text-slate-400 group-hover:bg-slate-50 group-hover:text-slate-600 flex items-center justify-center transition-colors">
-              <User size={22} className="stroke-[2px]" />
-            </div>
-            <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-widest transition-colors">Profile</span>
           </button>
         </div>
       </div>
