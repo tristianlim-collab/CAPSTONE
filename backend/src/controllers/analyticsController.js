@@ -37,9 +37,33 @@ export const getByType = async (_req, res) => {
   }
 };
 
-export const getByBarangay = async (_req, res) => {
+export const getByBarangay = async (req, res) => {
   try {
-    const rows = await prisma.incident.groupBy({ by: ["barangay_id"], _count: { _all: true } });
+    const { incident_type_id } = req.query;
+    const where = {};
+    if (incident_type_id && incident_type_id !== 'ALL') {
+      // Check if incident_type_id is a UUID or a name string
+      const matchedType = await prisma.incidentType.findFirst({
+        where: {
+          OR: [
+            { type_id: incident_type_id },
+            { name: { equals: incident_type_id, mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      if (matchedType) {
+        where.incident_type_id = matchedType.type_id;
+      } else {
+        where.incident_type_id = incident_type_id;
+      }
+    }
+
+    const rows = await prisma.incident.groupBy({
+      by: ["barangay_id"],
+      where,
+      _count: { _all: true }
+    });
     const barangays = await prisma.barangay.findMany();
     const bgyMap = new Map(barangays.map(b => [b.barangay_id, b.name]));
 

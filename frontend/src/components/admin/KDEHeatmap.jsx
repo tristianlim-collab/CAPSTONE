@@ -71,7 +71,8 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
 
   const fetchRankingData = async () => {
     try {
-      const res = await analyticsAPI.getByBarangay();
+      const params = selectedType !== 'ALL' ? { incident_type_id: selectedType } : {};
+      const res = await analyticsAPI.getByBarangay(params);
       setRankingData(res.data?.data || []);
     } catch (err) {
       console.error("Error loading barangay ranking data", err);
@@ -81,11 +82,8 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
 
   useEffect(() => {
     fetchKDEData();
-  }, [selectedType]);
-
-  useEffect(() => {
     fetchRankingData();
-  }, []);
+  }, [selectedType]);
 
   const handleExport = async (format) => {
     try {
@@ -197,7 +195,7 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
             <p className="text-sm font-medium text-red-600">{error}</p>
-            <button 
+            <button
               onClick={fetchKDEData}
               className="mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
             >
@@ -205,9 +203,9 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
             </button>
           </div>
         ) : (
-          <MapContainer 
-            center={[10.7421, 122.9688]} 
-            zoom={13} 
+          <MapContainer
+            center={[10.7421, 122.9688]}
+            zoom={13}
             className="w-full h-full grayscale-[0.3] contrast-[1.05]"
             zoomControl={false}
           >
@@ -244,7 +242,6 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
       <div className="mt-4 pt-4 border-t border-slate-100">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Trophy size={16} className="text-amber-500" />
             Incident Volume Ranking by Barangay / District
           </h4>
           <span className="text-xs text-slate-500 font-medium">Ranked by Highest Incident Frequency</span>
@@ -269,11 +266,10 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
                 {rankingData.slice(0, 10).map((item, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-2.5 font-bold text-slate-900">
-                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${
-                        idx === 0 ? 'bg-amber-100 text-amber-700 font-black' :
-                        idx === 1 ? 'bg-slate-200 text-slate-700 font-black' :
-                        idx === 2 ? 'bg-amber-700/10 text-amber-900 font-black' : 'bg-slate-100 text-slate-600'
-                      }`}>
+                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] ${idx === 0 ? 'bg-amber-100 text-amber-700 font-black' :
+                          idx === 1 ? 'bg-slate-200 text-slate-700 font-black' :
+                            idx === 2 ? 'bg-amber-700/10 text-amber-900 font-black' : 'bg-slate-100 text-slate-600'
+                        }`}>
                         {idx + 1}
                       </span>
                     </td>
