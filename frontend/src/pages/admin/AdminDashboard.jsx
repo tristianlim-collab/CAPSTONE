@@ -14,7 +14,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { on, connected } = useSocketContext();
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({ status: 'REPORTED,VERIFIED,RESPONDING,ON_SCENE' });
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -168,13 +169,24 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-500 font-medium">Click a marker to verify incidents directly</p>
           </div>
           <div className="flex-1 rounded-[20px] overflow-hidden bg-slate-100 relative">
-            <LiveMap zoom={13} center={[10.7421, 122.9688]} autoZoomOnNewIncident={true} markerColorMode="lgu" onVerify={handleVerifyFromMap} filters={filters} externalIncidents={recentIncidents} />
+            <LiveMap
+              zoom={13}
+              center={[10.7421, 122.9688]}
+              autoZoomOnNewIncident={true}
+              markerColorMode="lgu"
+              onVerify={handleVerifyFromMap}
+              filters={filters}
+              externalIncidents={recentIncidents}
+              selectedIncidentId={selectedIncidentId}
+              onSelect={setSelectedIncidentId}
+            />
           </div>
         </div>
 
         {/* Right Sidebar — Incident Feed */}
         <div className="w-80 flex flex-col gap-3 overflow-y-auto">
 
+          {/* Helper for severity badge style */}
           {/* New Reports */}
           <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100">
@@ -187,16 +199,39 @@ export default function AdminDashboard() {
             <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {recentIncidents.filter(i => i.status === 'REPORTED').length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No new reports</p>
-              ) : recentIncidents.filter(i => i.status === 'REPORTED').map(inc => (
-                <div key={inc.incident_id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <code className="text-xs font-bold text-amber-600">{inc.incident_code}</code>
-                    <span className="text-[10px] text-slate-400">{inc.reported_at ? new Date(inc.reported_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+              ) : recentIncidents.filter(i => i.status === 'REPORTED').map(inc => {
+                const isSelected = selectedIncidentId === inc.incident_id;
+                return (
+                  <div
+                    key={inc.incident_id}
+                    onClick={() => setSelectedIncidentId(inc.incident_id)}
+                    className={`px-4 py-3 transition-colors cursor-pointer border-l-4 ${
+                      isSelected ? 'bg-amber-50/80 border-amber-500 shadow-inner' : 'hover:bg-slate-50 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <code className="text-xs font-bold text-amber-600">{inc.incident_code}</code>
+                      <span className="text-[10px] text-slate-400">
+                        {inc.reported_at ? new Date(inc.reported_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
+                      {inc.severity && (
+                        <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                          inc.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                          inc.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          inc.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {inc.severity}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -212,20 +247,41 @@ export default function AdminDashboard() {
             <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No active responses</p>
-              ) : recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).map(inc => (
-                <div key={inc.incident_id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <code className="text-xs font-bold text-indigo-600">{inc.incident_code}</code>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      inc.status === 'ON_SCENE' ? 'bg-pink-100 text-pink-600' :
-                      inc.status === 'RESPONDING' ? 'bg-indigo-100 text-indigo-600' :
-                      'bg-blue-100 text-blue-600'
-                    }`}>{inc.status.replace('_', ' ')}</span>
+              ) : recentIncidents.filter(i => ['VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).map(inc => {
+                const isSelected = selectedIncidentId === inc.incident_id;
+                return (
+                  <div
+                    key={inc.incident_id}
+                    onClick={() => setSelectedIncidentId(inc.incident_id)}
+                    className={`px-4 py-3 transition-colors cursor-pointer border-l-4 ${
+                      isSelected ? 'bg-indigo-50/80 border-indigo-500 shadow-inner' : 'hover:bg-slate-50 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <code className="text-xs font-bold text-indigo-600">{inc.incident_code}</code>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        inc.status === 'ON_SCENE' ? 'bg-pink-100 text-pink-600' :
+                        inc.status === 'RESPONDING' ? 'bg-indigo-100 text-indigo-600' :
+                        'bg-blue-100 text-blue-600'
+                      }`}>{inc.status.replace('_', ' ')}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
+                      {inc.severity && (
+                        <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                          inc.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                          inc.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          inc.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {inc.severity}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -241,16 +297,39 @@ export default function AdminDashboard() {
             <div className="divide-y divide-slate-100 max-h-52 overflow-y-auto">
               {recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">No resolved incidents</p>
-              ) : recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).map(inc => (
-                <div key={inc.incident_id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <code className="text-xs font-bold text-emerald-600">{inc.incident_code}</code>
-                    <span className="text-[10px] text-slate-400">{inc.updated_at ? new Date(inc.updated_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+              ) : recentIncidents.filter(i => ['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(i.status)).map(inc => {
+                const isSelected = selectedIncidentId === inc.incident_id;
+                return (
+                  <div
+                    key={inc.incident_id}
+                    onClick={() => setSelectedIncidentId(inc.incident_id)}
+                    className={`px-4 py-3 transition-colors cursor-pointer border-l-4 ${
+                      isSelected ? 'bg-emerald-50/80 border-emerald-500 shadow-inner' : 'hover:bg-slate-50 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <code className="text-xs font-bold text-emerald-600">{inc.incident_code}</code>
+                      <span className="text-[10px] text-slate-400">
+                        {inc.updated_at ? new Date(inc.updated_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
+                      {inc.severity && (
+                        <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                          inc.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                          inc.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          inc.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {inc.severity}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700 truncate">{inc.incident_type?.name || 'Unknown Type'}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

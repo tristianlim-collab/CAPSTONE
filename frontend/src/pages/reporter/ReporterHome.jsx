@@ -26,21 +26,28 @@ export default function ReporterHome() {
   // Fetch reporter's own incidents
   useEffect(() => {
     const fetchIncidents = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
       try {
-        const res = await incidentAPI.getAll({ limit: 50 });
-        setIncidents(res.data?.data || []);
+        const stored = localStorage.getItem('my_report_ids');
+        const ids = stored ? JSON.parse(stored) : [];
+
+        if (ids.length > 0) {
+          const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
+          const fetched = results
+            .filter(r => r.status === 'fulfilled' && (r.value?.data?.data || r.value?.data))
+            .map(r => r.value.data?.data || r.value.data);
+          setIncidents(fetched);
+        } else {
+          setIncidents([]);
+        }
       } catch (err) {
         console.error('Failed to fetch incidents:', err);
+        setIncidents([]);
       } finally {
         setLoading(false);
       }
     };
     fetchIncidents();
-  }, []);
+  }, [user]);
 
   // Listen for real-time updates
   useEffect(() => {
@@ -164,42 +171,17 @@ export default function ReporterHome() {
           </p>
         </button>
 
-        {/* Overview Stats UI */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 text-blue-50">
-              <FileText size={80} />
-            </div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 relative z-10">Total Reports</div>
-            <div className="text-3xl font-black text-slate-800 relative z-10">
-              {loading ? <Loader2 size={24} className="animate-spin text-slate-300" /> : totalReports}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 text-orange-50">
-              <Activity size={80} />
-            </div>
-            <div className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-3 relative z-10 flex items-center gap-1.5">
-              {activeCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>} Active
-            </div>
-            <div className="text-3xl font-black text-slate-800 relative z-10">
-              {loading ? <Loader2 size={24} className="animate-spin text-slate-300" /> : activeCount}
-            </div>
-          </div>
-        </div>
-
-        {/* Active Reports List */}
+        {/* Active Reports List & Direct Tracking */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[13px] font-bold text-slate-800 tracking-wide uppercase">
-            Recent Activity
+            My Report Status Tracking
           </h3>
           <button onClick={() => navigate('/reporter/reports')} className="text-sm font-semibold text-blue-600 hover:text-blue-700">
             View All
           </button>
         </div>
         
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 size={28} className="animate-spin text-slate-400" />
@@ -209,7 +191,7 @@ export default function ReporterHome() {
               <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <FileText size={24} className="text-slate-400" />
               </div>
-              <p className="text-slate-500 text-sm">No reports yet. Tap the button above to submit one.</p>
+              <p className="text-slate-500 text-sm">No reports submitted yet. Tap the button above to submit an emergency report.</p>
             </div>
           ) : (
             recentIncidents.map((incident) => {
@@ -219,25 +201,47 @@ export default function ReporterHome() {
               return (
                 <div 
                   key={incident.incident_id}
-                  className={`bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${isResolved ? 'opacity-75' : ''}`}
+                  onClick={() => navigate('/reporter/reports')}
+                  className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 >
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-inner shrink-0 ${
-                    isResolved ? 'bg-slate-50 text-slate-400 border border-slate-100' : 'bg-orange-50 text-orange-500 border border-orange-100'
-                  }`}>
-                    <IconComp size={26} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-bold text-slate-800 text-[15px] truncate">
-                        {incident.incident_type?.name || 'Incident'}
-                      </h4>
-                      <span className={`px-2.5 py-0.5 ${badge.cls} border text-[10px] font-bold tracking-widest rounded-md uppercase shrink-0 flex items-center gap-1`}>
-                        {isResolved && <ShieldCheck size={10} />} {badge.label}
-                      </span>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner shrink-0 ${
+                      isResolved ? 'bg-slate-50 text-slate-400 border border-slate-100' : 'bg-red-50 text-red-500 border border-red-100'
+                    }`}>
+                      <IconComp size={24} />
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
-                      <span className="flex items-center gap-1"><Clock size={12} /> {getTimeAgo(incident.reported_at)}</span>
-                      <span className="flex items-center gap-1 truncate"><MapPin size={12} /> {incident.map_pin_address || 'Unknown'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-bold text-slate-800 text-[15px] truncate">
+                          {incident.incident_type?.name || 'Incident'}
+                        </h4>
+                        <span className={`px-2.5 py-0.5 ${badge.cls} border text-[10px] font-bold tracking-widest rounded-md uppercase shrink-0 flex items-center gap-1`}>
+                          {isResolved && <ShieldCheck size={10} />} {badge.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                        <span className="flex items-center gap-1"><Clock size={12} /> {getTimeAgo(incident.reported_at)}</span>
+                        <span className="flex items-center gap-1 truncate"><MapPin size={12} /> {incident.map_pin_address || 'Unknown'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Direct Progress Tracker */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-[10px] font-bold mt-1">
+                    <div className={`flex flex-col items-center gap-1 ${['REPORTED','VERIFIED','RESPONDING','ON_SCENE','RESOLVED'].includes(incident.status) ? 'text-indigo-600' : 'text-slate-300'}`}>
+                      <span>1. Reported</span>
+                    </div>
+                    <div className="h-0.5 w-4 bg-slate-200"></div>
+                    <div className={`flex flex-col items-center gap-1 ${['RESPONDING','ON_SCENE','RESOLVED'].includes(incident.status) ? 'text-indigo-600' : 'text-slate-300'}`}>
+                      <span>2. Responding</span>
+                    </div>
+                    <div className="h-0.5 w-4 bg-slate-200"></div>
+                    <div className={`flex flex-col items-center gap-1 ${['ON_SCENE','RESOLVED'].includes(incident.status) ? 'text-purple-600' : 'text-slate-300'}`}>
+                      <span>3. On Scene</span>
+                    </div>
+                    <div className="h-0.5 w-4 bg-slate-200"></div>
+                    <div className={`flex flex-col items-center gap-1 ${incident.status === 'RESOLVED' ? 'text-emerald-600 font-extrabold' : 'text-slate-300'}`}>
+                      <span>4. Resolved</span>
                     </div>
                   </div>
                 </div>

@@ -761,11 +761,11 @@ const ResponseMap = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-slate-50">
-      <div className="max-w-7xl mx-auto flex flex-col h-full gap-6">
+    <div className="h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 bg-slate-50 flex flex-col overflow-hidden">
+      <div className="max-w-7xl mx-auto flex flex-col h-full gap-4 w-full overflow-hidden">
 
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative z-[400]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative z-[400] shrink-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-3">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -785,7 +785,7 @@ const ResponseMap = () => {
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]"></span>
-              Responding ({incidents.filter(i => i.status === 'RESPONDING').length})
+              Responding ({incidents.filter(i => i.status === 'RESPONDING' || i.status === 'VERIFIED').length})
             </div>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
@@ -802,20 +802,141 @@ const ResponseMap = () => {
           </div>
         </div>
 
-        <div className="flex-1 relative z-0 h-[700px] sm:h-[calc(100vh-12rem)] min-h-[600px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          {loading && (
-            <div className="absolute inset-0 bg-white/60 z-[500] flex flex-col items-center justify-center backdrop-blur-sm">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-              <p className="text-sm font-medium text-slate-600">Loading map data...</p>
+        {/* Main Content Area: Map (Left) + Side Reports Panel (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
+          
+          {/* Side Panel: Approved Reports Needing Response */}
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col h-full overflow-hidden order-2 lg:order-2">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 shrink-0">
+              <h2 className="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+                Dispatch Reports ({incidents.length})
+              </h2>
+              <span className="text-[10px] bg-rose-50 text-rose-600 font-extrabold px-2 py-0.5 rounded-full">LIVE</span>
             </div>
-          )}
-          <div className="flex-1 w-full h-full relative z-0">
-            <MapContainer
-              center={defaultCenter}
-              zoom={9}
-              minZoom={5}
-              style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
-            >
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {incidents.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <CheckCircle2 size={32} className="mx-auto mb-2 text-emerald-500 opacity-60" />
+                  <p className="text-xs font-semibold">No pending dispatches.</p>
+                </div>
+              ) : (
+                incidents.map((incident) => {
+                  const isSelected = incident.incident_id === selectedIncidentId;
+                  const isResponding = incident.status === 'RESPONDING';
+                  const isOnScene = incident.status === 'ON_SCENE';
+
+                  return (
+                    <div
+                      key={incident.incident_id}
+                      onClick={() => setSelectedIncidentId(incident.incident_id)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-2.5 ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-50/40 shadow-sm ring-2 ring-blue-500/10' 
+                          : 'border-slate-100 bg-slate-50/60 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span className="text-[10px] font-black text-slate-400 font-mono">
+                            #{incident.incident_code}
+                          </span>
+                          <h4 className="font-bold text-slate-800 text-sm">
+                            {incident.incident_type?.name || 'Emergency'}
+                          </h4>
+                        </div>
+                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                          isResponding ? 'bg-blue-500 text-white' : isOnScene ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+                        }`}>
+                          {incident.status}
+                        </span>
+                      </div>
+
+                      {incident.description && (
+                        <p className="text-xs text-slate-600 line-clamp-2 italic">
+                          "{incident.description}"
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                        <MapPin size={14} className="text-rose-500 shrink-0" />
+                        <span className="truncate">{incident.map_pin_address || incident.barangay?.barangay_name || 'Location pending'}</span>
+                      </div>
+
+                      {/* Interactive Response Buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
+                        <button
+                          onClick={(e) => handleGetDirections(e, incident)}
+                          disabled={routeLoading}
+                          className="flex items-center justify-center gap-1 bg-slate-900 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all"
+                        >
+                          <Navigation2 size={12} /> Directions
+                        </button>
+
+                        {!isResponding && !isOnScene && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await handleUpdateStatus(incident.incident_id, 'RESPONDING');
+                            }}
+                            disabled={updatingId === incident.incident_id}
+                            className="flex items-center justify-center gap-1 bg-blue-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
+                            Respond
+                          </button>
+                        )}
+
+                        {isResponding && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await handleUpdateStatus(incident.incident_id, 'ON_SCENE');
+                            }}
+                            disabled={updatingId === incident.incident_id}
+                            className="flex items-center justify-center gap-1 bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            {updatingId === incident.incident_id ? <Loader2 size={12} className="animate-spin" /> : <MapPin size={12} />}
+                            On Scene
+                          </button>
+                        )}
+
+                        {isOnScene && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedIncidentForAction(incident);
+                              setShowReportModal(true);
+                            }}
+                            className="flex items-center justify-center gap-1 bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 active:scale-95 transition-all"
+                          >
+                            <CheckCircle2 size={12} /> Resolve
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Leaflet Map Area */}
+          <div className="lg:col-span-8 relative z-0 h-[600px] lg:h-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col order-1 lg:order-1">
+            {loading && (
+              <div className="absolute inset-0 bg-white/60 z-[500] flex flex-col items-center justify-center backdrop-blur-sm">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
+                <p className="text-sm font-medium text-slate-600">Loading map data...</p>
+              </div>
+            )}
+            <div className="flex-1 w-full h-full relative z-0">
+              <MapContainer
+                center={defaultCenter}
+                zoom={9}
+                minZoom={5}
+                style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0 }}
+              >
               <TileLayer
                 attribution='&copy; Google Maps'
                 url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
@@ -1019,6 +1140,7 @@ const ResponseMap = () => {
             </div>
           )}
         </div>
+      </div>
 
         {/* Modals */}
         {showBackupModal && (

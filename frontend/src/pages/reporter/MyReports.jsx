@@ -14,26 +14,39 @@ const MyReports = () => {
     const fetchReports = async () => {
       try {
         setLoading(true);
-        // Try fetching saved local report IDs first
+        // Fetch saved local report IDs created by this user session/device
         const stored = localStorage.getItem('my_report_ids');
         const ids = stored ? JSON.parse(stored) : [];
 
         if (ids.length > 0) {
           const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
           const fetched = results
-            .filter(r => r.status === 'fulfilled' && r.value?.data)
-            .map(r => r.value.data);
-          if (fetched.length > 0) {
-            setReports(fetched);
-            return;
-          }
-        }
+            .filter(r => r.status === 'fulfilled' && (r.value?.data?.data || r.value?.data))
+            .map(r => r.value.data?.data || r.value.data);
+          
+          // Also fetch associated post reports for photos if resolved
+          const enrichedReports = await Promise.all(
+            fetched.map(async (rep) => {
+              if (rep.status === 'RESOLVED') {
+                try {
+                  const pRes = await postReportAPI.getByIncident(rep.incident_id);
+                  const pData = pRes.data?.data || pRes.data;
+                  return { ...rep, post_report: pData };
+                } catch {
+                  return rep;
+                }
+              }
+              return rep;
+            })
+          );
 
-        // Fallback: fetch list from backend
-        const res = await incidentAPI.getAll({ limit: 100 });
-        setReports(res.data?.data || res.data || []);
+          setReports(enrichedReports);
+        } else {
+          setReports([]);
+        }
       } catch (err) {
         console.error('Failed to fetch reports:', err);
+        setReports([]);
       } finally {
         setLoading(false);
       }
@@ -43,16 +56,29 @@ const MyReports = () => {
 
   // Listen for real-time status updates and new reports
   useEffect(() => {
-    const unsub1 = on('incident_status_updated', (data) => {
-      setReports(prev => prev.map(r =>
-        r.incident_id === data.incident_id
-          ? { ...r, status: data.status, ...(data.incident || {}) }
-          : r
-      ));
+    const unsub1 = on('incident_status_updated', async (data) => {
+      setReports(prev => prev.map(r => {
+        if (r.incident_id === data.incident_id) {
+          return { ...r, status: data.status, ...(data.incident || {}) };
+        }
+        return r;
+      }));
+
+      // Fetch photos if resolved
+      if (data.status === 'RESOLVED') {
+        try {
+          const pRes = await postReportAPI.getByIncident(data.incident_id);
+          const pData = pRes.data?.data || pRes.data;
+          setReports(prev => prev.map(r => 
+            r.incident_id === data.incident_id ? { ...r, post_report: pData } : r
+          ));
+        } catch (e) {
+          console.error(e);
+        }
+      }
     });
 
     const unsub2 = on('incident_verified', (data) => {
-      // Update report status when admin verifies
       const incident = data.incident || data;
       setReports(prev => prev.map(r =>
         r.incident_id === incident.incident_id
@@ -62,7 +88,6 @@ const MyReports = () => {
     });
 
     const unsub3 = on('incident_deleted', (data) => {
-      // Remove report if admin rejects
       setReports(prev => prev.filter(r => r.incident_id !== data.incident_id));
     });
 
@@ -84,10 +109,10 @@ const MyReports = () => {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'REPORTED': return '⏳ Awaiting Admin Review';
-      case 'VERIFIED': return '✓ Verified & Dispatched';
-      case 'RESPONDING': return '🚗 Units Responding';
-      case 'ON_SCENE': return '📍 Units On Scene';
+      case 'REPORTED': return '⏳ Awaiting Review';
+      case 'VERIFIED': return '✓ Verified';
+      case 'RESPONDING': return '🚗 Responding';
+      case 'ON_SCENE': return '📍 On Scene';
       case 'RESOLVED': return '✓ Resolved';
       case 'FALSE_ALARM': return '✗ False Alarm';
       case 'CLOSED': return '📋 Closed';
@@ -116,7 +141,7 @@ const MyReports = () => {
           <ChevronLeft className="w-6 h-6" />
         </button>
         <span className="font-semibold text-slate-800 text-lg">My Reports</span>
-        <div className="w-10"></div> {/* Spacer for centering */}
+        <div className="w-10"></div>
       </header>
 
       {/* Content */}
@@ -134,46 +159,89 @@ const MyReports = () => {
             <p className="text-slate-500 text-sm">You haven't submitted any reports yet.</p>
           </div>
         ) : (
-          reports.map(report => (
-            <div key={report.incident_id} className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm flex flex-col gap-3">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800">{report.incident_type?.name || 'Incident'}</h3>
-                    <span className="text-xs text-slate-500">{report.incident_code}</span>
-                  </div>
-                </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getStatusColor(report.status)}`}>
-                  {getStatusLabel(report.status)}
-                </span>
-              </div>
+          reports.map(report => {
+            const photos = report.post_report?.photos || [];
 
-              {report.description && (
-                <p className="text-sm text-slate-600 line-clamp-2">{report.description}</p>
-              )}
+            return (
+              <div key={report.incident_id} className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-800">{report.incident_type?.name || 'Incident'}</h3>
+                      <span className="text-xs text-slate-500">{report.incident_code}</span>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getStatusColor(report.status)}`}>
+                    {getStatusLabel(report.status)}
+                  </span>
+                </div>
 
-              {report.landmark && (
-                <div className="bg-blue-50/80 border border-blue-100 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-800 flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Landmark: <span className="font-bold">{report.landmark}</span></span>
+                {report.description && (
+                  <p className="text-sm text-slate-600 line-clamp-2">{report.description}</p>
+                )}
+
+                {/* Real-time Incident Progress Tracker */}
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-[11px] font-bold">
+                  <div className={`flex flex-col items-center gap-1 ${['REPORTED','VERIFIED','RESPONDING','ON_SCENE','RESOLVED'].includes(report.status) ? 'text-indigo-600' : 'text-slate-300'}`}>
+                    <span>1. Reported</span>
+                  </div>
+                  <div className="h-0.5 w-6 bg-slate-200"></div>
+                  <div className={`flex flex-col items-center gap-1 ${['RESPONDING','ON_SCENE','RESOLVED'].includes(report.status) ? 'text-indigo-600' : 'text-slate-300'}`}>
+                    <span>2. Responding</span>
+                  </div>
+                  <div className="h-0.5 w-6 bg-slate-200"></div>
+                  <div className={`flex flex-col items-center gap-1 ${['ON_SCENE','RESOLVED'].includes(report.status) ? 'text-purple-600' : 'text-slate-300'}`}>
+                    <span>3. On Scene</span>
+                  </div>
+                  <div className="h-0.5 w-6 bg-slate-200"></div>
+                  <div className={`flex flex-col items-center gap-1 ${report.status === 'RESOLVED' ? 'text-emerald-600 font-extrabold' : 'text-slate-300'}`}>
+                    <span>4. Resolved</span>
+                  </div>
                 </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-500 text-xs text-left">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{formatDate(report.reported_at)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500 text-xs text-right justify-end truncate">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span className="truncate">{report.map_pin_address || 'Unknown'}</span>
+
+                {/* Display Response Unit Photo when Resolved */}
+                {report.status === 'RESOLVED' && photos.length > 0 && (
+                  <div className="mt-1 pt-3 border-t border-slate-100">
+                    <p className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      Response Unit Confirmation Photo:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {photos.map((photoUrl, pIdx) => (
+                        <img 
+                          key={pIdx} 
+                          src={photoUrl} 
+                          alt="Response Unit Evidence" 
+                          className="w-full h-28 object-cover rounded-xl border border-slate-200 shadow-sm"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {report.landmark && (
+                  <div className="bg-blue-50/80 border border-blue-100 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-800 flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Landmark: <span className="font-bold">{report.landmark}</span></span>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs text-left">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{formatDate(report.reported_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 text-xs text-right justify-end truncate">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="truncate">{report.map_pin_address || 'Unknown'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

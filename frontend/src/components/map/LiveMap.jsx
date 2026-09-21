@@ -109,13 +109,21 @@ export default function LiveMap({
   markerColorMode = 'severity',
   onVerify,
   filters = {},
-  externalIncidents = null
+  externalIncidents = null,
+  selectedIncidentId: externalSelectedId = null,
+  onSelect: externalOnSelect = null
 }) {
   const [incidents, setIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
   const [units, setUnits] = useState([]);
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
-  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState(externalSelectedId);
+
+  useEffect(() => {
+    if (externalSelectedId !== undefined) {
+      setSelectedIncidentId(externalSelectedId);
+    }
+  }, [externalSelectedId]);
 
   // Sync external incidents (from AdminDashboard state / socket polling)
   useEffect(() => {
@@ -277,6 +285,9 @@ export default function LiveMap({
     // Add filters to params if they exist
     if (filters.status) params.status = filters.status;
     if (filters.type_id) params.type_id = filters.type_id;
+    if (filters.district) params.district = filters.district;
+    if (filters.city) params.city = filters.city;
+    if (filters.barangay_id) params.barangay_id = filters.barangay_id;
     if (filters.from_date) params.from_date = filters.from_date;
     if (filters.to_date) params.to_date = filters.to_date;
 
@@ -299,7 +310,10 @@ export default function LiveMap({
   // Handler for when a marker is clicked — update the LGU zones focus
   const handleMarkerSelect = useCallback((incidentId) => {
     setSelectedIncidentId(incidentId);
-  }, []);
+    if (externalOnSelect) {
+      externalOnSelect(incidentId);
+    }
+  }, [externalOnSelect]);
 
   // Wrapper to immediately update local map state when an incident is verified/rejected
   const handleVerifyWrapper = async (incidentId, action, message) => {

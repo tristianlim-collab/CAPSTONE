@@ -109,9 +109,9 @@ const Login = () => {
         <div className="flex flex-col items-center gap-4 mt-8 pt-6 border-t border-slate-100 uppercase tracking-tighter">
           <Link
             to="/reporter/home"
-            className="text-blue-600 hover:text-blue-700 font-black text-xs"
+            className="w-full text-center bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl shadow-lg shadow-red-500/25 active:scale-[0.98] transition-all tracking-wider"
           >
-            Report Emergency (No login required)
+            🚨 REPORT EMERGENCY (NO LOGIN REQUIRED)
           </Link>
           <p className="text-[10px] text-slate-400 font-bold">
             ADMIN OR RESPONSE UNIT? USE THE FORM ABOVE

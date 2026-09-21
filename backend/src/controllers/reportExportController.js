@@ -139,15 +139,19 @@ const generatePostReportsPDFKit = (reports, res) => {
 
   doc.pipe(res);
 
-  doc.rect(0, 0, doc.page.width, 50).fill('#4F46E5');
-  doc.fillColor('#FFFFFF').fontSize(16).font('Helvetica-Bold').text('GAOIRS — POST-INCIDENT ANALYSIS REPORT', 30, 15);
-  doc.fontSize(9).font('Helvetica').text(`Generated: ${new Date().toLocaleString('en-PH')} | Reports: ${reports.length}`, 30, 34);
+  // Clean Header (No thick full-width banner)
+  doc.fillColor('#0F172A').fontSize(16).font('Helvetica-Bold').text('GAOIRS — POST-INCIDENT ANALYSIS REPORT', 30, 30);
+  doc.fillColor('#64748B').fontSize(9).font('Helvetica').text(`Generated: ${new Date().toLocaleString('en-PH')}  |  Total Reports: ${reports.length}`, 30, 50);
 
-  let currentY = 70;
+  // Divider Line
+  doc.moveTo(30, 65).lineTo(565, 65).strokeColor('#CBD5E1').lineWidth(1).stroke();
+
+  let currentY = 75;
   const headers = ['Code', 'Type', 'Submitted By', 'Response (min)', 'Status', 'Submitted Date'];
-  const colWidths = [100, 100, 100, 70, 70, 90];
+  const colWidths = [100, 100, 100, 70, 70, 95];
 
-  doc.rect(30, currentY, 535, 20).fill('#312E81');
+  // Table Header Line
+  doc.rect(30, currentY, 535, 20).fill('#1E293B');
   doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8);
 
   let currentX = 35;
@@ -163,7 +167,7 @@ const generatePostReportsPDFKit = (reports, res) => {
     if (currentY > 750) {
       doc.addPage({ margin: 30, size: 'A4', layout: 'portrait' });
       currentY = 40;
-      doc.rect(30, currentY, 535, 20).fill('#312E81');
+      doc.rect(30, currentY, 535, 20).fill('#1E293B');
       doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8);
       let posX = 35;
       headers.forEach((h, i) => {
@@ -181,7 +185,7 @@ const generatePostReportsPDFKit = (reports, res) => {
     doc.fillColor('#1E293B');
     let x = 35;
 
-    doc.font('Helvetica-Bold').fillColor('#4F46E5').text(r.incident?.incident_code || 'N/A', x, currentY, { width: colWidths[0] });
+    doc.font('Helvetica-Bold').fillColor('#2563EB').text(r.incident?.incident_code || 'N/A', x, currentY, { width: colWidths[0] });
     x += colWidths[0];
 
     doc.font('Helvetica').fillColor('#1E293B').text(r.incident?.incident_type?.name || 'N/A', x, currentY, { width: colWidths[1], truncate: true });
@@ -202,7 +206,7 @@ const generatePostReportsPDFKit = (reports, res) => {
     currentY += 18;
   });
 
-  doc.fontSize(8).fillColor('#94A3B8').text('GAOIRS — Government Agency Operations Incident Response System • Confidential Document', 30, doc.page.height - 25, { align: 'center' });
+  doc.fontSize(8).fillColor('#94A3B8').text('GAOIRS — Government Agency Operations Incident Response System • Official System Report', 30, doc.page.height - 25, { align: 'center' });
 
   doc.end();
 };
@@ -213,7 +217,7 @@ const generatePostReportsPDFKit = (reports, res) => {
  */
 export const exportIncidents = async (req, res) => {
   try {
-    const { format = 'xlsx', startDate, endDate, status, type_id, severity } = req.query;
+    const { format = 'xlsx', startDate, endDate, status, type_id, severity, includeHistorical = 'false' } = req.query;
 
     const where = {};
     if (status && status !== 'ALL') where.status = status;
@@ -223,6 +227,13 @@ export const exportIncidents = async (req, res) => {
       where.reported_at = {};
       if (startDate) where.reported_at.gte = new Date(startDate);
       if (endDate) where.reported_at.lte = new Date(endDate);
+    }
+
+    // Exclude historical seeded dataset records by default unless explicitly requested
+    if (includeHistorical !== 'true') {
+      where.NOT = {
+        landmark: { startsWith: 'Reporting Agency:' }
+      };
     }
 
     const incidents = await prisma.incident.findMany({
@@ -346,7 +357,7 @@ export const exportIncidents = async (req, res) => {
  */
 export const exportIncidentsPDF = async (req, res) => {
   try {
-    const { startDate, endDate, status, type_id, severity } = req.query;
+    const { startDate, endDate, status, type_id, severity, includeHistorical = 'false' } = req.query;
 
     const where = {};
     if (status && status !== 'ALL') where.status = status;
@@ -356,6 +367,13 @@ export const exportIncidentsPDF = async (req, res) => {
       where.reported_at = {};
       if (startDate) where.reported_at.gte = new Date(startDate);
       if (endDate) where.reported_at.lte = new Date(endDate);
+    }
+
+    // Exclude historical seeded dataset records by default unless explicitly requested
+    if (includeHistorical !== 'true') {
+      where.NOT = {
+        landmark: { startsWith: 'Reporting Agency:' }
+      };
     }
 
     const incidents = await prisma.incident.findMany({
@@ -659,20 +677,21 @@ export const exportPostReportsPDF = async (req, res) => {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 25px; font-size: 9px; line-height: 1.3; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
-            .header h1 { font-size: 16px; color: #4f46e5; margin-bottom: 2px; }
+            .header { text-align: left; margin-bottom: 16px; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
+            .header h1 { font-size: 16px; color: #0f172a; font-weight: 800; margin-bottom: 2px; }
+            .header p { color: #64748b; font-size: 9px; }
             table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-            th { background: #4f46e5; color: white; padding: 5px; text-align: left; font-size: 8px; text-transform: uppercase; }
-            td { padding: 5px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+            th { background: #0f172a; color: white; padding: 6px; text-align: left; font-size: 8px; text-transform: uppercase; }
+            td { padding: 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
             tr:nth-child(even) { background: #f8fafc; }
-            .code { font-family: monospace; font-weight: 700; color: #4f46e5; }
+            .code { font-family: monospace; font-weight: 700; color: #2563eb; }
             .footer { margin-top: 15px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 5px; }
           </style>
         </head>
         <body>
           <div class="header">
             <h1>GAOIRS — Post-Incident Analysis Report</h1>
-            <p>Generated: ${new Date().toLocaleString('en-PH')}</p>
+            <p>Generated: ${new Date().toLocaleString('en-PH')} &nbsp;|&nbsp; Total Reports: ${reports.length}</p>
           </div>
           <table>
             <thead>
@@ -680,26 +699,26 @@ export const exportPostReportsPDF = async (req, res) => {
                 <th>Code</th>
                 <th>Type</th>
                 <th>Submitted By</th>
-                <th>Date</th>
-                <th>Actions Taken</th>
+                <th>Response (min)</th>
                 <th>Status</th>
+                <th>Submitted Date</th>
               </tr>
             </thead>
             <tbody>
               ${reports.map(r => `
               <tr>
-                <td class="code">${r.incident?.incident_code}</td>
-                <td>${r.incident?.incident_type?.name}</td>
-                <td>${r.submitter?.name}</td>
+                <td class="code">${r.incident?.incident_code || 'N/A'}</td>
+                <td>${r.incident?.incident_type?.name || 'N/A'}</td>
+                <td>${r.submitter?.name || 'N/A'}</td>
+                <td>${r.response_time_minutes || 0}m</td>
+                <td style="font-weight:700">${r.status || 'SUBMITTED'}</td>
                 <td>${fmt(r.submitted_at)}</td>
-                <td>${(r.actions_taken || '').substring(0, 150)}</td>
-                <td style="font-weight:700">${r.status}</td>
               </tr>
               `).join('')}
             </tbody>
           </table>
           <div class="footer">
-            <p>GAOIRS Management System &bull; Confidential Document</p>
+            <p>GAOIRS — Government Agency Operations Incident Response System &bull; Official System Report</p>
           </div>
         </body>
         </html>`;

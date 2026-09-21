@@ -1,102 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  BarChart3, TrendingUp, Download, Calendar, Activity,
-  Clock, CheckCircle, Loader2, PlayCircle, FileText, FileSpreadsheet, PieChart as PieIcon, MapPin
+  BarChart3, Calendar, Activity,
+  Clock, CheckCircle, Loader2, PieChart as PieIcon, MapPin
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid
 } from 'recharts';
-import { analyticsAPI, reportAPI } from '../../api';
-import TrendForecast from '../../components/admin/TrendForecast';
+import { analyticsAPI, incidentTypeAPI } from '../../api';
 import KDEHeatmap from '../../components/admin/KDEHeatmap';
-import { toast } from 'react-hot-toast';
 
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6'];
 
 const Analytics = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, resolved: 0 });
   const [responseTime, setResponseTime] = useState(0);
-  const [byTypeData, setByTypeData] = useState([
-    { name: 'Fire Incident', count: 142 },
-    { name: 'Flood/Typhoon', count: 85 },
-    { name: 'Vehicular Accident', count: 64 },
-    { name: 'Infrastructure Damage', count: 48 },
-    { name: 'Medical Emergency', count: 32 },
-    { name: 'Landslide', count: 21 },
-    { name: 'Other Emergency', count: 18 }
-  ]);
-  const [byBarangayData, setByBarangayData] = useState([
-    { name: 'Dos Hermanas', count: 58 },
-    { name: 'San Isidro', count: 52 },
-    { name: 'Zone 16, Bubog', count: 49 },
-    { name: 'Efigenio Lizares', count: 44 },
-    { name: 'Concepcion', count: 41 },
-    { name: 'Katilingban', count: 38 },
-    { name: 'Zone 19', count: 35 },
-    { name: 'Bulanon', count: 32 }
-  ]);
+  const [byTypeData, setByTypeData] = useState([]);
+  const [byBarangayData, setByBarangayData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [training, setTraining] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const exportMenuRef = useRef(null);
+
+  const [incidentTypes, setIncidentTypes] = useState([]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const [sumRes, timeRes, typeRes, bgyRes] = await Promise.all([
+        const [sumRes, timeRes, typeRes, bgyRes, typesRes] = await Promise.all([
           analyticsAPI.getSummary(),
           analyticsAPI.getResponseTime(),
           analyticsAPI.getByType(),
           analyticsAPI.getByBarangay(),
+          incidentTypeAPI.getAll()
         ]);
 
         if (sumRes.data?.data) setStats(sumRes.data.data);
-        if (timeRes.data?.data) setResponseTime(timeRes.data.data.average_minutes || 6);
+        if (timeRes.data?.data) setResponseTime(timeRes.data.data.average_minutes || 0);
 
-        const typeData = (typeRes.data?.data && typeRes.data.data.length > 0) ? typeRes.data.data : [
-          { name: 'Fire Incident', count: 142 },
-          { name: 'Flood/Typhoon', count: 85 },
-          { name: 'Vehicular Accident', count: 64 },
-          { name: 'Infrastructure Damage', count: 48 },
-          { name: 'Medical Emergency', count: 32 },
-          { name: 'Landslide', count: 21 },
-          { name: 'Other Emergency', count: 18 }
-        ];
-        setByTypeData(typeData);
-
-        const bgyData = (bgyRes.data?.data && bgyRes.data.data.length > 0) ? bgyRes.data.data : [
-          { name: 'Dos Hermanas', count: 58 },
-          { name: 'San Isidro', count: 52 },
-          { name: 'Zone 16, Bubog', count: 49 },
-          { name: 'Efigenio Lizares', count: 44 },
-          { name: 'Concepcion', count: 41 },
-          { name: 'Katilingban', count: 38 },
-          { name: 'Zone 19', count: 35 },
-          { name: 'Bulanon', count: 32 }
-        ];
-        setByBarangayData(bgyData);
+        setByTypeData(typeRes.data?.data || []);
+        setByBarangayData(bgyRes.data?.data || []);
+        const typesList = Array.isArray(typesRes.data) ? typesRes.data : (typesRes.data?.data || []);
+        setIncidentTypes(typesList);
       } catch (err) {
         console.error("Error fetching analytics", err);
-        setByTypeData([
-          { name: 'Fire Incident', count: 142 },
-          { name: 'Flood/Typhoon', count: 85 },
-          { name: 'Vehicular Accident', count: 64 },
-          { name: 'Infrastructure Damage', count: 48 },
-          { name: 'Medical Emergency', count: 32 },
-          { name: 'Landslide', count: 21 },
-          { name: 'Other Emergency', count: 18 }
-        ]);
-        setByBarangayData([
-          { name: 'Dos Hermanas', count: 58 },
-          { name: 'San Isidro', count: 52 },
-          { name: 'Zone 16, Bubog', count: 49 },
-          { name: 'Efigenio Lizares', count: 44 },
-          { name: 'Concepcion', count: 41 },
-          { name: 'Katilingban', count: 38 },
-          { name: 'Zone 19', count: 35 },
-          { name: 'Bulanon', count: 32 }
-        ]);
+        setByTypeData([]);
+        setByBarangayData([]);
       } finally {
         setLoading(false);
       }
@@ -177,16 +122,6 @@ const Analytics = () => {
           <p className="text-sm text-slate-500 mt-1">Deep dive into response times, incident volumes, and unit efficiency.</p>
         </div>
         <div className="flex gap-2">
-          {/* Retrain Button */}
-          <button
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-all shadow-sm text-sm active:scale-95 disabled:opacity-50"
-            onClick={handleRetrain}
-            disabled={training}
-          >
-            {training ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} />}
-            Retrain Models
-          </button>
-
           <button 
             onClick={() => toast.info('Custom date filtering is available in the detailed Reports module.')}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors shadow-sm text-sm active:scale-95"
@@ -194,32 +129,6 @@ const Analytics = () => {
             <Calendar size={16} />
             This Month
           </button>
-
-          {/* Export Dropdown Menu */}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              disabled={isExporting}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition-colors shadow-indigo-600/20 shadow-sm text-sm active:scale-95"
-            >
-              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {isExporting ? 'Exporting...' : 'Export'}
-            </button>
-
-            {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-50 animate-fade-in">
-                <button onClick={() => handleExport('xlsx')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
-                  <FileSpreadsheet size={16} className="text-emerald-600" /> Export as Excel
-                </button>
-                <button onClick={() => handleExport('csv')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left border-b border-slate-50">
-                  <FileText size={16} className="text-sky-600" /> Export as CSV
-                </button>
-                <button onClick={() => handleExport('pdf')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
-                  <FileText size={16} className="text-rose-600" /> Export as PDF
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -238,7 +147,7 @@ const Analytics = () => {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-sky-600 uppercase tracking-widest mb-1">Avg Response</p>
-            <h3 className="text-3xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-6 h-6 text-sky-600" /> : `${responseTime || 6} mins`}</h3>
+            <h3 className="text-3xl font-black text-slate-800">{loading ? <Loader2 className="animate-spin w-6 h-6 text-sky-600" /> : `${responseTime} mins`}</h3>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
             <Clock size={24} />
@@ -326,14 +235,9 @@ const Analytics = () => {
           </div>
         </div>
 
-        {/* Trend Forecast */}
-        <div className="lg:col-span-2">
-          <TrendForecast days={7} />
-        </div>
-
         {/* KDE Heatmap Density */}
-        <div className="lg:col-span-2 h-[500px]">
-          <KDEHeatmap />
+        <div className="lg:col-span-2">
+          <KDEHeatmap incidentTypes={incidentTypes} />
         </div>
       </div>
     </div>

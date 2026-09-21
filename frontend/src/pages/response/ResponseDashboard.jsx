@@ -355,26 +355,25 @@ export default function ResponseDashboard() {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`flex-1 bg-white dark:bg-slate-900 rounded-[3rem] border-2 shadow-2xl overflow-hidden flex flex-col transition-all duration-500
-               ${priorityIncident ? 'border-rose-500 shadow-rose-500/10' : 'border-slate-100 dark:border-slate-800 shadow-slate-200/50'}`}
+               ${activeIncidents.length > 0 ? 'border-rose-500 shadow-rose-500/10' : 'border-slate-100 dark:border-slate-800 shadow-slate-200/50'}`}
           >
-            <div className={`p-6 flex justify-between items-center ${priorityIncident ? 'bg-rose-500 text-white' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500'}`}>
+            <div className={`p-6 flex justify-between items-center ${activeIncidents.length > 0 ? 'bg-rose-500 text-white' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500'}`}>
               <h2 className="font-black uppercase tracking-[0.2em] text-xs flex items-center gap-3">
-                {priorityIncident && <motion.span animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 rounded-full bg-white" />}
-                {priorityIncident ? 'Tactical priority: 01' : 'System Standby'}
+                {activeIncidents.length > 0 && <motion.span animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-2 h-2 rounded-full bg-white" />}
+                {activeIncidents.length > 0 ? 'Active Emergency Dispatch Feed' : 'System Standby'}
               </h2>
-              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${priorityIncident ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                {activeIncidents.length > 0 ? `${activeIncidents.length} Pending` : 'All Clear'}
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${activeIncidents.length > 0 ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                {activeIncidents.length > 0 ? `${activeIncidents.length} Needing Response` : 'All Clear'}
               </span>
             </div>
 
-            <div className="p-10 flex-1 flex flex-col">
+            <div className="p-8 flex-1 flex flex-col space-y-6 overflow-y-auto max-h-[650px]">
               {loading ? (
                 <div className="space-y-4 py-4">
                   <Skeleton height={30} width="60%" />
                   <Skeleton count={3} />
-                  <Skeleton height={200} className="rounded-[2.5rem]" />
                 </div>
-              ) : !priorityIncident ? (
+              ) : activeIncidents.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
                   <motion.div
                     initial={{ scale: 0.8 }}
@@ -388,123 +387,117 @@ export default function ResponseDashboard() {
                   <p className="text-sm text-slate-400 font-medium max-w-sm mx-auto">Maintain grid status. Next tactical update will trigger an immediate alert.</p>
                 </div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-8">
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                          {priorityIncident.incident_type?.name || 'Emergency'}
-                        </span>
-                        <span className="text-slate-400 dark:text-slate-500 text-sm font-black font-mono tracking-tighter">
-                          INTEL-#{priorityIncident.incident_code}
-                        </span>
-                      </div>
-                      <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none">
-                        {priorityIncident.incident_type?.name || 'Emergency Incident'}
-                      </h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1.5">Elapsed Time</p>
-                      <div className="text-xl font-black text-slate-900 dark:text-white flex items-center justify-end gap-2">
-                        <Clock size={20} className="text-rose-500" />
-                        {getTimeAgo(priorityIncident.reported_at)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-lg font-medium text-slate-600 dark:text-slate-300 mb-8 leading-relaxed italic border-l-4 border-rose-500 pl-6 py-2">
-                    "{priorityIncident.description}"
-                  </p>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 space-y-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center shrink-0">
-                          <MapPin className="text-rose-500" size={20} />
-                        </div>
+                activeIncidents.map((incident, idx) => {
+                  const isPrimary = idx === 0;
+                  return (
+                    <motion.div 
+                      key={incident.incident_id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-6 rounded-3xl border-2 transition-all ${
+                        isPrimary ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50 shadow-md' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-4">
                         <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tactical Objective</p>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">
-                            {priorityIncident.map_pin_address || priorityIncident.barangay?.name || 'Location pending'}
-                          </p>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                              {incident.incident_type?.name || 'Emergency'}
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-500 text-xs font-black font-mono tracking-tighter">
+                              #{incident.incident_code}
+                            </span>
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider ${
+                              incident.status === 'RESPONDING' ? 'bg-blue-500 text-white' : incident.status === 'ON_SCENE' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+                            }`}>
+                              {incident.status}
+                            </span>
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                            {incident.incident_type?.name || 'Emergency Incident'}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Time</p>
+                          <div className="text-sm font-black text-slate-800 dark:text-white flex items-center justify-end gap-1.5">
+                            <Clock size={14} className="text-rose-500" />
+                            {getTimeAgo(incident.reported_at)}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center shrink-0">
-                          <User className="text-emerald-500" size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Source Information</p>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">
-                            {priorityIncident.reporter?.name || priorityIncident.reporter_name || 'Resident'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-[10px] font-black text-slate-400 uppercase">Emergency Level</span>
-                        <span className={`text-xs font-black px-3 py-1 rounded-lg uppercase tracking-widest ${priorityIncident.severity === 'CRITICAL' ? 'bg-red-500 text-white' : priorityIncident.severity === 'HIGH' ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'}`}>
-                          {priorityIncident.severity}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-center">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-12 -translate-y-12 blur-2xl" />
-                      <div className="relative z-10 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Navigation2 className="text-indigo-200" size={24} />
-                          <h4 className="text-lg font-black uppercase tracking-tighter">Tactical Navigation</h4>
+                      {incident.description && (
+                        <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-4 italic line-clamp-2">
+                          "{incident.description}"
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-xs">
+                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                          <MapPin size={16} className="text-rose-500 shrink-0" />
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                            {incident.map_pin_address || incident.barangay?.barangay_name || 'Location pending'}
+                          </span>
                         </div>
-                        <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-[0.2em]">GPS Route Calculated</p>
+                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                          <User size={16} className="text-emerald-500 shrink-0" />
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                            {incident.reporter?.name || incident.reporter_name || 'Citizen Report'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons for Incident */}
+                      <div className="flex flex-wrap items-center gap-3">
                         <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${priorityIncident.latitude},${priorityIncident.longitude}`}
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${incident.latitude},${incident.longitude}`}
                           target="_blank" rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center gap-3 bg-white text-indigo-700 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-slate-50 transition-all active:scale-95"
+                          className="flex-1 min-w-[140px] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-md transition-all active:scale-95"
                         >
-                          Launch External HUD
+                          <Navigation2 size={16} /> GPS HUD
                         </a>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="mt-auto grid grid-cols-2 gap-4">
-                    {(priorityIncident.status === 'VERIFIED' || priorityIncident.status === 'RESPONDING') && (
-                      <>
-                        <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-                          onClick={() => setShowBackupModal(true)}
-                          className="flex items-center justify-center gap-3 bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95"
-                        >
-                          <PlusCircle size={20} /> Request Support
-                        </motion.button>
-                        <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-                          onClick={() => handleUpdateStatus(priorityIncident.incident_id, 'ON_SCENE')}
-                          disabled={acceptingId === priorityIncident.incident_id}
-                          className="flex items-center justify-center gap-3 bg-emerald-600 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
-                        >
-                          {acceptingId === priorityIncident.incident_id ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
-                          Confirm Arrival
-                        </motion.button>
-                      </>
-                    )}
+                        {(incident.status === 'VERIFIED' || incident.status === 'REPORTED') && (
+                          <button
+                            onClick={() => handleUpdateStatus(incident.incident_id, 'RESPONDING')}
+                            disabled={acceptingId === incident.incident_id}
+                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-md shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+                          >
+                            {acceptingId === incident.incident_id ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                            Respond Now
+                          </button>
+                        )}
 
-                    {priorityIncident.status === 'ON_SCENE' && (
-                      <>
+                        {incident.status === 'RESPONDING' && (
+                          <button
+                            onClick={() => handleUpdateStatus(incident.incident_id, 'ON_SCENE')}
+                            disabled={acceptingId === incident.incident_id}
+                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                          >
+                            {acceptingId === incident.incident_id ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
+                            Confirm Arrival
+                          </button>
+                        )}
+
+                        {incident.status === 'ON_SCENE' && (
+                          <button
+                            onClick={() => { setSelectedIncidentForAction(incident); setShowReportModal(true); }}
+                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-md shadow-emerald-500/30"
+                          >
+                            <CheckCircle2 size={16} /> Resolve Incident
+                          </button>
+                        )}
+
                         <button
-                          onClick={() => handleUpdateStatus(priorityIncident.incident_id, 'FALSE_ALARM')}
-                          className="flex items-center justify-center gap-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 py-4 rounded-3xl font-black text-xs uppercase tracking-widest"
+                          onClick={() => { setSelectedIncidentForAction(incident); setShowBackupModal(true); }}
+                          className="px-4 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest"
                         >
-                          Negative Status
+                          + Backup
                         </button>
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                          onClick={() => setShowReportModal(true)}
-                          className="flex items-center justify-center gap-3 bg-emerald-600 text-white py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-emerald-500/30"
-                        >
-                          <CheckCircle2 size={22} /> Resolve Incident
-                        </motion.button>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
+                      </div>
+                    </motion.div>
+                  );
+                })
               )}
             </div>
           </motion.div>

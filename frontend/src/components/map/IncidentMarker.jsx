@@ -115,10 +115,10 @@ const EvidenceGallery = ({ evidence, onExpand }) => {
   const isImage = currentEvidence.file_type.startsWith('image/');
 
   return (
-    <div className="mt-3 border-t pt-2">
-      <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium mb-2">
-        <Image className="w-3.5 h-3.5 flex-shrink-0" />
-        <span>Evidence Photos ({evidence.length})</span>
+    <div className="mt-1.5 border-t border-gray-100 pt-1">
+      <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium mb-1">
+        <Image className="w-3 h-3 flex-shrink-0" />
+        <span>Photos ({evidence.length})</span>
       </div>
       {isImage && (
         <div 
@@ -128,28 +128,28 @@ const EvidenceGallery = ({ evidence, onExpand }) => {
           <img
             src={currentEvidence.file_path}
             alt="Evidence"
-            className="w-full h-[150px] object-cover"
+            className="w-full h-[90px] object-cover"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/150?text=Photo+Unavailable';
+              e.target.src = 'https://via.placeholder.com/90?text=Photo+Unavailable';
             }}
           />
           {evidence.length > 1 && (
-            <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+            <div className="absolute inset-0 flex items-center justify-between px-1 opacity-0 hover:opacity-100 transition-opacity bg-black/20">
               <button
                 onClick={goToPrevious}
-                className="p-1 bg-white/80 hover:bg-white rounded-full transition"
+                className="p-0.5 bg-white/80 hover:bg-white rounded-full transition"
               >
-                <ChevronLeft className="w-3 h-3 text-gray-800" />
+                <ChevronLeft className="w-2.5 h-2.5 text-gray-800" />
               </button>
               <button
                 onClick={goToNext}
-                className="p-1 bg-white/80 hover:bg-white rounded-full transition"
+                className="p-0.5 bg-white/80 hover:bg-white rounded-full transition"
               >
-                <ChevronRight className="w-3 h-3 text-gray-800" />
+                <ChevronRight className="w-2.5 h-2.5 text-gray-800" />
               </button>
             </div>
           )}
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 py-0.5 rounded text-xs text-center min-w-[30px]">
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white px-1.5 py-0.2 rounded text-[9px] text-center min-w-[24px]">
             {currentIndex + 1} / {evidence.length}
           </div>
         </div>
@@ -217,45 +217,45 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
   };
 
   return (
-    <div className="mt-3 pt-3 border-t border-gray-200">
-      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">⚠ Awaiting Verification</p>
+    <div className="mt-1.5 pt-1.5 border-t border-gray-100">
+      <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1">⚠ Awaiting Verification</p>
       
-      <div className="mb-3 p-2 bg-slate-50 border border-slate-200 rounded-md">
-        <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Target Response Unit</p>
+      <div className="mb-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded">
+        <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Target Response Unit</p>
         {loadingUnit ? (
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <Loader2 className="w-3 h-3 animate-spin" /> Calculating nearest unit...
+          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Calculating nearest unit...
           </div>
         ) : nearestUnit ? (
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <Car className="w-3.5 h-3.5 text-blue-600" />
-              <span className="text-xs font-bold text-slate-800">{nearestUnit.unit_name}</span>
+            <div className="flex items-center gap-1">
+              <Car className="w-3 h-3 text-blue-600" />
+              <span className="text-[11px] font-bold text-slate-800">{nearestUnit.unit_name}</span>
             </div>
-            <span className="text-[10px] text-slate-500 ml-5 font-semibold">
+            <span className="text-[9px] text-slate-500 ml-4 font-semibold">
               Type: {nearestUnit.type} {nearestUnit.distance_km ? `• Dist: ${nearestUnit.distance_km.toFixed(1)} km` : ''}
             </span>
           </div>
         ) : (
-          <p className="text-xs text-slate-500 italic">No available units found nearby.</p>
+          <p className="text-[10px] text-slate-500 italic">No available units found nearby.</p>
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         <button
           onClick={handleApprove}
           disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 text-white text-xs font-bold rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-green-600 text-white text-[10px] font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50"
         >
-          {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+          {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <CheckCircle className="w-2.5 h-2.5" />}
           Approve & Dispatch
         </button>
         <button
           onClick={handleReject}
           disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 text-white text-xs font-bold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50"
         >
-          {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+          {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <XCircle className="w-2.5 h-2.5" />}
           Reject
         </button>
       </div>
@@ -294,57 +294,57 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
         icon={icon} 
         eventHandlers={{ click: handleClick }}
       >
-        <Popup className="min-w-[280px] max-w-[350px]">
-          <div className="font-sans pr-1 pb-1">
-            <div className="flex items-center justify-between border-b pb-2 mb-2">
-              <strong className="text-lg">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
-              <span className={`px-2 py-1 text-xs font-bold rounded-full ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+        <Popup className="min-w-[220px] max-w-[270px]">
+          <div className="font-sans text-xs pr-0.5 pb-0.5 max-h-[360px] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-1.5 mb-1.5">
+              <strong className="text-sm font-bold truncate pr-1">{incident.incident_code || `INC-${incident.incident_id?.slice(0, 5) || 'UNKNOWN'}`}</strong>
+              <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-full shrink-0 ${color === 'red' ? 'bg-red-100 text-red-800' : color === 'orange' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
                 {incident.status}
               </span>
             </div>
 
-            <p className="text-sm mb-1"><strong>Severity:</strong> {incident.severity}</p>
+            <p className="text-[11px] mb-0.5 leading-snug"><strong>Severity:</strong> {incident.severity}</p>
 
             {/* Location/Barangay Display */}
             {incident.barangay ? (
-              <p className="text-sm mb-1"><strong>Location:</strong> Barangay {incident.barangay.name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
+              <p className="text-[11px] mb-0.5 leading-snug"><strong>Location:</strong> Brgy. {incident.barangay.name || 'Unknown'}, {incident.barangay.city || incident.barangay.municipality || 'Unknown'}</p>
             ) : incident.map_pin_address ? (
-              <p className="text-sm mb-1"><strong>Location:</strong> {incident.map_pin_address}</p>
+              <p className="text-[11px] mb-0.5 leading-snug truncate"><strong>Location:</strong> {incident.map_pin_address}</p>
             ) : (
-              <p className="text-sm mb-1 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
+              <p className="text-[11px] mb-0.5 text-gray-400"><strong>Location:</strong> {Number(incident.latitude).toFixed(4)}°N, {Number(incident.longitude).toFixed(4)}°E</p>
             )}
 
             {incident.landmark && (
-              <p className="text-sm mb-1"><strong>Near Landmark:</strong> {incident.landmark}</p>
+              <p className="text-[11px] mb-0.5 leading-snug"><strong>Landmark:</strong> {incident.landmark}</p>
             )}
 
-            <p className="text-sm mb-1"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
-            <p className="text-sm mb-2 text-gray-600 line-clamp-2">{incident.description}</p>
+            <p className="text-[11px] mb-0.5 leading-snug"><strong>Type:</strong> {incident.incident_type?.name || 'Emergency'}</p>
+            <p className="text-[11px] mb-1 text-gray-600 line-clamp-2 leading-tight">{incident.description}</p>
 
-            {/* Reporter Personal Info - Priority: form fields > auth user fields */}
+            {/* Reporter Personal Info */}
             {(incident.reporter_name || incident.reporter_phone || incident.reporter || incident.reported_by) && (
-              <div className="mt-2 pt-2 border-t border-gray-200">
-                <p className="text-xs font-semibold text-gray-700 mb-1">Reporter Info:</p>
-                <p className="text-xs text-gray-600">
+              <div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[11px]">
+                <p className="font-semibold text-gray-700 text-[10px] uppercase mb-0.5">Reporter Info</p>
+                <p className="text-gray-600 leading-tight">
                   <strong>Name:</strong> {incident.reporter_name || incident.reporter?.name || 'Not provided'}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-gray-600 leading-tight">
                   <strong>Phone:</strong> {incident.reporter_phone ? `${incident.reporter_phone}` : incident.reporter?.contact_number || 'Not provided'}
                 </p>
               </div>
             )}
 
-            {/* Evidence Gallery - PROMINENT DISPLAY */}
+            {/* Evidence Gallery */}
             {incident.evidence && incident.evidence.length > 0 ? (
               <EvidenceGallery evidence={incident.evidence} onExpand={(url) => setFullscreenPhoto(url)} />
             ) : (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-400 italic">📸 No photos attached</p>
+              <div className="mt-1.5 pt-1.5 border-t border-gray-100">
+                <p className="text-[10px] text-gray-400 italic">📸 No photos attached</p>
               </div>
             )}
 
-            <div className="text-xs text-gray-400 mt-2">
-              Reported: {moment(incident.reported_at).format('MMM D, YYYY h:mm A')}
+            <div className="text-[10px] text-gray-400 mt-1">
+              Reported: {moment(incident.reported_at).format('MMM D, h:mm A')}
             </div>
             <QuickVerifyActions incident={incident} onVerify={onVerify} />
           </div>

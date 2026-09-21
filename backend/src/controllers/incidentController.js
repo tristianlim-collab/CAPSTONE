@@ -140,7 +140,7 @@ export const getIncidents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id, district } = req.query;
+    const { status, severity, barangay_id, type_id, search, from_date, to_date, unit_id, district, city } = req.query;
 
     const where = {};
     if (status) {
@@ -153,8 +153,20 @@ export const getIncidents = async (req, res) => {
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
+    
+    // Barangay / City / District filters
+    const barangayWhere = {};
     if (district) {
-      where.barangay = { congressional_district: { contains: district, mode: 'insensitive' } };
+      barangayWhere.congressional_district = { contains: district, mode: 'insensitive' };
+    }
+    if (city) {
+      barangayWhere.OR = [
+        { city: { contains: city, mode: 'insensitive' } },
+        { municipality: { contains: city, mode: 'insensitive' } }
+      ];
+    }
+    if (Object.keys(barangayWhere).length > 0) {
+      where.barangay = barangayWhere;
     }
 
     if (unit_id) {
@@ -182,7 +194,15 @@ export const getIncidents = async (req, res) => {
 
     if (req.user?.role === 'REPORTER') {
       // Reporters only see their own incidents
-      where.reported_by = req.user.id;
+      const idsParam = req.query.ids ? req.query.ids.split(',') : [];
+      if (idsParam.length > 0) {
+        where.AND = [
+          { reported_by: req.user.id },
+          { incident_id: { in: idsParam } }
+        ];
+      } else {
+        where.reported_by = req.user.id;
+      }
     } else if (req.user?.role === 'RESPONSE_UNIT') {
       const unit = req.user.unit;
       const unitType = unit?.unit_type;

@@ -76,8 +76,8 @@ export const getResponseTime = async (_req, res) => {
   try {
     const assignments = await prisma.incidentAssignment.findMany({ where: { acknowledged_at: { not: null }, resolved_at: { not: null } } });
     const minutes = assignments.map((a) => (new Date(a.resolved_at).getTime() - new Date(a.acknowledged_at).getTime()) / 60000);
-    const avg = minutes.length ? minutes.reduce((sum, m) => sum + m, 0) / minutes.length : 6;
-    return res.status(200).json(success({ data: { average_minutes: Number((avg || 6).toFixed(2)) }, message: "Response time analytics fetched" }));
+    const avg = minutes.length ? minutes.reduce((sum, m) => sum + m, 0) / minutes.length : 0;
+    return res.status(200).json(success({ data: { average_minutes: Number(avg.toFixed(2)) }, message: "Response time analytics fetched" }));
   } catch (err) {
     return res.status(500).json(error({ message: err.message }));
   }
@@ -173,13 +173,21 @@ export const getPredictionHealth = async (_req, res) => {
 /**
  * Get KDE visualization data
  */
-export const getKDE = async (_req, res) => {
+export const getKDE = async (req, res) => {
   try {
+    const { incident_type_id } = req.query;
+
+    const where = {
+      latitude: { gte: 10.68, lte: 10.82 },
+      longitude: { gte: 122.935, lte: 123.05 }
+    };
+
+    if (incident_type_id && incident_type_id !== 'ALL') {
+      where.incident_type_id = incident_type_id;
+    }
+
     const points = await prisma.incident.findMany({
-      where: {
-        latitude: { gte: 10.68, lte: 10.82 },
-        longitude: { gte: 122.935, lte: 123.05 }
-      },
+      where,
       select: { latitude: true, longitude: true, severity: true }
     });
 
