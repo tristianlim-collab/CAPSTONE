@@ -770,14 +770,14 @@ export default function IncidentVerificationQueue() {
             animate={{ scale: 1, opacity: 1 }}
             className="relative max-w-5xl w-full h-full flex items-center justify-center"
           >
-            <img 
-              src={fullscreenPhoto} 
-              alt="Evidence Full" 
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95" 
-              onClick={(e) => e.stopPropagation()} 
+            <img
+              src={fullscreenPhoto}
+              alt="Evidence Full"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-transform duration-500 scale-in-95"
+              onClick={(e) => e.stopPropagation()}
             />
-            <button 
-              onClick={() => setFullscreenPhoto(null)} 
+            <button
+              onClick={() => setFullscreenPhoto(null)}
               className="absolute top-0 right-0 sm:-top-12 sm:right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-all active:scale-90 border border-white/20"
               title="Close Preview"
             >
