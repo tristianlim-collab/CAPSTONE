@@ -17,35 +17,8 @@ const generateIncidentsPDFKit = (incidents, res) => {
 
   doc.pipe(res);
 
-  // Header Banner
-  doc.rect(0, 0, doc.page.width, 50).fill('#4F46E5');
-  doc.fillColor('#FFFFFF').fontSize(16).font('Helvetica-Bold').text('GAOIRS — INCIDENT EMERGENCY REPORT', 30, 15);
-  doc.fontSize(9).font('Helvetica').text(`Generated: ${new Date().toLocaleString('en-PH')} | Records: ${incidents.length}`, 30, 34);
-
-  // Summary Metrics
-  const total = incidents.length;
-  const resolved = incidents.filter(i => i.status === 'RESOLVED').length;
-  const active = incidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).length;
-  const sameReports = incidents.filter(i => i.same_report_tag?.is_same_report).length;
-
-  const metricY = 62;
-  const boxW = 180;
-  const boxes = [
-    { label: 'TOTAL INCIDENTS', val: `${total}`, color: '#EEF2FF', border: '#C7D2FE', txt: '#3730A3' },
-    { label: 'ACTIVE INCIDENTS', val: `${active}`, color: '#FEF3C7', border: '#FDE68A', txt: '#92400E' },
-    { label: 'RESOLVED', val: `${resolved}`, color: '#D1FAE5', border: '#A7F3D0', txt: '#065F46' },
-    { label: 'SAME REPORT TAGS', val: `${sameReports}`, color: '#FED7AA', border: '#FDBA74', txt: '#9A3412' }
-  ];
-
-  boxes.forEach((box, i) => {
-    const x = 30 + i * 195;
-    doc.rect(x, metricY, boxW, 35).fillAndStroke(box.color, box.border);
-    doc.fillColor('#64748B').fontSize(7).font('Helvetica-Bold').text(box.label, x + 10, metricY + 6);
-    doc.fillColor(box.txt).fontSize(14).font('Helvetica-Bold').text(box.val, x + 10, metricY + 16);
-  });
-
   // Table Setup
-  const startY = 110;
+  const startY = 30;
   const headers = ['#', 'Incident Code', 'Type', 'Status', 'Severity', 'Location', 'Reporter', 'Same Report Tag', 'Date'];
   const colWidths = [25, 120, 90, 75, 55, 130, 95, 100, 90];
 
@@ -67,7 +40,7 @@ const generateIncidentsPDFKit = (incidents, res) => {
   incidents.forEach((inc, idx) => {
     if (currentY > 520) {
       doc.addPage({ margin: 30, size: 'A4', layout: 'landscape' });
-      currentY = 40;
+      currentY = 30;
       doc.rect(30, currentY, 780, 20).fill('#312E81');
       doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8);
       let posX = 35;
@@ -122,7 +95,7 @@ const generateIncidentsPDFKit = (incidents, res) => {
     currentY += 18;
   });
 
-  doc.fontSize(8).fillColor('#94A3B8').text('GAOIRS — Government Agency Operations Incident Response System • Confidential Intelligence Document', 30, doc.page.height - 25, { align: 'center' });
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('#334155').text('GAOIRS — Incident reports', 30, doc.page.height - 30, { align: 'center' });
 
   doc.end();
 };
@@ -217,26 +190,41 @@ const generatePostReportsPDFKit = (reports, res) => {
  */
 export const exportIncidents = async (req, res) => {
   try {
-    const { format = 'xlsx', startDate, endDate, status, type_id, severity, includeHistorical = 'false' } = req.query;
+    const { format = 'xlsx', startDate, endDate, status, type_id, severity, includeHistorical } = req.query;
 
     const where = {};
     if (status && status !== 'ALL') where.status = status;
-    if (type_id && type_id !== 'ALL') where.incident_type_id = type_id;
     if (severity && severity !== 'ALL') where.severity = severity;
+
+    if (type_id && type_id !== 'ALL') {
+      const matchedType = await prisma.incidentType.findFirst({
+        where: {
+          OR: [
+            { type_id: type_id },
+            { name: { equals: type_id, mode: 'insensitive' } }
+          ]
+        }
+      });
+      if (matchedType) {
+        where.incident_type_id = matchedType.type_id;
+      } else {
+        where.incident_type_id = type_id;
+      }
+    }
+
     if (startDate || endDate) {
       where.reported_at = {};
       if (startDate) where.reported_at.gte = new Date(startDate);
       if (endDate) where.reported_at.lte = new Date(endDate);
     }
 
-    // Exclude historical seeded dataset records by default unless explicitly requested
-    if (includeHistorical !== 'true') {
+    if (includeHistorical === 'false') {
       where.NOT = {
         landmark: { startsWith: 'Reporting Agency:' }
       };
     }
 
-    const incidents = await prisma.incident.findMany({
+    let incidents = await prisma.incident.findMany({
       where,
       include: {
         incident_type: true,
@@ -247,6 +235,21 @@ export const exportIncidents = async (req, res) => {
       orderBy: { reported_at: 'desc' },
       take: 5000,
     });
+
+    if (incidents.length === 0 && includeHistorical === 'false') {
+      delete where.NOT;
+      incidents = await prisma.incident.findMany({
+        where,
+        include: {
+          incident_type: true,
+          barangay: true,
+          reporter: { select: { name: true, email: true, contact_number: true } },
+          assignments: { include: { unit: true } },
+        },
+        orderBy: { reported_at: 'desc' },
+        take: 5000,
+      });
+    }
 
     if (incidents.length === 0) {
       return res.status(404).json({ message: 'No incidents found matching the filters.' });
@@ -357,26 +360,41 @@ export const exportIncidents = async (req, res) => {
  */
 export const exportIncidentsPDF = async (req, res) => {
   try {
-    const { startDate, endDate, status, type_id, severity, includeHistorical = 'false' } = req.query;
+    const { startDate, endDate, status, type_id, severity, includeHistorical } = req.query;
 
     const where = {};
     if (status && status !== 'ALL') where.status = status;
-    if (type_id && type_id !== 'ALL') where.incident_type_id = type_id;
     if (severity && severity !== 'ALL') where.severity = severity;
+
+    if (type_id && type_id !== 'ALL') {
+      const matchedType = await prisma.incidentType.findFirst({
+        where: {
+          OR: [
+            { type_id: type_id },
+            { name: { equals: type_id, mode: 'insensitive' } }
+          ]
+        }
+      });
+      if (matchedType) {
+        where.incident_type_id = matchedType.type_id;
+      } else {
+        where.incident_type_id = type_id;
+      }
+    }
+
     if (startDate || endDate) {
       where.reported_at = {};
       if (startDate) where.reported_at.gte = new Date(startDate);
       if (endDate) where.reported_at.lte = new Date(endDate);
     }
 
-    // Exclude historical seeded dataset records by default unless explicitly requested
-    if (includeHistorical !== 'true') {
+    if (includeHistorical === 'false') {
       where.NOT = {
         landmark: { startsWith: 'Reporting Agency:' }
       };
     }
 
-    const incidents = await prisma.incident.findMany({
+    let incidents = await prisma.incident.findMany({
       where,
       include: {
         incident_type: true,
@@ -387,6 +405,21 @@ export const exportIncidentsPDF = async (req, res) => {
       orderBy: { reported_at: 'desc' },
       take: 1000,
     });
+
+    if (incidents.length === 0 && includeHistorical === 'false') {
+      delete where.NOT;
+      incidents = await prisma.incident.findMany({
+        where,
+        include: {
+          incident_type: true,
+          barangay: true,
+          reporter: { select: { name: true, email: true, contact_number: true } },
+          assignments: { include: { unit: true } },
+        },
+        orderBy: { reported_at: 'desc' },
+        take: 1000,
+      });
+    }
 
     if (incidents.length === 0) {
       return res.status(404).json({ message: 'No incidents found matching the filters.' });
@@ -414,16 +447,9 @@ export const exportIncidentsPDF = async (req, res) => {
           <meta charset="utf-8">
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 30px; font-size: 10px; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #4f46e5; padding-bottom: 15px; }
-            .header h1 { font-size: 20px; color: #4f46e5; margin-bottom: 4px; font-weight: 900; }
-            .header p { font-size: 11px; color: #64748b; }
-            .summary { display: flex; gap: 15px; margin-bottom: 20px; }
-            .summary-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
-            .summary-card .label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; }
-            .summary-card .value { font-size: 18px; font-weight: 900; color: #1e293b; margin-top: 2px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #4f46e5; color: white; padding: 7px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 20px; font-size: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 0; }
+            th { background: #312e81; color: white; padding: 7px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
             td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 9px; vertical-align: middle; }
             tr:nth-child(even) { background: #f8fafc; }
             .badge-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 8px; text-transform: uppercase; }
@@ -436,22 +462,10 @@ export const exportIncidentsPDF = async (req, res) => {
             .status-ON_SCENE { background: #fce7f3; color: #db2777; }
             .status-RESOLVED { background: #d1fae5; color: #059669; }
             .status-FALSE_ALARM { background: #fee2e2; color: #dc2626; }
-            .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+            .footer { margin-top: 25px; text-align: center; font-size: 13px; font-weight: 700; color: #334155; border-top: 1px solid #cbd5e1; padding-top: 12px; letter-spacing: 0.5px; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>GAOIRS — Incident Intelligence Report</h1>
-            <p>Generated on ${new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-          </div>
-
-          <div class="summary">
-            <div class="summary-card"><div class="label">Total Incidents</div><div class="value">${taggedIncidents.length}</div></div>
-            <div class="summary-card"><div class="label">Resolved</div><div class="value">${taggedIncidents.filter(i => i.status === 'RESOLVED').length}</div></div>
-            <div class="summary-card"><div class="label">Active</div><div class="value">${taggedIncidents.filter(i => ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'].includes(i.status)).length}</div></div>
-            <div class="summary-card"><div class="label">Same Report Tagged</div><div class="value">${taggedIncidents.filter(i => i.same_report_tag?.is_same_report).length}</div></div>
-          </div>
-
           <table>
             <thead>
               <tr>
@@ -488,7 +502,7 @@ export const exportIncidentsPDF = async (req, res) => {
           </table>
 
           <div class="footer">
-            <p>GAOIRS — Government Agency Operations Incident Response System &bull; Confidential Report</p>
+            <p>GAOIRS — Incident reports</p>
           </div>
         </body>
         </html>`;

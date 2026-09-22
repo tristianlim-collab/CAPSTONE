@@ -36,8 +36,8 @@ export default function ResponseDashboard() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   useEffect(() => {
-    fetchIncidents();
-    const interval = setInterval(fetchIncidents, 5000);
+    fetchIncidents(true);
+    const interval = setInterval(() => fetchIncidents(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -117,15 +117,15 @@ export default function ResponseDashboard() {
     return () => { unsub1(); unsub1b(); unsub2(); unsub3(); unsub4(); };
   }, [on]);
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const res = await incidentAPI.getAll({ limit: 50 });
       setIncidents(res.data?.data || []);
     } catch (err) {
       console.error('Failed to load incidents:', err);
     } finally {
-      setTimeout(() => setLoading(false), 600);
+      if (isInitial) setLoading(false);
     }
   };
 

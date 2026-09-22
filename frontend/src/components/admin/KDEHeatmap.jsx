@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
@@ -12,13 +13,13 @@ const HeatmapLayer = ({ points }) => {
   useEffect(() => {
     if (!points || points.length === 0) return;
 
-    // Filter points to ensure they stay on land (Talisay City land bounds: Lat 10.68 - 10.80, Lng 122.935 - 123.05)
-    const landPoints = points.filter(p => p[0] >= 10.68 && p[0] <= 10.82 && p[1] >= 122.935 && p[1] <= 123.05);
+    // Filter points to ensure they stay on land (Talisay/Silay land bounds: Lat 10.68 - 10.82, Lng 122.968 - 123.05)
+    const landPoints = points.filter(p => p[0] >= 10.68 && p[0] <= 10.82 && p[1] >= 122.968 && p[1] <= 123.05);
     const validPoints = landPoints.length > 0 ? landPoints : points;
 
     const heatLayer = L.heatLayer(validPoints, {
-      radius: 25,
-      blur: 15,
+      radius: 18,
+      blur: 10,
       maxZoom: 17,
       gradient: {
         0.4: 'blue',
@@ -86,11 +87,14 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
   }, [selectedType]);
 
   const handleExport = async (format) => {
+    const toastId = toast.loading(`Generating ${format.toUpperCase()} export...`);
     try {
       setIsExporting(true);
       setShowExportMenu(false);
-      const toastId = toast.loading(`Generating ${format.toUpperCase()} export...`);
-      const params = selectedType !== 'ALL' ? { type_id: selectedType } : {};
+      const params = {
+        includeHistorical: 'true',
+        ...(selectedType !== 'ALL' ? { type_id: selectedType } : {})
+      };
       const response = await reportAPI.export(format, params);
 
       let blobType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -110,7 +114,7 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
       toast.success('Export downloaded successfully', { id: toastId });
     } catch (err) {
       console.error('Export error:', err);
-      toast.error('Failed to generate export');
+      toast.error(err.response?.data?.message || 'Failed to generate export', { id: toastId });
     } finally {
       setIsExporting(false);
     }
