@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import incidentRoutes from "./routes/incidentRoutes.js";
@@ -19,6 +20,7 @@ import { success, error } from "./utils/apiResponse.js";
 
 const app = express();
 
+app.use(compression());
 app.use(
   cors({
     origin: (origin, callback) => callback(null, true),

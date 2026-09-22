@@ -108,6 +108,10 @@ model Incident {
   notifications    Notification[]
   post_report      PostIncidentReport?
 
+  @@index([status])
+  @@index([barangay_id])
+  @@index([incident_type_id])
+  @@index([reported_at])
   @@map("INCIDENT")
 }
 

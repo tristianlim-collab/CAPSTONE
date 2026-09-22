@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
@@ -6,43 +6,42 @@ import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ProtectedRoute, PublicRoute } from './components/common/ProtectedRoute';
 
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import Unauthorized from './pages/auth/Unauthorized';
+// Lazy loading heavy pages for faster initial load
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Unauthorized = lazy(() => import('./pages/auth/Unauthorized'));
 
-import ReporterHome from './pages/reporter/ReporterHome';
-import IncidentReportForm from './pages/reporter/IncidentReportForm';
-import ReportSuccess from './pages/reporter/ReportSuccess';
-import ReporterProfile from './pages/reporter/ReporterProfile';
-import MyReports from './pages/reporter/MyReports';
+const ReporterHome = lazy(() => import('./pages/reporter/ReporterHome'));
+const IncidentReportForm = lazy(() => import('./pages/reporter/IncidentReportForm'));
+const ReportSuccess = lazy(() => import('./pages/reporter/ReportSuccess'));
+const ReporterProfile = lazy(() => import('./pages/reporter/ReporterProfile'));
+const MyReports = lazy(() => import('./pages/reporter/MyReports'));
 
-import ShiftStart from './pages/response/ShiftStart';
-import ResponseDashboard from './pages/response/ResponseDashboard';
-import ResponseMap from './pages/response/ResponseMap';
-import ResponseIncidents from './pages/response/ResponseIncidents';
-import ResponseNotifications from './pages/response/ResponseNotifications';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UserManagement from './pages/admin/UserManagement';
-import ResponseUnitManagement from './pages/admin/ResponseUnitManagement';
-import IncidentManagement from './pages/admin/IncidentManagement';
-import Analytics from './pages/admin/Analytics';
-import SystemSettings from './pages/admin/SystemSettings';
-import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
-import PostIncidentReports from './pages/admin/PostIncidentReports';
-import IncidentArchive from './pages/admin/IncidentArchive';
-import AuditLogs from './pages/admin/AuditLogs';
-import UserGuide from './pages/common/UserGuide';
+const ShiftStart = lazy(() => import('./pages/response/ShiftStart'));
+const ResponseDashboard = lazy(() => import('./pages/response/ResponseDashboard'));
+const ResponseMap = lazy(() => import('./pages/response/ResponseMap'));
+const ResponseIncidents = lazy(() => import('./pages/response/ResponseIncidents'));
+const ResponseNotifications = lazy(() => import('./pages/response/ResponseNotifications'));
+
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const ResponseUnitManagement = lazy(() => import('./pages/admin/ResponseUnitManagement'));
+const IncidentManagement = lazy(() => import('./pages/admin/IncidentManagement'));
+const Analytics = lazy(() => import('./pages/admin/Analytics'));
+const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'));
+const IncidentVerificationQueue = lazy(() => import('./pages/admin/IncidentVerificationQueue'));
+const PostIncidentReports = lazy(() => import('./pages/admin/PostIncidentReports'));
+const IncidentArchive = lazy(() => import('./pages/admin/IncidentArchive'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const UserGuide = lazy(() => import('./pages/common/UserGuide'));
 
 // Administration Layouts
 import AdminLayout from './components/layout/AdminLayout';
 import ResponseLayout from './components/layout/ResponseLayout';
 
-const EmptyResponsePage = ({ title }) => (
-  <div className="flex flex-col h-full space-y-6 animate-fade-in max-w-6xl mx-auto w-full">
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-      <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{title}</h2>
-      <p className="text-slate-500 mt-2">This module is part of the next development phase.</p>
-    </div>
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-[400px] w-full">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900"></div>
   </div>
 );
 
@@ -59,52 +58,54 @@ const App = () => {
       <AuthProvider>
         <SocketProvider>
           <NotificationProvider>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/unauthorized" element={<Unauthorized />} />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* Admin Routes */}
-              <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="verification" element={<IncidentVerificationQueue />} />
-                <Route path="users" element={<UserManagement />} />
-                <Route path="response-units" element={<ResponseUnitManagement />} />
-                <Route path="categories" element={<IncidentManagement />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="post-incident-reports" element={<PostIncidentReports />} />
-                <Route path="archive" element={<IncidentArchive />} />
-                <Route path="audit-logs" element={<AuditLogs />} />
-                <Route path="settings" element={<SystemSettings />} />
-                <Route path="guide" element={<UserGuide />} />
-              </Route>
+                {/* Admin Routes */}
+                <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>}>
+                  <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="verification" element={<IncidentVerificationQueue />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="response-units" element={<ResponseUnitManagement />} />
+                  <Route path="categories" element={<IncidentManagement />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="post-incident-reports" element={<PostIncidentReports />} />
+                  <Route path="archive" element={<IncidentArchive />} />
+                  <Route path="audit-logs" element={<AuditLogs />} />
+                  <Route path="settings" element={<SystemSettings />} />
+                  <Route path="guide" element={<UserGuide />} />
+                </Route>
 
-              {/* Response Unit Routes */}
-              <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
+                {/* Response Unit Routes */}
+                <Route path="/response/shift-start" element={<ProtectedRoute role="RESPONSE_UNIT"><ShiftStart /></ProtectedRoute>} />
 
-              <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/response/map" replace />} />
-                <Route path="dashboard" element={<ResponseDashboard />} />
-                <Route path="map" element={<ResponseMap />} />
-                <Route path="incidents" element={<ResponseIncidents />} />
-                <Route path="notifications" element={<ResponseNotifications />} />
-                <Route path="guide" element={<UserGuide />} />
-              </Route>
+                <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
+                  <Route index element={<Navigate to="/response/map" replace />} />
+                  <Route path="dashboard" element={<ResponseDashboard />} />
+                  <Route path="map" element={<ResponseMap />} />
+                  <Route path="incidents" element={<ResponseIncidents />} />
+                  <Route path="notifications" element={<ResponseNotifications />} />
+                  <Route path="guide" element={<UserGuide />} />
+                </Route>
 
-              {/* Reporter Routes */}
-              <Route path="/reporter/home" element={<ReporterHome />} />
-              <Route path="/reporter/report" element={<IncidentReportForm />} />
-              <Route path="/reporter/report/success" element={<ReportSuccess />} />
-              <Route path="/reporter/reports" element={<MyReports />} />
-              <Route path="/reporter/profile" element={<Navigate to="/reporter/home" replace />} />
-              <Route path="/reporter/*" element={<ReporterHome />} />
+                {/* Reporter Routes */}
+                <Route path="/reporter/home" element={<ReporterHome />} />
+                <Route path="/reporter/report" element={<IncidentReportForm />} />
+                <Route path="/reporter/report/success" element={<ReportSuccess />} />
+                <Route path="/reporter/reports" element={<MyReports />} />
+                <Route path="/reporter/profile" element={<Navigate to="/reporter/home" replace />} />
+                <Route path="/reporter/*" element={<ReporterHome />} />
 
-              {/* Default */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
+                {/* Default */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Suspense>
             <Toaster 
               position="top-right" 
               toastOptions={{
