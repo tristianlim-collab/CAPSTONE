@@ -6,6 +6,18 @@ import 'leaflet.heat';
 import { Loader2, AlertCircle, Maximize2, Zap, Filter, Trophy, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { analyticsAPI, reportAPI } from '../../api';
 
+// Helper component to fix Leaflet map container sizing when loaded inside dynamic layouts
+const MapResizer = () => {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+};
+
 // Heatmap Layer Component
 const HeatmapLayer = ({ points }) => {
   const map = useMap();
@@ -213,6 +225,7 @@ const KDEHeatmap = ({ incidentTypes = [] }) => {
             className="w-full h-full grayscale-[0.3] contrast-[1.05]"
             zoomControl={false}
           >
+            <MapResizer />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
