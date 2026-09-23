@@ -223,8 +223,8 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
       <div className="mb-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded">
         <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Target Response Unit</p>
         {loadingUnit ? (
-          <div className="flex items-center gap-1 text-[10px] text-slate-400">
-            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Calculating nearest unit...
+          <div className="flex items-center gap-1 text-[10px] text-blue-600 font-medium">
+            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Auto-matching nearest station...
           </div>
         ) : nearestUnit ? (
           <div className="flex flex-col gap-0.5">
@@ -237,7 +237,7 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
             </span>
           </div>
         ) : (
-          <p className="text-[10px] text-slate-500 italic">No available units found nearby.</p>
+          <p className="text-[10px] text-emerald-700 font-semibold">Auto-dispatch to local station on approval</p>
         )}
       </div>
 
@@ -245,7 +245,7 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
         <button
           onClick={handleApprove}
           disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-green-600 text-white text-[10px] font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-green-600 text-white text-[10px] font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50 active:scale-95"
         >
           {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <CheckCircle className="w-2.5 h-2.5" />}
           Approve & Dispatch
@@ -253,7 +253,7 @@ const QuickVerifyActions = ({ incident, onVerify }) => {
         <button
           onClick={handleReject}
           disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50 active:scale-95"
         >
           {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <XCircle className="w-2.5 h-2.5" />}
           Reject

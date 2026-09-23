@@ -469,33 +469,45 @@ const ResponseMap = () => {
     // 5. Verification / Approval (Prepend for auto-zoom tracking & map update)
     const handleVerifiedMap = (data) => {
       const verifiedInc = data.incident || data;
-      if (!verifiedInc || (!verifiedInc.latitude && !data.latitude)) return;
+      if (!verifiedInc) return;
 
-      const incObj = { ...verifiedInc, status: verifiedInc.status || 'RESPONDING' };
+      const incObj = { 
+        ...verifiedInc, 
+        status: verifiedInc.status || 'RESPONDING',
+        latitude: Number(verifiedInc.latitude || data.latitude),
+        longitude: Number(verifiedInc.longitude || data.longitude)
+      };
+      
+      if (!incObj.latitude || !incObj.longitude) return;
+
       const incId = incObj.incident_id || data.incident_id;
+      const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
+      
+      const unitCity = (user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
+      const incidentCity = (incObj.barangay?.municipality || incObj.barangay?.city || incObj.map_pin_address || '').toLowerCase();
 
-      const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id);
-      const unitName = user?.unit?.unit_name?.toLowerCase() || '';
-      const incidentAddress = (incObj.map_pin_address || '').toLowerCase();
-
-      const isSilayUnit = unitName.includes('silay');
-      const isTalisayUnit = unitName.includes('talisay');
-      const isSilayIncident = incidentAddress.includes('silay');
-      const isTalisayIncident = incidentAddress.includes('talisay');
+      const isSilayUnit = unitCity.includes('silay');
+      const isTalisayUnit = unitCity.includes('talisay');
+      const isSilayIncident = incidentCity.includes('silay');
+      const isTalisayIncident = incidentCity.includes('talisay');
 
       let shouldShow = true;
       if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
       if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
 
+      // Show if assigned OR if within unit jurisdiction
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
-          const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
-          if (isCrossCity && !isAssigned) return prev.filter(i => i.incident_id !== incId);
-
           const others = prev.filter(i => i.incident_id !== incId);
           return [incObj, ...others];
         });
         setSelectedIncidentId(incId);
+        
+        toast(`🚨 Newly Approved Incident #${incObj.incident_code || ''}!`, {
+          icon: '📍',
+          style: { fontWeight: 'bold', borderLeft: '4px solid #10b981' },
+          duration: 4000
+        });
       }
     };
 
