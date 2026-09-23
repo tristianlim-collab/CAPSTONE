@@ -47,7 +47,16 @@ app.use("/api/post-reports", postReportRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/config", systemConfigRoutes);
 
-app.get("/api/health", (_req, res) => {
+app.get("/", (_req, res) => {
+  return res.status(200).json(
+    success({
+      message: "GAOIRS Backend API Service is running",
+      data: { status: "ONLINE", uptime: process.uptime() },
+    })
+  );
+});
+
+app.get(["/api/health", "/health"], (_req, res) => {
   return res.status(200).json(
     success({
       message: "GAOIRS API is healthy",
