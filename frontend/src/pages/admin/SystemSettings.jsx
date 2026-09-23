@@ -82,7 +82,6 @@ const SystemSettings = () => {
     { id: 'general', label: 'General Info', icon: <Globe size={18} /> },
     { id: 'roles', label: 'Roles & Permissions', icon: <ShieldCheck size={18} /> },
     { id: 'notifications', label: 'Notification Rules', icon: <Bell size={18} /> },
-    { id: 'mail', label: 'SMTP Server', icon: <Mail size={18} /> },
     { id: 'support', label: 'Help & Documentation', icon: <HelpCircle size={18} /> },
   ]), []);
 
@@ -295,36 +294,6 @@ const SystemSettings = () => {
                 <p className="text-sm text-slate-500">Configure global and role-specific alerting methodologies.</p>
               </div>
               <div className="space-y-6">
-                {/* Email */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                    <div className="p-2.5 bg-white text-indigo-600 rounded-lg shadow-sm"><Mail size={18} /></div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">Email Notifications</h4>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">SMTP Provider: SendGrid (Active)</p>
-                    </div>
-                  </div>
-                  <div className="p-2 space-y-1">
-                    {renderToggle('email_critical', 'Critical Incident Summaries', 'Send immediate email blasts to all admins for CRITICAL priority events.')}
-                    <div className="h-px bg-slate-100 mx-4" />
-                    {renderToggle('email_daily', 'Daily Digest Reports', 'Send automated 24-hour summary logs every night at midnight.')}
-                  </div>
-                </div>
-                {/* SMS */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
-                    <div className="p-2.5 bg-white text-emerald-600 rounded-lg shadow-sm"><MessageSquare size={18} /></div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">SMS Dispatch</h4>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Gateway: Twilio (Operational)</p>
-                    </div>
-                  </div>
-                  <div className="p-2 space-y-1">
-                    {renderToggle('sms_dispatch', 'Unit Dispatch Alerts', 'Send automated SMS to field responder units when they are assigned a ticket.')}
-                    <div className="h-px bg-slate-100 mx-4" />
-                    {renderToggle('sms_alerts', 'Citizen Status Updates', 'Send SMS updates to the reporting citizen when units are dispatched or arrive.')}
-                  </div>
-                </div>
                 {/* Push */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
@@ -344,52 +313,7 @@ const SystemSettings = () => {
             </>
           )}
 
-          {/* ─── SMTP Server Tab ─── */}
-          {activeTab === 'mail' && (
-            <>
-              <div className="mb-6 pb-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 tracking-tight mb-2 flex items-center gap-2">
-                  <Mail size={20} className="text-indigo-600" />
-                  SMTP Email Server
-                </h3>
-                <p className="text-sm text-slate-500">Configure outgoing mail server for alerts and notifications.</p>
-              </div>
-              {isLoading ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8 text-slate-400" /></div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <label className="block text-sm font-bold text-slate-700">SMTP Host</label>
-                      <input type="text" value={configs.SMTP_HOST?.value || configs.SMTP_HOST || ''} onChange={(e) => handleConfigChange('SMTP_HOST', e.target.value)} placeholder="smtp.example.com" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="block text-sm font-bold text-slate-700">SMTP Port</label>
-                      <input type="number" value={configs.SMTP_PORT?.value || configs.SMTP_PORT || ''} onChange={(e) => handleConfigChange('SMTP_PORT', e.target.value)} placeholder="587" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">SMTP User</label>
-                    <input type="text" value={configs.SMTP_USER?.value || configs.SMTP_USER || ''} onChange={(e) => handleConfigChange('SMTP_USER', e.target.value)} placeholder="api_user" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                  </div>
-                  <div className="space-y-3 relative">
-                    <label className="block text-sm font-bold text-slate-700">SMTP Password</label>
-                    <div className="relative">
-                      <input type={showSecrets['SMTP_PASS'] ? 'text' : 'password'} value={configs.SMTP_PASS?.value === '********' ? '********' : (configs.SMTP_PASS?.value || configs.SMTP_PASS || '')} onChange={(e) => handleConfigChange('SMTP_PASS', e.target.value, true)} placeholder="••••••••" className="w-full px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                      <button type="button" onClick={() => setShowSecrets(p => ({ ...p, SMTP_PASS: !p.SMTP_PASS }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                        {showSecrets['SMTP_PASS'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">This value is encrypted at rest. Enter a new password to change it.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-bold text-slate-700">From Address</label>
-                    <input type="email" value={configs.SMTP_FROM?.value || configs.SMTP_FROM || ''} onChange={(e) => handleConfigChange('SMTP_FROM', e.target.value)} placeholder="noreply@gaoirs.gov.ph" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50 focus:bg-white" />
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+
 
 
 
