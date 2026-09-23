@@ -19,9 +19,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-    // Fast auto-sync every 5 seconds + instant WebSocket push
-    const reconcileInterval = setInterval(fetchDashboardData, 5000);
-    return () => clearInterval(reconcileInterval);
   }, [filters]);
 
   useEffect(() => {
