@@ -33,6 +33,9 @@ model User {
   barangay         Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit             ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
 
+  @@index([role])
+  @@index([barangay_id])
+  @@index([unit_id])
   @@map("USER")
 }
 
@@ -66,6 +69,9 @@ model ResponseUnit {
   barangay            Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   users               User[]               @relation("UnitUser")
 
+  @@index([availability_status])
+  @@index([barangay_id])
+  @@index([unit_type])
   @@map("RESPONSE_UNIT")
 }
 
@@ -134,6 +140,8 @@ model PostIncidentReport {
   reviewed_by           User?        @relation("PostReportReviewedBy", fields: [reviewed_by_id], references: [user_id])
   submitter             User         @relation("PostReportSubmitter", fields: [submitted_by], references: [user_id])
 
+  @@index([status])
+  @@index([submitted_at])
   @@map("POST_INCIDENT_REPORTS")
 }
 
@@ -152,6 +160,10 @@ model IncidentAssignment {
   incident         Incident         @relation(fields: [incident_id], references: [incident_id])
   unit             ResponseUnit     @relation(fields: [unit_id], references: [unit_id])
 
+  @@index([incident_id])
+  @@index([unit_id])
+  @@index([status])
+  @@index([assigned_at])
   @@map("INCIDENT_ASSIGNMENTS")
 }
 
@@ -165,6 +177,8 @@ model IncidentStatusLog {
   user        User           @relation("ChangedBy", fields: [changed_by], references: [user_id])
   incident    Incident       @relation(fields: [incident_id], references: [incident_id])
 
+  @@index([incident_id])
+  @@index([changed_at])
   @@map("INCIDENT_STATUS_LOG")
 }
 
@@ -178,6 +192,7 @@ model Evidence {
   incident    Incident @relation(fields: [incident_id], references: [incident_id])
   uploader    User?    @relation("UploadedBy", fields: [uploaded_by], references: [user_id])
 
+  @@index([incident_id])
   @@map("EVIDENCE")
 }
 
@@ -194,6 +209,9 @@ model Notification {
   incident        Incident       @relation(fields: [incident_id], references: [incident_id])
   unit            ResponseUnit?  @relation(fields: [unit_id], references: [unit_id])
 
+  @@index([unit_id])
+  @@index([delivery_status])
+  @@index([sent_at])
   @@map("NOTIFICATIONS")
 }
 
@@ -222,6 +240,8 @@ model SystemAuditLog {
   created_at  DateTime @default(now())
   user        User     @relation("AuditUser", fields: [user_id], references: [user_id])
 
+  @@index([user_id])
+  @@index([created_at])
   @@map("SYSTEM_AUDIT_LOGS")
 }
 
