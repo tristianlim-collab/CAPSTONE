@@ -94,37 +94,36 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Try hard deletion by unlinking optional relations first
-    try {
-      await prisma.$transaction([
-        prisma.incident.updateMany({ where: { reported_by: userId }, data: { reported_by: null } }),
-        prisma.evidence.updateMany({ where: { uploaded_by: userId }, data: { uploaded_by: null } }),
-        prisma.notification.updateMany({ where: { assigned_by: userId }, data: { assigned_by: null } }),
-        prisma.systemConfig.updateMany({ where: { updated_by: userId }, data: { updated_by: null } }),
-        prisma.user.delete({ where: { user_id: userId } })
-      ]);
-    } catch (dbError) {
-      // If hard delete is prevented by audit logs, status logs, or assignments history,
-      // fallback to soft deletion (deactivating user account) to maintain system audit integrity
-      console.warn('Hard delete prevented by audit constraints. Soft deleting user account:', dbError.message);
-      await prisma.user.update({
-        where: { user_id: userId },
-        data: { is_active: false }
-      });
-    }
+    // Comprehensive cleanup transaction to allow permanent user deletion
+    await prisma.$transaction([
+      // Unlink optional foreign keys
+      prisma.incident.updateMany({ where: { reported_by: userId }, data: { reported_by: null } }),
+      prisma.evidence.updateMany({ where: { uploaded_by: userId }, data: { uploaded_by: null } }),
+      prisma.notification.updateMany({ where: { assigned_by: userId }, data: { assigned_by: null } }),
+      prisma.systemConfig.updateMany({ where: { updated_by: userId }, data: { updated_by: null } }),
+      prisma.postIncidentReport.updateMany({ where: { reviewed_by_id: userId }, data: { reviewed_by_id: null } }),
+      // Delete user log & assignment records
+      prisma.incidentStatusLog.deleteMany({ where: { changed_by: userId } }),
+      prisma.systemAuditLog.deleteMany({ where: { user_id: userId } }),
+      prisma.incidentAssignment.deleteMany({ where: { assigned_by: userId } }),
+      prisma.postIncidentReport.deleteMany({ where: { submitted_by: userId } }),
+      prisma.generatedReport.deleteMany({ where: { generated_by: userId } }),
+      // Delete the user record
+      prisma.user.delete({ where: { user_id: userId } })
+    ]);
 
     // Emit socket event for deletion
     socketService.emitUserDeleted(userId);
 
-    res.json({ message: 'User deleted or deactivated successfully' });
+    res.json({ message: 'User deleted successfully' });
 
-    // Log the deletion
+    // Log the deletion (using admin user id)
     await logAuditEvent({
       user_id: req.user.id,
       action: 'DELETED_USER',
       resource: 'USER',
       resource_id: userId,
-      details: `Deleted or deactivated user account with ID: ${userId}`,
+      details: `Permanently deleted user account: ${userToDelete.email} (${userToDelete.name})`,
       ip_address: req.ip
     });
 
