@@ -158,7 +158,22 @@ export const updateUnit = async (req, res) => {
 export const deleteUnit = async (req, res) => {
   try {
     const unitId = req.params.id;
-    await prisma.responseUnit.delete({ where: { unit_id: unitId } });
+    const unit = await prisma.responseUnit.findUnique({ where: { unit_id: unitId } });
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    // Clean up or unlink references in a single transaction
+    await prisma.$transaction([
+      // Unlink notifications
+      prisma.notification.updateMany({ where: { unit_id: unitId }, data: { unit_id: null } }),
+      // Delete incident assignments linked to this unit
+      prisma.incidentAssignment.deleteMany({ where: { unit_id: unitId } }),
+      // Delete user account linked to this unit if it exists
+      prisma.user.deleteMany({ where: { unit_id: unitId } }),
+      // Delete the response unit itself
+      prisma.responseUnit.delete({ where: { unit_id: unitId } })
+    ]);
 
     // Emit socket event for deletion
     socketService.emitResponseUnitDeleted(unitId);
@@ -171,12 +186,13 @@ export const deleteUnit = async (req, res) => {
       action: 'DELETED_UNIT',
       resource: 'RESPONSE_UNIT',
       resource_id: unitId,
-      details: `Deleted response unit with ID: ${unitId}`,
+      details: `Deleted response unit: ${unit.unit_name}`,
       ip_address: req.ip
     });
 
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting unit', error: error.message });
+    console.error('deleteUnit error:', error);
+    res.status(500).json({ message: error.message || 'Error deleting unit' });
   }
 };
 

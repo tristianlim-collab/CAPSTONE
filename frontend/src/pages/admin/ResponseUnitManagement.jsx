@@ -316,14 +316,8 @@ const ResponseUnitManagement = () => {
                   <option value="DRRMO">DRRMO Team</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Base Station (Barangay)</label>
-                <select value={formData.barangay_id} onChange={e => setFormData({ ...formData, barangay_id: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
-                  <option value="">-- Unassigned (System-Wide) --</option>
-                  {barangays.map(b => (
-                    <option key={b.barangay_id} value={b.barangay_id}>{b.name}</option>
-                  ))}
-                </select>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">Base Location (Barangay):</span> Automatically assigned when you pin/update the unit's location on the map.
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contact Number</label>
