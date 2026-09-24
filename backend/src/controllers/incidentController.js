@@ -309,17 +309,25 @@ export const getIncidents = async (req, res) => {
 export const tagSameReports = (incidents) => {
   if (!Array.isArray(incidents) || incidents.length === 0) return incidents;
 
+  // Pre-group incidents by type to reduce comparison complexity from O(N^2) to O(N)
+  const groupedByType = new Map();
+  incidents.forEach(inc => {
+    const key = inc.incident_type_id || 'default';
+    if (!groupedByType.has(key)) groupedByType.set(key, []);
+    groupedByType.get(key).push(inc);
+  });
+
   return incidents.map(incA => {
-    const sameGroup = incidents.filter(incB => {
+    const typeGroup = groupedByType.get(incA.incident_type_id || 'default') || [];
+    const sameGroup = typeGroup.filter(incB => {
       if (incB.incident_id === incA.incident_id) return false;
-      const sameType = incB.incident_type_id === incA.incident_type_id;
       const sameBarangay = (incB.barangay_id && incA.barangay_id && incB.barangay_id === incA.barangay_id);
       const closeLat = Math.abs((incB.latitude || 0) - (incA.latitude || 0)) <= 0.006;
       const closeLng = Math.abs((incB.longitude || 0) - (incA.longitude || 0)) <= 0.006;
       const sameLocation = sameBarangay || (closeLat && closeLng);
       const timeDiff = Math.abs(new Date(incB.reported_at || Date.now()) - new Date(incA.reported_at || Date.now()));
       const within24Hours = timeDiff <= 24 * 60 * 60 * 1000;
-      return sameType && sameLocation && within24Hours;
+      return sameLocation && within24Hours;
     });
 
     if (sameGroup.length > 0) {

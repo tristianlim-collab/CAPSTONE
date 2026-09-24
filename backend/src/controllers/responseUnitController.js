@@ -8,7 +8,17 @@ import { logAuditEvent } from './auditController.js';
 export const getAll = async (req, res) => {
   try {
     const units = await prisma.responseUnit.findMany({
-      include: { barangay: true }
+      include: {
+        barangay: {
+          select: {
+            barangay_id: true,
+            name: true,
+            municipality: true,
+            city: true,
+            congressional_district: true
+          }
+        }
+      }
     });
     res.json(units);
   } catch (error) {
