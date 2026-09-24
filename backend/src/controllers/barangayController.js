@@ -6,7 +6,15 @@ export const getAll = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const barangays = await prisma.barangay.findMany({ skip, take: limit });
+    const select = {
+      barangay_id: true,
+      name: true,
+      municipality: true,
+      city: true,
+      congressional_district: true
+    };
+
+    const barangays = await prisma.barangay.findMany({ select, skip, take: limit });
     const total = await prisma.barangay.count();
 
     res.json({
