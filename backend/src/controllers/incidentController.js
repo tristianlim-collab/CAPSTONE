@@ -254,7 +254,16 @@ export const getIncidents = async (req, res) => {
         where.status = { in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE'] };
       }
     }
-    // ADMIN can see all incidents
+
+    // ADMIN / SUB-ADMIN / RESPONSE_UNIT District Restrictions
+    if (req.user?.congressional_district) {
+      where.barangay = {
+        ...(where.barangay || {}),
+        congressional_district: { equals: req.user.congressional_district, mode: 'insensitive' }
+      };
+    }
+
+    // ADMIN can see all incidents (subject to district restriction if assigned)
 
     // Build include object based on ?include query param
     const includeParam = req.query.include?.split(',').map(s => s.trim()) || [];
@@ -1120,5 +1129,70 @@ export const getIncidentHotspots = async (req, res) => {
   } catch (error) {
     console.error('Hotspot calculation error:', error);
     res.status(500).json({ message: 'Failed to calculate hotspots', error: error.message });
+  }
+};
+
+/**
+ * Merge duplicate incidents under a primary main incident
+ * POST /api/incidents/merge
+ * Body: { primary_incident_id: string, duplicate_incident_ids: string[] }
+ */
+export const mergeDuplicateIncidents = async (req, res) => {
+  try {
+    const { primary_incident_id, duplicate_incident_ids } = req.body;
+
+    if (!primary_incident_id || !Array.isArray(duplicate_incident_ids) || duplicate_incident_ids.length === 0) {
+      return res.status(400).json({ message: 'Primary incident ID and duplicate incident IDs are required' });
+    }
+
+    const primary = await prisma.incident.findUnique({ where: { incident_id: primary_incident_id } });
+    if (!primary) {
+      return res.status(404).json({ message: 'Primary incident not found' });
+    }
+
+    // Update duplicate incidents: set is_duplicate = true, parent_incident_id = primary_incident_id, status = CLOSED
+    await prisma.incident.updateMany({
+      where: { incident_id: { in: duplicate_incident_ids } },
+      data: {
+        is_duplicate: true,
+        parent_incident_id: primary_incident_id,
+        status: 'CLOSED'
+      }
+    });
+
+    // Log status logs for merged duplicates
+    for (const dupId of duplicate_incident_ids) {
+      await prisma.incidentStatusLog.create({
+        data: {
+          incident_id: dupId,
+          changed_by: req.user.id,
+          status: 'CLOSED',
+          remarks: `Merged into primary report #${primary.incident_code}`
+        }
+      });
+    }
+
+    // Log audit event
+    await logAuditEvent({
+      user_id: req.user.id,
+      action: 'MERGED_INCIDENTS',
+      resource: 'INCIDENT',
+      resource_id: primary_incident_id,
+      details: `Merged ${duplicate_incident_ids.length} duplicate incident(s) under primary report #${primary.incident_code}`,
+      ip_address: req.ip
+    });
+
+    socketService.emitIncidentStatusUpdate({
+      incident_id: primary_incident_id,
+      status: primary.status
+    });
+
+    res.json({
+      message: `Successfully merged ${duplicate_incident_ids.length} duplicate report(s) into primary report #${primary.incident_code}`,
+      primary_incident_id
+    });
+  } catch (error) {
+    console.error('mergeDuplicateIncidents error:', error);
+    res.status(500).json({ message: 'Error merging duplicate incidents', error: error.message });
   }
 };

@@ -258,6 +258,25 @@ export default function IncidentVerificationQueue() {
     finally { setSubmitting(false); }
   };
 
+  const handleMergeDuplicates = async () => {
+    if (!selectedIncident || !selectedIncident.same_report_tag?.related_incidents) return;
+    setSubmitting(true);
+    try {
+      const duplicateIds = selectedIncident.same_report_tag.related_incidents.map(r => r.incident_id);
+      await api.post('/incidents/merge', {
+        primary_incident_id: selectedIncident.incident_id,
+        duplicate_incident_ids: duplicateIds
+      });
+      toast.success('Duplicate reports merged successfully');
+      fetchIncidents(searchFilters);
+      setSelectedIncident(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to merge duplicate incidents');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getTypeIcon = (type_id) => {
     const type = incidentTypes.find(t => t.type_id === type_id);
     if (!type) return FileText;
@@ -595,6 +614,15 @@ export default function IncidentVerificationQueue() {
                               </span>
                             </div>
                           ))}
+                          {selectedIncident.same_report_tag.is_primary && (
+                            <button
+                              onClick={handleMergeDuplicates}
+                              disabled={submitting}
+                              className="w-full mt-2 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                              {submitting ? <Loader2 size={14} className="animate-spin" /> : '🔗 Merge & Close Duplicates'}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

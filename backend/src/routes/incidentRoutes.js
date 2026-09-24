@@ -15,6 +15,7 @@ router.get('/heatmap', authenticate, authorize('ADMIN'), controller.getHeatmap);
 router.get('/analytics/hotspots', authenticate, authorize('ADMIN'), controller.getIncidentHotspots);
 router.patch('/:id/status', authenticate, authorize('ADMIN', 'RESPONSE_UNIT'), controller.updateIncidentStatus);
 router.post('/:id/backup', authenticate, authorize('ADMIN', 'RESPONSE_UNIT'), controller.requestBackup);
+router.post('/merge', authenticate, authorize('ADMIN'), controller.mergeDuplicateIncidents);
 router.post('/:id/verify', authenticate, authorize('ADMIN'), controller.verifyIncident);
 router.patch('/:id/edit', authenticate, authorize('ADMIN'), controller.editIncident);
 router.patch('/:id/priority', authenticate, authorize('ADMIN'), controller.updateIncidentPriority);

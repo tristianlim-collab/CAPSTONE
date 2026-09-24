@@ -11,7 +11,8 @@ const UserManagement = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '', congressional_district: '' });
+  const [districtFilter, setDistrictFilter] = useState('');
   const [units, setUnits] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -47,11 +48,12 @@ const UserManagement = () => {
         password: '', // Leave blank when editing to not change unless typed
         role: user.role,
         contact_number: user.contact_number || '',
-        unit_id: user.unit_id || ''
+        unit_id: user.unit_id || '',
+        congressional_district: user.congressional_district || ''
       });
     } else {
       setEditingId(null);
-      setFormData({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '' });
+      setFormData({ name: '', email: '', password: '', role: 'REPORTER', contact_number: '', unit_id: '', congressional_district: '' });
     }
     setIsModalOpen(true);
   };
@@ -72,6 +74,7 @@ const UserManagement = () => {
           email: formData.email,
           role: formData.role,
           contact_number: formData.contact_number,
+          congressional_district: formData.congressional_district || null,
           unit_id: formData.role === 'RESPONSE_UNIT' ? (formData.unit_id || null) : null
         });
         toast.success('User updated successfully');
@@ -84,6 +87,7 @@ const UserManagement = () => {
         }
         await userAPI.create({
           ...formData,
+          congressional_district: formData.congressional_district || null,
           unit_id: formData.role === 'RESPONSE_UNIT' ? (formData.unit_id || null) : null
         });
         toast.success('User account created');
@@ -136,7 +140,11 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || u.email?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || u.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDistrict = !districtFilter || (u.congressional_district || u.barangay?.congressional_district || '') === districtFilter;
+    return matchesSearch && matchesDistrict;
+  });
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in relative">
@@ -145,7 +153,7 @@ const UserManagement = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">System Users</h2>
-          <p className="text-sm text-slate-500 mt-1">Manage user accounts, roles, and access credentials.</p>
+          <p className="text-sm text-slate-500 mt-1">Manage user accounts, roles, congressional districts, and access credentials.</p>
         </div>
         <button onClick={() => openModal()} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm shadow-indigo-600/20 active:scale-95">
           <Plus size={18} />
@@ -190,6 +198,23 @@ const UserManagement = () => {
               className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-white"
             />
           </div>
+
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-slate-400" />
+            <select
+              value={districtFilter}
+              onChange={(e) => setDistrictFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All Congressional Districts</option>
+              <option value="1st District">1st District</option>
+              <option value="2nd District">2nd District</option>
+              <option value="3rd District">3rd District</option>
+              <option value="4th District">4th District</option>
+              <option value="5th District">5th District</option>
+              <option value="6th District">6th District</option>
+            </select>
+          </div>
         </div>
 
         {/* Data Table */}
@@ -198,6 +223,7 @@ const UserManagement = () => {
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest">
                 <th className="px-6 py-4 font-bold">User Details</th>
+                <th className="px-6 py-4 font-bold">Congressional District</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold">Role</th>
                 <th className="px-6 py-4 font-bold">Date Joined</th>
@@ -206,9 +232,9 @@ const UserManagement = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400"><Loader2 className="animate-spin w-8 h-8 mx-auto" /></td></tr>
+                <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-400"><Loader2 className="animate-spin w-8 h-8 mx-auto" /></td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-medium">No users found.</td></tr>
+                <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400 font-medium">No users found.</td></tr>
               ) : filteredUsers.map((u) => (
                 <tr key={u.user_id} className="hover:bg-slate-50/80 transition-colors group">
                   <td className="px-6 py-4">
@@ -221,6 +247,11 @@ const UserManagement = () => {
                         <p className="text-xs text-slate-500">{u.email}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                      {u.congressional_district || u.barangay?.congressional_district || 'Unassigned'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     {getStatusBadge(u.is_active !== false ? 'Active' : 'Inactive')}
@@ -281,6 +312,18 @@ const UserManagement = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Phone Number</label>
                 <input type="text" value={formData.contact_number} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="+63 900 000 0000" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Congressional District</label>
+                <select value={formData.congressional_district} onChange={e => setFormData({ ...formData, congressional_district: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
+                  <option value="">-- Select Congressional District --</option>
+                  <option value="1st District">1st District</option>
+                  <option value="2nd District">2nd District</option>
+                  <option value="3rd District">3rd District</option>
+                  <option value="4th District">4th District</option>
+                  <option value="5th District">5th District</option>
+                  <option value="6th District">6th District</option>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">System Role</label>

@@ -9,29 +9,30 @@ datasource db {
 }
 
 model User {
-  user_id          String               @id @default(uuid())
-  name             String
-  email            String               @unique
-  password_hash    String
-  contact_number   String?
-  role             Role
-  barangay_id      String?
-  unit_id          String?
-  created_at       DateTime             @default(now())
-  fcm_token        String?
-  is_active        Boolean              @default(true)
-  evidence         Evidence[]           @relation("UploadedBy")
-  reports          GeneratedReport[]    @relation("GeneratedBy")
-  incidents        Incident[]           @relation("ReportedBy")
-  assignments      IncidentAssignment[] @relation("AssignedByUser")
-  status_logs      IncidentStatusLog[]  @relation("ChangedBy")
-  notifications    Notification[]       @relation("AssignedTo")
-  reviewed_reports PostIncidentReport[] @relation("PostReportReviewedBy")
-  post_reports     PostIncidentReport[] @relation("PostReportSubmitter")
-  audit_logs       SystemAuditLog[]     @relation("AuditUser")
-  configs          SystemConfig[]
-  barangay         Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
-  unit             ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
+  user_id                String               @id @default(uuid())
+  name                   String
+  email                  String               @unique
+  password_hash          String
+  contact_number         String?
+  role                   Role
+  barangay_id            String?
+  unit_id                String?
+  congressional_district String?
+  created_at             DateTime             @default(now())
+  fcm_token              String?
+  is_active              Boolean              @default(true)
+  evidence               Evidence[]           @relation("UploadedBy")
+  reports                GeneratedReport[]    @relation("GeneratedBy")
+  incidents              Incident[]           @relation("ReportedBy")
+  assignments            IncidentAssignment[] @relation("AssignedByUser")
+  status_logs            IncidentStatusLog[]  @relation("ChangedBy")
+  notifications          Notification[]       @relation("AssignedTo")
+  reviewed_reports       PostIncidentReport[] @relation("PostReportReviewedBy")
+  post_reports           PostIncidentReport[] @relation("PostReportSubmitter")
+  audit_logs             SystemAuditLog[]     @relation("AuditUser")
+  configs                SystemConfig[]
+  barangay               Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  unit                   ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
 
   @@index([role])
   @@index([barangay_id])
@@ -88,36 +89,41 @@ model IncidentType {
 }
 
 model Incident {
-  incident_id      String               @id @default(uuid())
-  incident_code    String               @unique
-  reported_by      String?
-  incident_type_id String
-  barangay_id      String?
-  description      String
-  landmark         String?
-  latitude         Float
-  longitude        Float
-  map_pin_address  String?
-  status           IncidentStatus       @default(REPORTED)
-  severity         Severity             @default(HIGH)
-  reported_at      DateTime             @default(now())
-  updated_at       DateTime             @updatedAt
-  priority         Priority             @default(MEDIUM)
-  reporter_name    String?
-  reporter_phone   String?
-  evidence         Evidence[]
-  barangay         Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
-  incident_type    IncidentType         @relation(fields: [incident_type_id], references: [type_id])
-  reporter         User?                @relation("ReportedBy", fields: [reported_by], references: [user_id])
-  assignments      IncidentAssignment[]
-  status_logs      IncidentStatusLog[]
-  notifications    Notification[]
-  post_report      PostIncidentReport?
+  incident_id        String               @id @default(uuid())
+  incident_code      String               @unique
+  reported_by        String?
+  incident_type_id   String
+  barangay_id        String?
+  description        String
+  landmark           String?
+  latitude           Float
+  longitude          Float
+  map_pin_address    String?
+  status             IncidentStatus       @default(REPORTED)
+  severity           Severity             @default(HIGH)
+  reported_at        DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  priority           Priority             @default(MEDIUM)
+  reporter_name      String?
+  reporter_phone     String?
+  is_duplicate       Boolean              @default(false)
+  parent_incident_id String?
+  evidence           Evidence[]
+  barangay           Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  incident_type      IncidentType         @relation(fields: [incident_type_id], references: [type_id])
+  reporter           User?                @relation("ReportedBy", fields: [reported_by], references: [user_id])
+  parent_incident    Incident?            @relation("DuplicateIncidents", fields: [parent_incident_id], references: [incident_id], onDelete: NoAction, onUpdate: NoAction)
+  duplicate_reports  Incident[]           @relation("DuplicateIncidents")
+  assignments        IncidentAssignment[]
+  status_logs        IncidentStatusLog[]
+  notifications      Notification[]
+  post_report        PostIncidentReport?
 
   @@index([status])
   @@index([barangay_id])
   @@index([incident_type_id])
   @@index([reported_at])
+  @@index([parent_incident_id])
   @@map("INCIDENT")
 }
 

@@ -56,6 +56,7 @@ export default function IncidentReportForm() {
   const [photos, setPhotos] = useState([]);
   const [selectedType, setSelectedType] = useState('');
   const [severity, setSeverity] = useState('LOW');
+  const [landmark, setLandmark] = useState('');
   const [fullName, setFullName] = useState('');
   const [contactNumber, setContactNumber] = useState('+63');
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -255,6 +256,7 @@ export default function IncidentReportForm() {
         latitude: location.lat,
         longitude: location.lng,
         map_pin_address: locationAddress,
+        landmark: landmark || undefined,
         severity: severity,
         reporter_name: fullName || undefined,
         reporter_phone: contactNumber
@@ -420,7 +422,7 @@ export default function IncidentReportForm() {
           </div>
 
           {/* Location Status */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-3">
             <div className="flex items-start gap-2">
               <MapPin size={16} className="text-green-600 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
@@ -441,6 +443,20 @@ export default function IncidentReportForm() {
               </div>
             </div>
           </div>
+
+          {/* Near Landmark / Location Details Field */}
+          <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              Near Landmark / Additional Details <span className="text-slate-400 font-normal"></span>
+            </label>
+            <input
+              type="text"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              placeholder='e.g. "near the church" or "beside the school"'
+              className="w-full text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
         </div>
 
         {/* EMERGENCY TYPE SECTION */}
@@ -459,15 +475,14 @@ export default function IncidentReportForm() {
               Emergency Type <span className="text-red-500">*</span>
             </h3>
             {selectedType && (
-              <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
-                selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
+              <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
                   ? 'bg-amber-50 text-amber-600 border-amber-300'
                   : selectedType.toLowerCase().includes('fire')
-                  ? 'bg-orange-50 text-orange-600 border-orange-300'
-                  : selectedType.toLowerCase().includes('med')
-                  ? 'bg-rose-50 text-rose-600 border-rose-300'
-                  : 'bg-blue-50 text-blue-600 border-blue-300'
-              }`}>
+                    ? 'bg-orange-50 text-orange-600 border-orange-300'
+                    : selectedType.toLowerCase().includes('med')
+                      ? 'bg-rose-50 text-rose-600 border-rose-300'
+                      : 'bg-blue-50 text-blue-600 border-blue-300'
+                }`}>
                 {selectedType.toUpperCase()}
               </span>
             )}
@@ -475,11 +490,10 @@ export default function IncidentReportForm() {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className={`w-full px-4 py-3 rounded-xl border bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 shadow-sm appearance-none cursor-pointer ${
-              selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
+            className={`w-full px-4 py-3 rounded-xl border bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 shadow-sm appearance-none cursor-pointer ${selectedType.toLowerCase().includes('accid') || selectedType.toLowerCase().includes('road')
                 ? 'border-amber-400 focus:ring-amber-500/20 focus:border-amber-500'
                 : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
-            }`}
+              }`}
             style={{
               backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
@@ -490,11 +504,11 @@ export default function IncidentReportForm() {
             <option value="">-- Select Emergency Type --</option>
             {incidentTypes.length > 0
               ? incidentTypes.map((type) => (
-                  <option key={type.type_id} value={type.name}>{type.name}</option>
-                ))
+                <option key={type.type_id} value={type.name}>{type.name}</option>
+              ))
               : emergencyTypesList.map((type) => (
-                  <option key={type.id} value={type.name}>{type.name}</option>
-                ))
+                <option key={type.id} value={type.name}>{type.name}</option>
+              ))
             }
           </select>
         </div>
@@ -509,13 +523,12 @@ export default function IncidentReportForm() {
               <button
                 key={level}
                 onClick={() => setSeverity(level)}
-                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all border ${
-                  severity === level
+                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all border ${severity === level
                     ? level === 'CRITICAL' ? 'bg-red-500 text-white border-red-500 shadow-[0_4px_12px_rgba(239,68,68,0.3)]'
                       : level === 'HIGH' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_12px_rgba(249,115,22,0.3)]'
-                      : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
+                        : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)]'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                }`}
+                  }`}
               >
                 {level}
               </button>
@@ -555,11 +568,10 @@ export default function IncidentReportForm() {
                 setContactNumber(`+63${normalized}`);
               }}
               onBlur={() => setPhoneTouched(true)}
-              className={`w-full px-4 py-3 rounded-xl bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-blue-500 shadow-sm ${
-                showPhoneError
+              className={`w-full px-4 py-3 rounded-xl bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-blue-500 shadow-sm ${showPhoneError
                   ? 'border-red-300 focus:ring-red-500/20'
                   : 'border-slate-200 focus:ring-blue-500/20'
-              }`}
+                }`}
             />
             {showPhoneError && (
               <p className="text-xs text-red-600 -mt-1">Contact number is required. Use +639XXXXXXXXX</p>
@@ -582,11 +594,10 @@ export default function IncidentReportForm() {
           <button
             onClick={handleSubmit}
             disabled={loading || !location || !selectedType || photos.length === 0}
-            className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
-              !loading && location && selectedType && photos.length > 0
+            className={`w-full py-4 rounded-2xl font-bold text-[15px] tracking-wide uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${!loading && location && selectedType && photos.length > 0
                 ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-            }`}
+              }`}
           >
             {loading ? (
               <>

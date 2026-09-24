@@ -8,14 +8,21 @@ export const getAllUsers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const { district } = req.query;
+
+    const where = {};
+    if (district) {
+      where.congressional_district = { contains: district, mode: 'insensitive' };
+    }
 
     const users = await prisma.user.findMany({
+      where,
       skip,
       take: limit,
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true, unit_id: true, created_at: true }
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true, unit_id: true, congressional_district: true, created_at: true }
     });
     
-    const total = await prisma.user.count();
+    const total = await prisma.user.count({ where });
 
     res.json({
       data: users,
@@ -46,11 +53,11 @@ export const getUserById = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, role, contact_number, unit_id } = req.body;
+    const { name, email, role, contact_number, unit_id, congressional_district } = req.body;
     const user = await prisma.user.update({
       where: { user_id: req.params.id },
-      data: { name, email, role, contact_number, unit_id },
-      select: { user_id: true, name: true, email: true, role: true, unit_id: true }
+      data: { name, email, role, contact_number, unit_id, congressional_district },
+      select: { user_id: true, name: true, email: true, role: true, unit_id: true, congressional_district: true }
     });
     res.json(user);
 
@@ -142,7 +149,7 @@ export const toggleStatus = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, contact_number, unit_id } = req.body;
+    const { name, email, password, role, contact_number, unit_id, congressional_district } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -158,13 +165,14 @@ export const createUser = async (req, res) => {
         password_hash: hashedPassword,
         role: role || 'REPORTER',
         contact_number,
-        unit_id
+        unit_id,
+        congressional_district
       }
     });
 
     res.status(201).json({
       message: 'User created successfully',
-      user: { id: user.user_id, name: user.name, email: user.email, role: user.role }
+      user: { id: user.user_id, name: user.name, email: user.email, role: user.role, congressional_district: user.congressional_district }
     });
 
     // Log the creation
