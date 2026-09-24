@@ -158,22 +158,48 @@ export const updateUnit = async (req, res) => {
 export const deleteUnit = async (req, res) => {
   try {
     const unitId = req.params.id;
-    const unit = await prisma.responseUnit.findUnique({ where: { unit_id: unitId } });
+    const unit = await prisma.responseUnit.findUnique({
+      where: { unit_id: unitId },
+      include: { users: true }
+    });
     if (!unit) {
       return res.status(404).json({ message: 'Unit not found' });
     }
 
-    // Clean up or unlink references in a single transaction
-    await prisma.$transaction([
-      // Unlink notifications
-      prisma.notification.updateMany({ where: { unit_id: unitId }, data: { unit_id: null } }),
-      // Delete incident assignments linked to this unit
-      prisma.incidentAssignment.deleteMany({ where: { unit_id: unitId } }),
-      // Delete user account linked to this unit if it exists
-      prisma.user.deleteMany({ where: { unit_id: unitId } }),
-      // Delete the response unit itself
-      prisma.responseUnit.delete({ where: { unit_id: unitId } })
-    ]);
+    // Unlink any users assigned to this unit first
+    await prisma.user.updateMany({
+      where: { unit_id: unitId },
+      data: { unit_id: null }
+    });
+
+    // For linked auto-generated response unit users, try deleting them safely if they have no audit/status log dependencies
+    if (unit.users && unit.users.length > 0) {
+      for (const u of unit.users) {
+        try {
+          await prisma.$transaction([
+            prisma.incident.updateMany({ where: { reported_by: u.user_id }, data: { reported_by: null } }),
+            prisma.evidence.updateMany({ where: { uploaded_by: u.user_id }, data: { uploaded_by: null } }),
+            prisma.notification.updateMany({ where: { assigned_by: u.user_id }, data: { assigned_by: null } }),
+            prisma.systemConfig.updateMany({ where: { updated_by: u.user_id }, data: { updated_by: null } }),
+            prisma.user.delete({ where: { user_id: u.user_id } })
+          ]);
+        } catch (uErr) {
+          // If user cannot be hard deleted due to audit/incident history, soft delete / deactivate it
+          console.warn(`User ${u.user_id} could not be hard deleted:`, uErr.message);
+          await prisma.user.update({
+            where: { user_id: u.user_id },
+            data: { is_active: false }
+          });
+        }
+      }
+    }
+
+    // Clean up notifications and incident assignments linked to this unit
+    await prisma.notification.updateMany({ where: { unit_id: unitId }, data: { unit_id: null } });
+    await prisma.incidentAssignment.deleteMany({ where: { unit_id: unitId } });
+
+    // Finally delete the response unit
+    await prisma.responseUnit.delete({ where: { unit_id: unitId } });
 
     // Emit socket event for deletion
     socketService.emitResponseUnitDeleted(unitId);

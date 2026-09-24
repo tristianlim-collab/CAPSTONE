@@ -5,32 +5,36 @@ import { logAuditEvent } from './auditController.js';
 
 export const getAllUsers = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const { district } = req.query;
+    const { district, limit } = req.query;
 
     const where = {};
     if (district) {
       where.congressional_district = { contains: district, mode: 'insensitive' };
     }
 
-    const users = await prisma.user.findMany({
+    const queryOptions = {
       where,
-      skip,
-      take: limit,
-      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true, unit_id: true, congressional_district: true, created_at: true }
-    });
-    
+      select: { user_id: true, name: true, email: true, role: true, contact_number: true, is_active: true, unit_id: true, congressional_district: true, created_at: true },
+      orderBy: { created_at: 'desc' }
+    };
+
+    if (limit) {
+      const page = parseInt(req.query.page) || 1;
+      const parsedLimit = parseInt(limit);
+      queryOptions.skip = (page - 1) * parsedLimit;
+      queryOptions.take = parsedLimit;
+    }
+
+    const users = await prisma.user.findMany(queryOptions);
     const total = await prisma.user.count({ where });
 
     res.json({
       data: users,
       pagination: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
+        page: parseInt(req.query.page) || 1,
+        limit: limit ? parseInt(limit) : total,
+        totalPages: limit ? Math.ceil(total / parseInt(limit)) : 1
       }
     });
   } catch (error) {
