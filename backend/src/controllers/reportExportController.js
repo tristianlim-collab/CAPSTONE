@@ -680,6 +680,136 @@ export const exportPostReportsPDF = async (req, res) => {
 
     let executablePath = commonPaths.find(p => fs.existsSync(p));
 
+    if (report_id && reports.length === 1) {
+      const r = reports[0];
+      const inc = r.incident || {};
+
+      if (executablePath) {
+        try {
+          const fmt = (d) => d ? new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+          const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 30px; font-size: 11px; line-height: 1.5; }
+              .header { border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+              .title { font-size: 18px; font-weight: 800; color: #0f172a; text-transform: uppercase; tracking: 0.5px; }
+              .subtitle { font-size: 10px; color: #64748b; margin-top: 2px; }
+              .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 10px; text-transform: uppercase; background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+              
+              .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-top: 18px; margin-bottom: 10px; }
+              
+              .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+              .card { bg: #f8fafc; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; }
+              .card-label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
+              .card-value { font-size: 11px; font-weight: 700; color: #0f172a; }
+              
+              .box { background-color: #f1f5f9; border-left: 4px solid #2563eb; padding: 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; font-size: 11px; color: #1e293b; }
+              .photos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+              .photo-card { border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff; text-align: center; }
+              .photo-card img { width: 100%; height: 160px; object-fit: cover; }
+              .photo-caption { padding: 6px; font-size: 9px; color: #64748b; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+
+              .footer { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; font-size: 9px; color: #94a3b8; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div>
+                <div class="title">POST-INCIDENT FULL REPORT</div>
+                <div class="subtitle">GAOIRS Emergency Response System &bull; Code: <strong>${inc.incident_code || 'N/A'}</strong></div>
+              </div>
+              <div>
+                <span class="badge">${r.status || 'SUBMITTED'}</span>
+              </div>
+            </div>
+
+            <div class="section-title">1. Incident Summary</div>
+            <div class="grid">
+              <div class="card"><div class="card-label">Incident Type</div><div class="card-value">${inc.incident_type?.name || 'N/A'}</div></div>
+              <div class="card"><div class="card-label">Barangay / Location</div><div class="card-value">${inc.barangay?.name || inc.map_pin_address || 'N/A'}</div></div>
+              <div class="card"><div class="card-label">Reported At</div><div class="card-value">${fmt(inc.reported_at)}</div></div>
+              <div class="card"><div class="card-label">Severity Level</div><div class="card-value">${inc.severity || 'N/A'}</div></div>
+              <div class="card"><div class="card-label">City / District</div><div class="card-value">${inc.city || 'Talisay City'} (3rd District)</div></div>
+              <div class="card"><div class="card-label">Reporter</div><div class="card-value">${inc.reporter?.name || inc.reporter_name || 'Resident'}</div></div>
+            </div>
+
+            <div class="section-title">2. Response Unit Operations</div>
+            <div class="grid">
+              <div class="card"><div class="card-label">Responding Unit / Submitter</div><div class="card-value">${r.submitter?.name || 'N/A'}</div></div>
+              <div class="card"><div class="card-label">Response Time</div><div class="card-value" style="color:#2563eb;">${r.response_time_minutes ? `${r.response_time_minutes} Minutes` : 'Not recorded'}</div></div>
+              <div class="card"><div class="card-label">Report Submitted At</div><div class="card-value">${fmt(r.submitted_at)}</div></div>
+              <div class="card"><div class="card-label">Casualties / Injuries</div><div class="card-value">${r.casualties ?? 0}</div></div>
+              <div class="card"><div class="card-label">Est. Financial Damage</div><div class="card-value">${r.damages_estimate || 'None Reported'}</div></div>
+            </div>
+
+            <div class="section-title">3. Actions Taken</div>
+            <div class="box">
+              ${r.actions_taken || 'No operational actions specified.'}
+            </div>
+
+            ${r.remarks ? `
+              <div class="section-title">4. Responding Unit Remarks</div>
+              <div class="box" style="border-left-color: #64748b; background-color: #f8fafc;">
+                ${r.remarks}
+              </div>
+            ` : ''}
+
+            ${r.admin_notes ? `
+              <div class="section-title">5. Administrative Notes</div>
+              <div class="box" style="border-left-color: #059669; background-color: #ecfdf5;">
+                ${r.admin_notes}
+              </div>
+            ` : ''}
+
+            ${((r.photos && r.photos.length > 0) || (inc.evidence && inc.evidence.length > 0)) ? `
+              <div class="section-title">6. Attached Photo Evidence</div>
+              <div class="photos-grid">
+                ${(r.photos || []).map((img, idx) => `
+                  <div class="photo-card">
+                    <img src="${img}" alt="Responder Photo ${idx+1}" />
+                    <div class="photo-caption">Responder Photo #${idx+1}</div>
+                  </div>
+                `).join('')}
+                ${(inc.evidence || []).map((ev, idx) => `
+                  <div class="photo-card">
+                    <img src="${ev.file_path}" alt="Reporter Evidence ${idx+1}" />
+                    <div class="photo-caption">Reporter Evidence #${idx+1}</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              GAOIRS — Government Agency Operations Incident Response System &bull; Official Single Incident Analysis PDF
+            </div>
+          </body>
+          </html>`;
+
+          const browser = await puppeteer.launch({
+            headless: 'new',
+            executablePath,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+          });
+          const page = await browser.newPage();
+          await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+          const pdfBuffer = await page.pdf({ format: 'A4', landscape: false, printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' } });
+          await browser.close();
+
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="Incident_Report_${inc.incident_code || 'Details'}.pdf"`);
+          res.setHeader('Content-Length', pdfBuffer.length);
+          return res.end(pdfBuffer);
+        } catch (pErr) {
+          console.warn('Puppeteer launch failed for single report, fallback to table:', pErr.message);
+        }
+      }
+    }
+
+    // Default Multi-report summary PDF renderer
     if (executablePath) {
       try {
         const fmt = (d) => d ? new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
