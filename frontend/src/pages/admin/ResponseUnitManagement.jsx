@@ -40,11 +40,44 @@ const ResponseUnitManagement = () => {
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinUnit, setPinUnit] = useState(null);
   const [pinPosition, setPinPosition] = useState(null);
+  const [pinAddress, setPinAddress] = useState('');
+  const [addressLoading, setAddressLoading] = useState(false);
   const [savingPin, setSavingPin] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const reverseGeocode = async (lat, lng) => {
+    if (!lat || !lng) return;
+    setAddressLoading(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: { 'Accept': 'application/json', 'Accept-Language': 'en' }
+        }
+      );
+      const data = await response.json();
+      if (data && data.display_name) {
+        setPinAddress(data.display_name);
+      } else {
+        setPinAddress('');
+      }
+    } catch (err) {
+      console.error('Pin reverse geocode error:', err);
+      setPinAddress('');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const handleSelectPosition = (pos) => {
+    setPinPosition(pos);
+    if (pos) {
+      reverseGeocode(pos[0], pos[1]);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -128,11 +161,14 @@ const ResponseUnitManagement = () => {
   // Pin Location handlers
   const openPinModal = (unit) => {
     setPinUnit(unit);
-    setPinPosition(
-      unit.latitude && unit.longitude
-        ? [unit.latitude, unit.longitude]
-        : null
-    );
+    const pos = unit.latitude && unit.longitude
+      ? [unit.latitude, unit.longitude]
+      : null;
+    setPinPosition(pos);
+    setPinAddress('');
+    if (pos) {
+      reverseGeocode(pos[0], pos[1]);
+    }
     setPinModalOpen(true);
   };
 
@@ -140,6 +176,7 @@ const ResponseUnitManagement = () => {
     setPinModalOpen(false);
     setPinUnit(null);
     setPinPosition(null);
+    setPinAddress('');
   };
 
   const handleSavePin = async () => {
@@ -148,7 +185,8 @@ const ResponseUnitManagement = () => {
       setSavingPin(true);
       await responseUnitAPI.updateLocation(pinUnit.unit_id, {
         latitude: pinPosition[0],
-        longitude: pinPosition[1]
+        longitude: pinPosition[1],
+        map_pin_address: pinAddress
       });
       toast.success(`Location pinned for ${pinUnit.unit_name}`);
       closePinModal();
@@ -229,16 +267,15 @@ const ResponseUnitManagement = () => {
                 <th className="px-6 py-4 font-bold">Type</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold">Pinned</th>
-                <th className="px-6 py-4 font-bold">Base Location</th>
                 <th className="px-6 py-4 font-bold">Contact</th>
                 <th className="px-6 py-4 font-bold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-400"><Loader2 className="animate-spin w-8 h-8 mx-auto" /></td></tr>
+                <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-400"><Loader2 className="animate-spin w-8 h-8 mx-auto" /></td></tr>
               ) : filteredUnits.length === 0 ? (
-                <tr><td colSpan="7" className="px-6 py-8 text-center text-slate-400 font-medium">No units found.</td></tr>
+                <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400 font-medium">No units found.</td></tr>
               ) : filteredUnits.map((u) => (
                 <tr key={u.unit_id} className="hover:bg-slate-50/80 transition-colors group">
                   <td className="px-6 py-4">
@@ -264,9 +301,6 @@ const ResponseUnitManagement = () => {
                         No Pin
                       </span>
                     )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {u.barangay?.name || 'Unassigned'}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-600">
                     {u.contact_number || '-'}
@@ -316,9 +350,6 @@ const ResponseUnitManagement = () => {
                   <option value="DRRMO">DRRMO Team</option>
                 </select>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">Base Location (Barangay):</span> Automatically assigned when you pin/update the unit's location on the map.
-              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contact Number</label>
                 <input type="text" value={formData.contact_number} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="+63 900 000 0000" />
@@ -361,21 +392,30 @@ const ResponseUnitManagement = () => {
                   url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
                   maxZoom={20}
                 />
-                <MapClickHandler position={pinPosition} setPosition={setPinPosition} />
+                <MapClickHandler position={pinPosition} setPosition={handleSelectPosition} />
               </MapContainer>
             </div>
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-100 space-y-3">
               <div className="text-sm text-slate-600">
                 {pinPosition ? (
-                  <span className="flex items-center gap-1.5">
-                    <MapPin size={14} className="text-emerald-500" />
-                    <span className="font-mono text-xs">{pinPosition[0].toFixed(6)}, {pinPosition[1].toFixed(6)}</span>
-                  </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={14} className="text-emerald-500 shrink-0" />
+                      <span className="font-mono text-xs font-semibold">{pinPosition[0].toFixed(6)}, {pinPosition[1].toFixed(6)}</span>
+                    </div>
+                    {addressLoading ? (
+                      <p className="text-xs text-slate-400 animate-pulse pl-5">Detecting barangay location address...</p>
+                    ) : pinAddress ? (
+                      <p className="text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 line-clamp-2">
+                        📍 <span className="font-semibold">{pinAddress}</span>
+                      </p>
+                    ) : null}
+                  </div>
                 ) : (
                   <span className="text-slate-400 italic">Click on the map to place a pin</span>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
                 <button onClick={closePinModal} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-300 transition-colors text-sm">Cancel</button>
                 <button
                   onClick={handleSavePin}

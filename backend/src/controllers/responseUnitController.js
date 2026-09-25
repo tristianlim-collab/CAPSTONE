@@ -28,11 +28,11 @@ export const getAll = async (req, res) => {
 
 export const create = async (req, res) => {
   try {
-    let { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
+    let { unit_name, unit_type, contact_number, barangay_id, latitude, longitude, map_pin_address } = req.body;
     
     // Auto-detect the Barangay based on coordinates ONLY if coordinates are manually provided
     if (!barangay_id && latitude && longitude) {
-      barangay_id = await geoService.findBarangayByPoint(latitude, longitude);
+      barangay_id = await geoService.findBarangayByPoint(latitude, longitude, map_pin_address);
     }
 
     // 1. Create the physical Response Unit
@@ -83,16 +83,16 @@ export const create = async (req, res) => {
 
 export const updateLocation = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, map_pin_address } = req.body;
     
     // Auto-detect the Barangay based on the new map pin
     let detectedId = null;
     if (latitude !== undefined && longitude !== undefined) {
-      detectedId = await geoService.findBarangayByPoint(latitude, longitude);
+      detectedId = await geoService.findBarangayByPoint(latitude, longitude, map_pin_address);
     }
 
     const data = { latitude, longitude, last_updated: new Date() };
-    // Only update the barangay_id if a valid one was detected
+    // Update the barangay_id if a valid one was detected or set to null if unassigned
     if (detectedId) {
       data.barangay_id = detectedId;
     }
@@ -125,7 +125,7 @@ export const updateStatus = async (req, res) => {
 
 export const updateUnit = async (req, res) => {
   try {
-    const { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
+    const { unit_name, unit_type, contact_number, barangay_id, latitude, longitude, map_pin_address } = req.body;
     const data = {};
     if (unit_name !== undefined) data.unit_name = unit_name;
     if (unit_type !== undefined) data.unit_type = unit_type;
@@ -136,7 +136,7 @@ export const updateUnit = async (req, res) => {
 
     // Auto-detect the Barangay based on the map pin if coordinates are provided
     if (latitude && longitude && !barangay_id) {
-      const detectedId = await geoService.findBarangayByPoint(latitude, longitude);
+      const detectedId = await geoService.findBarangayByPoint(latitude, longitude, map_pin_address);
       if (detectedId) {
         data.barangay_id = detectedId;
       }

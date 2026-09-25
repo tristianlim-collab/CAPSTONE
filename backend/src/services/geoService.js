@@ -7,9 +7,9 @@ const geoService = {
    * Assumes boundary_geojson is stored as GeoJSON text in Prisma
    * Uses ST_Within via PostGIS
    */
-  async findBarangayByPoint(lat, lng) {
+  async findBarangayByPoint(lat, lng, mapPinAddress = null) {
     try {
-      // 1. Polygon ST_Within check
+      // 1. Polygon ST_Within check (for barangays with full GeoJSON boundary definitions)
       const polygonMatch = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
@@ -23,7 +23,13 @@ const geoService = {
         return polygonMatch[0].barangay_id;
       }
 
-      // 2. Proximity check (Find closest Barangay dynamically based on pinned lat & lng)
+      // 2. Parse address & auto-find or auto-create Barangay record dynamically
+      const autoDetectedId = await this.parseAndGetBarangay(lat, lng, mapPinAddress);
+      if (autoDetectedId) {
+        return autoDetectedId;
+      }
+
+      // 3. Proximity check (Find closest Barangay dynamically based on pinned lat & lng)
       const closest = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
@@ -39,13 +45,101 @@ const geoService = {
         return closest[0].barangay_id;
       }
 
-      const fallback = await prisma.barangay.findFirst();
-      return fallback ? fallback.barangay_id : null;
+      return null;
     } catch (error) {
       console.error('GeoService findBarangayByPoint Error:', error);
-      const fallback = await prisma.barangay.findFirst();
-      return fallback ? fallback.barangay_id : null;
+      return null;
     }
+  },
+
+  /**
+   * Helper: Parse reverse geocoded address to find or create the exact Barangay in the DB
+   */
+  async parseAndGetBarangay(lat, lng, mapPinAddress = null) {
+    try {
+      let addressObj = null;
+      let rawAddress = mapPinAddress || '';
+
+      // If address is missing or incomplete, query Nominatim API dynamically
+      if (!rawAddress || (!rawAddress.toLowerCase().includes('barangay') && !rawAddress.toLowerCase().includes('brgy'))) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { 'User-Agent': 'GAOIRS-App/1.0' } }
+          );
+          const data = await res.json();
+          if (data && data.address) {
+            addressObj = data.address;
+            rawAddress = data.display_name || rawAddress;
+          }
+        } catch (e) {
+          console.warn('GeoService reverse geocode fetch failed:', e.message);
+        }
+      }
+
+      let brgyName = null;
+      let municipality = null;
+
+      if (addressObj) {
+        brgyName = addressObj.suburb || addressObj.village || addressObj.quarter || addressObj.neighbourhood || addressObj.city_district || null;
+        municipality = addressObj.city || addressObj.town || addressObj.municipality || addressObj.county || null;
+      }
+
+      // Fallback: parse raw address text
+      const parts = (rawAddress || '').split(',').map(p => p.trim());
+      if (!brgyName) {
+        brgyName = parts.find(p => /^(barangay|brgy|bgy|zone|poblacion)/i.test(p)) || null;
+      }
+      if (!municipality) {
+        const nirLguList = ['silay', 'talisay', 'victorias', 'cadiz', 'sagay', 'san carlos', 'bago', 'la carlota', 'himamaylan', 'kabankalan', 'sipalay', 'bacolod', 'murcia', 'e.b. magalona', 'magalona', 'manapla', 'pulupandan', 'san enrique', 'valladolid', 'pontevedra', 'hinigaran', 'binalbagan', 'isabela', 'moises padilla', 'la castellana', 'toboso', 'calatrava', 'candoni', 'cauayan', 'ilog', 'hinoba-an', 'salvador benedicto'];
+        municipality = parts.find(p => nirLguList.some(c => p.toLowerCase().includes(c))) || null;
+      }
+
+      if (brgyName) {
+        const cleanBrgy = brgyName.trim();
+        const cleanMuni = (municipality || 'Negros Occidental').trim();
+
+        // 1. Check if exact barangay exists in DB
+        const existing = await prisma.barangay.findFirst({
+          where: {
+            name: { equals: cleanBrgy, mode: 'insensitive' },
+            OR: [
+              { municipality: { contains: cleanMuni, mode: 'insensitive' } },
+              { city: { contains: cleanMuni, mode: 'insensitive' } }
+            ]
+          }
+        });
+
+        if (existing) {
+          return existing.barangay_id;
+        }
+
+        // 2. Check if barangay matches by name alone
+        const existingNameOnly = await prisma.barangay.findFirst({
+          where: {
+            name: { equals: cleanBrgy, mode: 'insensitive' }
+          }
+        });
+
+        if (existingNameOnly) {
+          return existingNameOnly.barangay_id;
+        }
+
+        // 3. Auto-create missing Barangay record in database for this municipality/city
+        const newBrgy = await prisma.barangay.create({
+          data: {
+            name: cleanBrgy,
+            municipality: cleanMuni,
+            city: cleanMuni.toLowerCase().includes('city') ? cleanMuni : `${cleanMuni} City`,
+            boundary_geojson: {}
+          }
+        });
+        return newBrgy.barangay_id;
+      }
+    } catch (err) {
+      console.error('parseAndGetBarangay error:', err);
+    }
+    return null;
   },
 
   /**
