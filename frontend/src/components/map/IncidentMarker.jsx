@@ -158,104 +158,61 @@ const EvidenceGallery = ({ evidence, onExpand }) => {
   );
 };
 
-const QuickVerifyActions = ({ incident, onVerify }) => {
+const QuickVerifyActions = ({ incident, onVerify, onClosePopup }) => {
   const [submitting, setSubmitting] = useState(false);
   const [verifiedAction, setVerifiedAction] = useState(null);
-  const [nearestUnit, setNearestUnit] = useState(null);
-  const [loadingUnit, setLoadingUnit] = useState(false);
-
-  useEffect(() => {
-    if (incident.status === 'REPORTED') {
-      const fetchNearestUnit = async () => {
-        try {
-          setLoadingUnit(true);
-          const type = incident.incident_type?.default_unit_type || 'BARANGAY';
-          const res = await api.get('/assignments/nearest', { 
-            params: { incident_id: incident.incident_id, limit: 1, unit_type: type } 
-          });
-          if (res.data && res.data.length > 0) {
-            setNearestUnit(res.data[0]);
-          }
-        } catch (err) {
-          console.error('Failed to fetch nearest unit', err);
-        } finally {
-          setLoadingUnit(false);
-        }
-      };
-      fetchNearestUnit();
-    }
-  }, [incident.incident_id, incident.status, incident.incident_type]);
 
   if (!onVerify || incident.status !== 'REPORTED' || verifiedAction) return null;
 
-  const handleApprove = async (e) => {
+  const handleApprove = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setSubmitting(true);
-    try {
-      await onVerify(incident.incident_id, 'APPROVE');
-      setVerifiedAction('APPROVED');
-    } catch (err) {
-      // Keep buttons visible if request failed
-    } finally {
-      setSubmitting(false);
-    }
+    setVerifiedAction('APPROVED');
+    if (onClosePopup) onClosePopup();
+    onVerify(incident.incident_id, 'APPROVE').catch(() => {
+      setVerifiedAction(null);
+    });
   };
 
-  const handleReject = async (e) => {
+  const handleReject = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setSubmitting(true);
-    try {
-      await onVerify(incident.incident_id, 'REJECT');
-      setVerifiedAction('REJECTED');
-    } catch (err) {
-      // Keep buttons visible if request failed
-    } finally {
-      setSubmitting(false);
-    }
+    setVerifiedAction('REJECTED');
+    if (onClosePopup) onClosePopup();
+    onVerify(incident.incident_id, 'REJECT').catch(() => {
+      setVerifiedAction(null);
+    });
   };
+
+  const targetUnitName = incident.assignments?.[0]?.unit?.unit_name;
 
   return (
-    <div className="mt-1.5 pt-1.5 border-t border-gray-100">
-      <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1">⚠ Awaiting Verification</p>
-      
-      <div className="mb-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded">
-        <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Target Response Unit</p>
-        {loadingUnit ? (
-          <div className="flex items-center gap-1 text-[10px] text-blue-600 font-medium">
-            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Auto-matching nearest station...
-          </div>
-        ) : nearestUnit ? (
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-1">
-              <Car className="w-3 h-3 text-blue-600" />
-              <span className="text-[11px] font-bold text-slate-800">{nearestUnit.unit_name}</span>
-            </div>
-            <span className="text-[9px] text-slate-500 ml-4 font-semibold">
-              Type: {nearestUnit.type} {nearestUnit.distance_km ? `• Dist: ${nearestUnit.distance_km.toFixed(1)} km` : ''}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[10px] text-emerald-700 font-semibold">Auto-dispatch to local station on approval</p>
+    <div className="mt-2 pt-2 border-t border-slate-100">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+          Awaiting Verification
+        </p>
+        {targetUnitName && (
+          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+            🎯 {targetUnitName}
+          </span>
         )}
       </div>
 
       <div className="flex gap-1.5">
         <button
           onClick={handleApprove}
-          disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-green-600 text-white text-[10px] font-bold rounded hover:bg-green-700 transition-colors disabled:opacity-50 active:scale-95"
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm active:scale-95 cursor-pointer"
         >
-          {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <CheckCircle className="w-2.5 h-2.5" />}
+          <CheckCircle className="w-3 h-3" />
           Approve & Dispatch
         </button>
         <button
           onClick={handleReject}
-          disabled={submitting}
-          className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700 transition-colors disabled:opacity-50 active:scale-95"
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-rose-500 text-white text-[11px] font-bold rounded-lg hover:bg-rose-600 transition-all shadow-sm active:scale-95 cursor-pointer"
         >
-          {submitting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <XCircle className="w-2.5 h-2.5" />}
+          <XCircle className="w-3 h-3" />
           Reject
         </button>
       </div>
@@ -283,6 +240,12 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
   const handleClick = () => {
     if (onSelect) {
       onSelect(incident.incident_id);
+    }
+  };
+
+  const handleClosePopup = () => {
+    if (markerRef.current) {
+      markerRef.current.closePopup();
     }
   };
 
@@ -346,7 +309,7 @@ export default function IncidentMarker({ incident, colorMode = 'severity', onVer
             <div className="text-[10px] text-gray-400 mt-1">
               Reported: {moment(incident.reported_at).format('MMM D, h:mm A')}
             </div>
-            <QuickVerifyActions incident={incident} onVerify={onVerify} />
+            <QuickVerifyActions incident={incident} onVerify={onVerify} onClosePopup={handleClosePopup} />
           </div>
         </Popup>
       </Marker>

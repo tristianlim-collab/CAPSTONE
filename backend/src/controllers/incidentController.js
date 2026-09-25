@@ -219,36 +219,60 @@ export const getIncidents = async (req, res) => {
     } else if (req.user?.role === 'RESPONSE_UNIT') {
       const unit = req.user.unit;
       const unitType = unit?.unit_type;
-      const userMunicipality = unit?.barangay?.municipality;
+      
+      // Determine unit's city/municipality from barangay, map_pin_address, or unit name
+      let userMunicipality = unit?.barangay?.municipality || unit?.barangay?.city;
+      if (!userMunicipality && unit?.map_pin_address) {
+        const parts = unit.map_pin_address.split(',').map(s => s.trim());
+        userMunicipality = parts.find(p => p.toLowerCase().includes('city') || p.toLowerCase().includes('municipality')) || parts[parts.length - 2] || parts[parts.length - 1];
+      }
+      if (!userMunicipality && unit?.unit_name) {
+        // Match unit name against all NIR LGUs (Negros Occidental, Negros Oriental, Siquijor)
+        const knownCities = [
+          // Negros Occidental
+          'Bacolod', 'Bago', 'Cadiz', 'Escalante', 'Himamaylan', 'Kabankalan', 'La Carlota', 'Sagay', 'San Carlos', 'Silay', 'Sipalay', 'Talisay', 'Victorias',
+          'Binalbagan', 'Calatrava', 'Candoni', 'Cauayan', 'Enrique B. Magalona', 'E.B. Magalona', 'Magalona', 'Hinigaran', 'Hinoba-an', 'Hinobaan', 'Ilog', 'Isabela',
+          'La Castellana', 'Manapla', 'Moises Padilla', 'Murcia', 'Pontevedra', 'Pulupandan', 'Salvador Benedicto', 'San Enrique', 'Toboso', 'Valladolid',
+          // Negros Oriental
+          'Bais', 'Bayawan', 'Canlaon', 'Dumaguete', 'Guihulngan', 'Tanjay', 'Amlan', 'Ayungon', 'Bacong', 'Basay', 'Bindoy', 'Dauin', 'Jimalalud',
+          'La Libertad', 'Mabinay', 'Manjuyod', 'Pamplona', 'San Jose', 'Santa Catalina', 'Siaton', 'Sibulan', 'Tayasan', 'Valencia', 'Vallehermoso', 'Zamboanguita',
+          // Siquijor
+          'Enrique Villanueva', 'Larena', 'Lazi', 'Maria', 'San Juan', 'Siquijor'
+        ];
+        userMunicipality = knownCities.find(c => unit.unit_name.toLowerCase().includes(c.toLowerCase())) || null;
+      }
 
-      if (req.user.unit_id || (unitType && userMunicipality)) {
+      if (req.user.unit_id || unitType) {
         const roleFilters = [];
         
-        // 1. Always see explicitly assigned incidents (including backups)
+        // 1. Always see explicitly assigned incidents (including backup requests assigned to this unit)
         if (req.user.unit_id) {
           roleFilters.push({ assignments: { some: { unit_id: req.user.unit_id } } });
         }
         
-        // 2. See incidents of their type within their jurisdiction (including REPORTED)
+        // 2. See incidents of their type within their jurisdiction
         if (unitType) {
-          const typeAndCityFilter = { incident_type: { default_unit_type: unitType } };
-          
+          const typeFilter = { incident_type: { default_unit_type: unitType } };
+          const cityConditions = [];
+
           if (userMunicipality) {
-            // If they have a city, restrict feed to that city
-            typeAndCityFilter.barangay = { municipality: { equals: userMunicipality, mode: 'insensitive' } };
+            cityConditions.push(
+              { barangay: { municipality: { contains: userMunicipality, mode: 'insensitive' } } },
+              { barangay: { city: { contains: userMunicipality, mode: 'insensitive' } } },
+              { map_pin_address: { contains: userMunicipality, mode: 'insensitive' } }
+            );
           }
-          // If no municipality assigned, they see all incidents of their type system-wide
 
           roleFilters.push({
             AND: [
               { status: { in: ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED'] } },
-              typeAndCityFilter
+              typeFilter,
+              ...(cityConditions.length > 0 ? [{ OR: cityConditions }] : [])
             ]
           });
         }
 
         if (where.OR) {
-          // If search is active, intersect search with role filters
           where.AND = [
             { OR: where.OR },
             { OR: roleFilters }
@@ -258,7 +282,6 @@ export const getIncidents = async (req, res) => {
           where.OR = roleFilters;
         }
       } else {
-        // Fallback or restricted access if unit info is missing
         where.assignments = { some: { unit_id: req.user.unit_id || 'none' } };
       }
     } else if (!req.user) {
