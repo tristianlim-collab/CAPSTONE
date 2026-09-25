@@ -16,6 +16,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import postReportRoutes from "./routes/postReportRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import systemConfigRoutes from "./routes/systemConfigRoutes.js";
+import districtRoutes from "./routes/districtRoutes.js";
 import { success, error } from "./utils/apiResponse.js";
 
 const app = express();
@@ -33,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/districts", districtRoutes);
 app.use("/api/incidents", incidentRoutes);
 app.use("/api/incident-types", incidentTypeRoutes);
 app.use("/api/assignments", assignmentRoutes);

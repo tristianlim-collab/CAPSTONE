@@ -21,6 +21,9 @@
         <h1>GAOIRS Complete ERD Matrix</h1>
         <div class="mermaid">
             erDiagram
+                DISTRICTS ||--o{ BARANGAYS : "contains"
+                DISTRICTS ||--o{ USER : "assigned_jurisdiction"
+
                 USER ||--o{ INCIDENT : "reported_by"
                 USER ||--o{ INCIDENT_ASSIGNMENTS : "assigned_by"
                 USER ||--o{ INCIDENT_STATUS_LOG : "changed_by"
@@ -31,6 +34,7 @@
                 USER ||--o{ SYSTEM_CONFIG : "configures"
                 USER ||--o{ GENERATED_REPORTS : "generates"
                 
+                DISTRICTS ||--o{ INCIDENT : "categorizes"
                 BARANGAYS ||--o{ INCIDENT : "location"
                 BARANGAYS ||--o{ RESPONSE_UNIT : "jurisdiction"
                 
@@ -43,16 +47,24 @@
                 INCIDENT ||--o{ EVIDENCE : "media"
                 INCIDENT ||--o{ NOTIFICATIONS : "alert_trigger"
 
+                DISTRICTS {
+                    string district_id PK
+                    string name UK
+                    string province
+                }
+
                 USER {
                     string user_id PK
                     string email UK
                     string name
                     string role
+                    string district_id FK
                 }
 
                 BARANGAYS {
                     string barangay_id PK
                     string name
+                    string district_id FK
                 }
 
                 RESPONSE_UNIT {
@@ -65,6 +77,8 @@
                     string incident_id PK
                     string code UK
                     string status
+                    string city
+                    string district_id FK
                 }
 
                 INCIDENT_TYPES {

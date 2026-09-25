@@ -157,6 +157,8 @@ export default function IncidentVerificationQueue() {
   const handleExport = async (format = 'xlsx') => {
     try {
       setExporting(true);
+      
+      // 1. Trigger export download
       const response = await reportAPI.export(format, {
         status: activeTab === 'ALL' ? undefined : activeTab,
         ...searchFilters
@@ -167,6 +169,18 @@ export default function IncidentVerificationQueue() {
         const text = await response.data.text();
         const errObj = JSON.parse(text);
         throw new Error(errObj.message || 'Export failed');
+      }
+
+      // 2. Automatically log to GENERATED_REPORTS database table
+      try {
+        await reportAPI.generate({
+          report_type: 'INCIDENT_SUMMARY',
+          file_format: format === 'pdf' ? 'PDF' : 'EXCEL',
+          report_title: `Incident Queue Export (${activeTab})`,
+          filters_applied: JSON.stringify({ status: activeTab, ...searchFilters })
+        });
+      } catch (logErr) {
+        console.warn('Could not save to GENERATED_REPORTS history:', logErr);
       }
 
       const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';

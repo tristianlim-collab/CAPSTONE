@@ -87,9 +87,35 @@ async function main() {
   const passwordMedical = await bcrypt.hash("Medical@2026", 12);
   const passwordReporter = await bcrypt.hash("Reporter@2026", 12);
 
+  const districtsSeed = [
+    { name: "1st District", province: "Negros Occidental" },
+    { name: "2nd District", province: "Negros Occidental" },
+    { name: "3rd District", province: "Negros Occidental" },
+    { name: "4th District", province: "Negros Occidental" },
+    { name: "5th District", province: "Negros Occidental" },
+    { name: "6th District", province: "Negros Occidental" }
+  ];
+
+  const createdDistricts = {};
+  for (const d of districtsSeed) {
+    const created = await prisma.district.upsert({
+      where: { name: d.name },
+      update: { province: d.province },
+      create: d
+    });
+    createdDistricts[d.name] = created;
+  }
+
+  const defaultDistrict = createdDistricts["3rd District"];
+
   const barangays = [];
   for (const barangay of talisayBarangays) {
-    const created = await prisma.barangay.create({ data: barangay });
+    const created = await prisma.barangay.create({
+      data: {
+        ...barangay,
+        district_id: defaultDistrict?.district_id || null
+      }
+    });
     barangays.push(created);
   }
 
@@ -99,10 +125,11 @@ async function main() {
     incidentTypes.push(created);
   }
 
-  const responseUnit = await prisma.responseUnit.create({
+  // Response Units
+  const fireUnit = await prisma.responseUnit.create({
     data: {
-      unit_name: "Response Unit",
-      unit_type: "BARANGAY",
+      unit_name: "BFP Station 1 - Talisay",
+      unit_type: "FIRE",
       contact_number: "+639171110001",
       latitude: 10.7421,
       longitude: 122.9688,
@@ -111,6 +138,31 @@ async function main() {
     },
   });
 
+  const drrmoUnit = await prisma.responseUnit.create({
+    data: {
+      unit_name: "Talisay City DRRMO Rescue 1",
+      unit_type: "DRRMO",
+      contact_number: "+639171110002",
+      latitude: 10.7360,
+      longitude: 122.9595,
+      barangay_id: barangays[1].barangay_id,
+      availability_status: "AVAILABLE",
+    },
+  });
+
+  const policeUnit = await prisma.responseUnit.create({
+    data: {
+      unit_name: "PNP Station - Talisay",
+      unit_type: "POLICE",
+      contact_number: "+639171110003",
+      latitude: 10.7380,
+      longitude: 122.9660,
+      barangay_id: barangays[2].barangay_id,
+      availability_status: "AVAILABLE",
+    },
+  });
+
+  // Users
   const adminUser = await prisma.user.create({
     data: {
       name: "System Admin",
@@ -119,18 +171,50 @@ async function main() {
       role: "ADMIN",
       contact_number: "+639170001111",
       barangay_id: barangays[0].barangay_id,
+      district_id: defaultDistrict?.district_id || null,
+      congressional_district: "3rd District of Negros Occidental"
     },
   });
 
   await prisma.user.create({
     data: {
-      name: "Response Unit",
-      email: "response@gaoirs.com",
+      name: "BFP Fire Responder",
+      email: "fire@gaoirs.com",
       password_hash: passwordFire,
       role: "RESPONSE_UNIT",
       contact_number: "+639171110001",
-      unit_id: responseUnit.unit_id,
-      barangay_id: responseUnit.barangay_id,
+      unit_id: fireUnit.unit_id,
+      barangay_id: fireUnit.barangay_id,
+      district_id: defaultDistrict?.district_id || null,
+      congressional_district: "3rd District of Negros Occidental"
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: "DRRMO Rescue Responder",
+      email: "drrmo@gaoirs.com",
+      password_hash: passwordFire,
+      role: "RESPONSE_UNIT",
+      contact_number: "+639171110002",
+      unit_id: drrmoUnit.unit_id,
+      barangay_id: drrmoUnit.barangay_id,
+      district_id: defaultDistrict?.district_id || null,
+      congressional_district: "3rd District of Negros Occidental"
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: "Police Responder",
+      email: "police@gaoirs.com",
+      password_hash: passwordPolice,
+      role: "RESPONSE_UNIT",
+      contact_number: "+639171110003",
+      unit_id: policeUnit.unit_id,
+      barangay_id: policeUnit.barangay_id,
+      district_id: defaultDistrict?.district_id || null,
+      congressional_district: "3rd District of Negros Occidental"
     },
   });
 
@@ -142,11 +226,103 @@ async function main() {
       role: "REPORTER",
       contact_number: "+639179999999",
       barangay_id: barangays[3].barangay_id,
+      district_id: defaultDistrict?.district_id || null
     },
   });
 
+  // Sample Incidents populated with city & district_id across different statuses
+  await prisma.incident.createMany({
+    data: [
+      {
+        incident_code: "DRRMO-20260828-0028",
+        reported_by: reporter.user_id,
+        incident_type_id: incidentTypes[5]?.type_id || incidentTypes[0].type_id,
+        barangay_id: barangays[0].barangay_id,
+        city: "Talisay City",
+        district_id: defaultDistrict?.district_id || null,
+        description: "Infrastructure Damage: Building crack/structural risk",
+        landmark: "San Isidro DRRMO Station",
+        latitude: 10.736,
+        longitude: 122.9595,
+        map_pin_address: "San Isidro, Talisay City, Negros Occidental",
+        status: "CLOSED",
+        severity: "LOW",
+        reporter_name: "Local Resident",
+        reporter_phone: "+639170002222"
+      },
+      {
+        incident_code: "BFP-20260825-6144",
+        reported_by: reporter.user_id,
+        incident_type_id: incidentTypes[0].type_id,
+        barangay_id: barangays[1].barangay_id,
+        city: "Talisay City",
+        district_id: defaultDistrict?.district_id || null,
+        description: "Fire Incident: Candle / lighted lamp",
+        landmark: "Zone 16, Bubog",
+        latitude: 10.738,
+        longitude: 122.966,
+        map_pin_address: "Zone 16, Bubog, Talisay City, Negros Occidental",
+        status: "CLOSED",
+        severity: "HIGH",
+        reporter_name: "Local Resident",
+        reporter_phone: "+639170003333"
+      },
+      {
+        incident_code: "DRRMO-20260824-8038",
+        reported_by: reporter.user_id,
+        incident_type_id: incidentTypes[6]?.type_id || incidentTypes[0].type_id,
+        barangay_id: barangays[2].barangay_id,
+        city: "Talisay City",
+        district_id: defaultDistrict?.district_id || null,
+        description: "Other Emergency: Search and rescue assistance required",
+        landmark: "Zone 3 Public Market",
+        latitude: 10.740,
+        longitude: 122.972,
+        map_pin_address: "Zone 3, Talisay City, Negros Occidental",
+        status: "RESOLVED",
+        severity: "LOW",
+        reporter_name: "Local Resident",
+        reporter_phone: "+639170004444"
+      },
+      {
+        incident_code: "INC-2026-001",
+        reported_by: reporter.user_id,
+        incident_type_id: incidentTypes[0].type_id,
+        barangay_id: barangays[3].barangay_id,
+        city: "Silay City",
+        district_id: defaultDistrict?.district_id || null,
+        description: "Residential fire reported in Zone 4.",
+        landmark: "Near Barangay Hall",
+        latitude: 10.7989,
+        longitude: 122.9754,
+        map_pin_address: "Zone 4, Silay City, Negros Occidental",
+        status: "REPORTED",
+        severity: "HIGH",
+        reporter_name: "Community Reporter",
+        reporter_phone: "+639179999999"
+      },
+      {
+        incident_code: "INC-2026-002",
+        reported_by: reporter.user_id,
+        incident_type_id: incidentTypes[3]?.type_id || incidentTypes[0].type_id,
+        barangay_id: barangays[4].barangay_id,
+        city: "Talisay City",
+        district_id: defaultDistrict?.district_id || null,
+        description: "Vehicular accident requiring medical assistance.",
+        landmark: "Highway intersection",
+        latitude: 10.7301,
+        longitude: 122.9691,
+        map_pin_address: "Zone 5, Talisay City, Negros Occidental",
+        status: "RESPONDING",
+        severity: "CRITICAL",
+        reporter_name: "Community Reporter",
+        reporter_phone: "+639179999999"
+      }
+    ]
+  });
+
   // eslint-disable-next-line no-console
-  console.log("Seed complete: admin, response unit, reporter, barangays, and incident types created.");
+  console.log("Seed complete: admin, response unit, reporter, barangays, districts, and sample incidents created.");
 }
 
 main()

@@ -30,8 +30,18 @@ export const create = async (req, res) => {
   try {
     let { unit_name, unit_type, contact_number, barangay_id, latitude, longitude } = req.body;
     
-    // Auto-detect the Barangay based on the map pin if coordinates are provided
-    if (latitude && longitude && !barangay_id) {
+    // Auto-detect city & coordinates from unit_name if missing
+    if (!latitude || !longitude) {
+      const nameLower = (unit_name || '').toLowerCase();
+      if (nameLower.includes('silay')) { latitude = 10.7989; longitude = 122.9754; }
+      else if (nameLower.includes('victorias')) { latitude = 10.8986; longitude = 123.0766; }
+      else if (nameLower.includes('murcia')) { latitude = 10.6027; longitude = 123.0397; }
+      else if (nameLower.includes('magalona')) { latitude = 10.8354; longitude = 122.9863; }
+      else { latitude = 10.7421; longitude = 122.9688; } // Default Talisay
+    }
+
+    // Auto-detect the Barangay based on coordinates
+    if (!barangay_id && latitude && longitude) {
       barangay_id = await geoService.findBarangayByPoint(latitude, longitude);
     }
 

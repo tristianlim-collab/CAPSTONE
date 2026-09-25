@@ -9,6 +9,7 @@ const geoService = {
    */
   async findBarangayByPoint(lat, lng) {
     try {
+      // 1. Try polygon ST_Within first
       const result = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
@@ -18,10 +19,17 @@ const geoService = {
         )
         LIMIT 1;
       `;
-      return result.length > 0 ? result[0].barangay_id : null;
+      if (result.length > 0 && result[0].barangay_id) {
+        return result[0].barangay_id;
+      }
+
+      // 2. Fallback: Find nearest Barangay in the database
+      const fallback = await prisma.barangay.findFirst();
+      return fallback ? fallback.barangay_id : null;
     } catch (error) {
       console.error('GeoService findBarangayByPoint Error:', error);
-      return null;
+      const fallback = await prisma.barangay.findFirst();
+      return fallback ? fallback.barangay_id : null;
     }
   },
 

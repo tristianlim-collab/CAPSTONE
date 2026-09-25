@@ -8,6 +8,18 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model District {
+  district_id  String     @id @default(uuid())
+  name         String     @unique // e.g. "1st District", "2nd District"
+  province     String?    // e.g. "Negros Occidental", "Negros Oriental", "Siquijor"
+  created_at   DateTime   @default(now())
+  barangays    Barangay[]
+  users        User[]
+  incidents    Incident[]
+
+  @@map("DISTRICTS")
+}
+
 model User {
   user_id                String               @id @default(uuid())
   name                   String
@@ -17,6 +29,7 @@ model User {
   role                   Role
   barangay_id            String?
   unit_id                String?
+  district_id            String?
   congressional_district String?
   created_at             DateTime             @default(now())
   fcm_token              String?
@@ -33,10 +46,12 @@ model User {
   configs                SystemConfig[]
   barangay               Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
   unit                   ResponseUnit?        @relation("UnitUser", fields: [unit_id], references: [unit_id])
+  district               District?            @relation(fields: [district_id], references: [district_id])
 
   @@index([role])
   @@index([barangay_id])
   @@index([unit_id])
+  @@index([district_id])
   @@map("USER")
 }
 
@@ -45,13 +60,16 @@ model Barangay {
   name                   String
   municipality           String
   city                   String?
+  district_id            String?
   congressional_district String?
   boundary_geojson       Json
   created_at             DateTime       @default(now())
   incidents              Incident[]
   response_units         ResponseUnit[]
   users                  User[]
+  district               District?      @relation(fields: [district_id], references: [district_id])
 
+  @@index([district_id])
   @@map("BARANGAYS")
 }
 
@@ -109,7 +127,10 @@ model Incident {
   is_duplicate       Boolean              @default(false)
   parent_incident_id String?
   evidence           Evidence[]
+  city               String?
+  district_id        String?
   barangay           Barangay?            @relation(fields: [barangay_id], references: [barangay_id])
+  district           District?            @relation(fields: [district_id], references: [district_id])
   incident_type      IncidentType         @relation(fields: [incident_type_id], references: [type_id])
   reporter           User?                @relation("ReportedBy", fields: [reported_by], references: [user_id])
   parent_incident    Incident?            @relation("DuplicateIncidents", fields: [parent_incident_id], references: [incident_id], onDelete: NoAction, onUpdate: NoAction)
@@ -121,6 +142,7 @@ model Incident {
 
   @@index([status])
   @@index([barangay_id])
+  @@index([district_id])
   @@index([incident_type_id])
   @@index([reported_at])
   @@index([parent_incident_id])

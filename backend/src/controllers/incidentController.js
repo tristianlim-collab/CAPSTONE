@@ -95,6 +95,17 @@ export const createIncident = async (req, res) => {
     // Get the default response unit type from the incident type (configured in admin panel)
     const targetUnitType = incidentType?.default_unit_type || 'BARANGAY';
 
+    let detectedCity = null;
+    let detectedDistrictId = null;
+
+    if (detectedBarangayId) {
+      const bgDetail = await prisma.barangay.findUnique({ where: { barangay_id: detectedBarangayId } });
+      if (bgDetail) {
+        detectedCity = bgDetail.city || bgDetail.municipality || null;
+        detectedDistrictId = bgDetail.district_id || null;
+      }
+    }
+
     const incident = await prisma.incident.create({
       data: {
         incident_code,
@@ -107,6 +118,8 @@ export const createIncident = async (req, res) => {
         landmark: landmark || null,
         severity: severity || 'HIGH',
         barangay_id: detectedBarangayId,
+        city: detectedCity,
+        district_id: detectedDistrictId,
         status: 'REPORTED', // Explicitly set to REPORTED - requires admin verification before dispatch
         reporter_name: reporter_name || null,  // Optional override from mobile form
         reporter_phone: reporter_phone || null  // Optional override from mobile form
