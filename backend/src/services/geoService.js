@@ -23,13 +23,14 @@ const geoService = {
         return polygonMatch[0].barangay_id;
       }
 
-      // 2. Proximity check (Closest Barangay in DB)
+      // 2. Proximity check (Find closest Barangay dynamically based on pinned lat & lng)
       const closest = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
+        WHERE boundary_geojson IS NOT NULL
         ORDER BY ST_Distance(
-          ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326),
-          ST_SetSRID(ST_MakePoint(122.96, 10.74), 4326)
+          ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography,
+          ST_Centroid(ST_GeomFromGeoJSON(boundary_geojson::text))::geography
         ) ASC
         LIMIT 1;
       `;
