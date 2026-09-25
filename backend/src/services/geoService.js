@@ -9,8 +9,8 @@ const geoService = {
    */
   async findBarangayByPoint(lat, lng) {
     try {
-      // 1. Try polygon ST_Within first
-      const result = await prisma.$queryRaw`
+      // 1. Polygon ST_Within check
+      const polygonMatch = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
         WHERE ST_Within(
@@ -19,11 +19,25 @@ const geoService = {
         )
         LIMIT 1;
       `;
-      if (result.length > 0 && result[0].barangay_id) {
-        return result[0].barangay_id;
+      if (polygonMatch.length > 0 && polygonMatch[0].barangay_id) {
+        return polygonMatch[0].barangay_id;
       }
 
-      // 2. Fallback: Find nearest Barangay in the database
+      // 2. Proximity check (Closest Barangay in DB)
+      const closest = await prisma.$queryRaw`
+        SELECT barangay_id 
+        FROM "BARANGAYS"
+        ORDER BY ST_Distance(
+          ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326),
+          ST_SetSRID(ST_MakePoint(122.96, 10.74), 4326)
+        ) ASC
+        LIMIT 1;
+      `;
+
+      if (closest.length > 0 && closest[0].barangay_id) {
+        return closest[0].barangay_id;
+      }
+
       const fallback = await prisma.barangay.findFirst();
       return fallback ? fallback.barangay_id : null;
     } catch (error) {
