@@ -467,9 +467,20 @@ const ResponseMap = () => {
     });
 
     // 5. Verification / Approval (Prepend for auto-zoom tracking & map update)
-    const handleVerifiedMap = (data) => {
-      const verifiedInc = data.incident || data;
+    const handleVerifiedMap = async (data) => {
+      let verifiedInc = data.incident || data;
       if (!verifiedInc) return;
+      const incId = verifiedInc.incident_id || data.incident_id;
+
+      // If lat/lng or barangay missing from socket payload, fetch full incident
+      if (!verifiedInc.latitude || !verifiedInc.longitude || !verifiedInc.map_pin_address) {
+        try {
+          const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });
+          if (res.data) verifiedInc = res.data?.data || res.data;
+        } catch (err) {
+          console.error('Failed to fetch full verified incident:', err);
+        }
+      }
 
       const incObj = { 
         ...verifiedInc, 
@@ -480,11 +491,10 @@ const ResponseMap = () => {
       
       if (!incObj.latitude || !incObj.longitude) return;
 
-      const incId = incObj.incident_id || data.incident_id;
       const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
       
-      const unitCity = (user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
-      const incidentCity = (incObj.barangay?.municipality || incObj.barangay?.city || incObj.map_pin_address || '').toLowerCase();
+      const unitCity = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
+      const incidentCity = (incObj.barangay?.city || incObj.barangay?.municipality || incObj.map_pin_address || '').toLowerCase();
 
       const isSilayUnit = unitCity.includes('silay');
       const isTalisayUnit = unitCity.includes('talisay');
@@ -492,7 +502,8 @@ const ResponseMap = () => {
       const isTalisayIncident = incidentCity.includes('talisay');
 
       let shouldShow = true;
-      if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
+      if (isSilayUnit && !isSilayIncident && isTalisayIncident) shouldShow = false;
+      if (isTalisayUnit && !isTalisayIncident && isSilayIncident) shouldShow = false;
       if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
 
       // Show if assigned OR if within unit jurisdiction
@@ -593,12 +604,12 @@ const ResponseMap = () => {
           if (!hasCoordinates) return false;
 
           // Priority 1: Show if I am explicitly assigned to it
-          const isAssignedToMe = inc.assignments?.some(a => a.unit_id === user?.unit_id);
+          const isAssignedToMe = inc.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
           if (isAssignedToMe) return true;
 
           // Priority 2: Keyword-based Jurisdiction Filter
-          const unitName = user?.unit?.unit_name?.toLowerCase() || '';
-          const incidentAddress = (inc.map_pin_address || '').toLowerCase();
+          const unitName = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
+          const incidentAddress = (inc.barangay?.city || inc.barangay?.municipality || inc.map_pin_address || '').toLowerCase();
 
           const isSilayUnit = unitName.includes('silay');
           const isTalisayUnit = unitName.includes('talisay');
@@ -606,9 +617,9 @@ const ResponseMap = () => {
           const isTalisayIncident = incidentAddress.includes('talisay');
 
           // If I'm a Silay unit, I only want to see Silay incidents
-          if (isSilayUnit && isTalisayIncident && !isSilayIncident) return false;
+          if (isSilayUnit && !isSilayIncident && isTalisayIncident) return false;
           // If I'm a Talisay unit, I only want to see Talisay incidents
-          if (isTalisayUnit && isSilayIncident && !isTalisayIncident) return false;
+          if (isTalisayUnit && !isTalisayIncident && isSilayIncident) return false;
 
           return true;
         });

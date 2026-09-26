@@ -22,13 +22,26 @@ export default function AdminDashboard() {
   }, [filters]);
 
   useEffect(() => {
-    const handleNewIncident = (data) => {
-      const inc = data.incident || data;
-      if (!inc || !inc.incident_id) return;
+    const handleNewIncident = async (data) => {
+      let inc = data.incident || data;
+      if (!inc || (!inc.incident_id && !inc.id)) return;
+      const incId = inc.incident_id || inc.id;
+
+      // If lat/lng missing from socket payload, fetch full incident
+      if (!inc.latitude || !inc.longitude) {
+        try {
+          const res = await incidentAPI.getById(incId);
+          if (res.data) inc = res.data?.data || res.data;
+        } catch (err) {
+          console.error('Failed to fetch full new incident details:', err);
+        }
+      }
+
       setRecentIncidents(prev => {
-        if (prev.some(i => i.incident_id === inc.incident_id)) return prev;
-        return [inc, ...prev];
+        const filtered = prev.filter(i => (i.incident_id || i.id) !== incId);
+        return [inc, ...filtered];
       });
+      setSelectedIncidentId(incId);
       setStats(s => ({ ...s, total: s.total + 1, active: s.active + 1 }));
       toast('🚨 New Emergency Report Received!', {
         icon: '⚠️',

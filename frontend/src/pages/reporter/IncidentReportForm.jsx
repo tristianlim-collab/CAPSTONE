@@ -58,7 +58,7 @@ export default function IncidentReportForm() {
   const [severity, setSeverity] = useState('LOW');
   const [landmark, setLandmark] = useState('');
   const [fullName, setFullName] = useState('');
-  const [contactNumber, setContactNumber] = useState('+63');
+  const [contactNumber, setContactNumber] = useState('+639');
   const [phoneTouched, setPhoneTouched] = useState(false);
 
   // Data state
@@ -280,8 +280,19 @@ export default function IncidentReportForm() {
         }
       }
 
+      if (incidentId) {
+        localStorage.setItem('last_reported_incident_id', incidentId);
+      }
+
       toast.success('Incident reported successfully!');
-      navigate('/reporter/report/success');
+      navigate('/reporter/report/success', { 
+        state: { 
+          incident_id: incidentId,
+          incident_code: incRes.data?.incident_code,
+          reported_at: new Date().toISOString(),
+          location_address: locationAddress
+        } 
+      });
     } catch (err) {
       console.error('Submit error:', err);
       toast.error(err.response?.data?.message || 'Failed to submit emergency report');

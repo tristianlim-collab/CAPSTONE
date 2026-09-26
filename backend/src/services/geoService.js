@@ -9,14 +9,16 @@ const geoService = {
    */
   async findBarangayByPoint(lat, lng, mapPinAddress = null) {
     try {
-      // 1. Polygon ST_Within check (for barangays with full GeoJSON boundary definitions)
+      // 1. Polygon ST_Within check (for barangays with valid GeoJSON boundary definitions)
       const polygonMatch = await prisma.$queryRaw`
         SELECT barangay_id 
         FROM "BARANGAYS"
-        WHERE ST_Within(
-          ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326),
-          ST_GeomFromGeoJSON(boundary_geojson::text)
-        )
+        WHERE boundary_geojson IS NOT NULL 
+          AND boundary_geojson::text LIKE '{%'
+          AND ST_Within(
+            ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326),
+            ST_GeomFromGeoJSON(boundary_geojson::text)
+          )
         LIMIT 1;
       `;
       if (polygonMatch.length > 0 && polygonMatch[0].barangay_id) {
@@ -34,6 +36,7 @@ const geoService = {
         SELECT barangay_id 
         FROM "BARANGAYS"
         WHERE boundary_geojson IS NOT NULL
+          AND boundary_geojson::text LIKE '{%'
         ORDER BY ST_Distance(
           ST_SetSRID(ST_MakePoint(${lng}::float, ${lat}::float), 4326)::geography,
           ST_Centroid(ST_GeomFromGeoJSON(boundary_geojson::text))::geography
@@ -194,37 +197,48 @@ const geoService = {
       // Step 3: Prioritize same barangay (jurisdiction)
       // Step 4: Sort by distance (proximity)
 
+      // Fetch incident barangay to get city/district for strict jurisdiction priority
+      let incidentCity = null;
+      if (incidentBarangayId) {
+        const bg = await prisma.barangay.findUnique({ where: { barangay_id: incidentBarangayId } });
+        if (bg) incidentCity = bg.city || bg.municipality;
+      }
+
       const units = await prisma.$queryRaw`
         SELECT
-          unit_id,
-          unit_name,
-          unit_type,
-          contact_number,
-          availability_status,
-          latitude,
-          longitude,
-          barangay_id,
+          u.unit_id,
+          u.unit_name,
+          u.unit_type,
+          u.contact_number,
+          u.availability_status,
+          u.latitude,
+          u.longitude,
+          u.barangay_id,
           ST_Distance(
-            ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+            ST_SetSRID(ST_MakePoint(u.longitude, u.latitude), 4326)::geography,
             ST_SetSRID(ST_MakePoint(${incidentLng}::float, ${incidentLat}::float), 4326)::geography
           ) as distance_meters,
-          -- Priority: Same barangay = 0, Different = 1
-          CASE WHEN barangay_id = ${incidentBarangayId} THEN 0 ELSE 1 END as jurisdiction_priority,
+          -- Priority: Same city = 0, Same barangay = 0, Different = 1
+          CASE 
+            WHEN b.city ILIKE ${'%' + (incidentCity || '') + '%'} OR b.municipality ILIKE ${'%' + (incidentCity || '') + '%'} OR u.barangay_id = ${incidentBarangayId} THEN 0 
+            ELSE 1 
+          END as jurisdiction_priority,
           -- Priority: AVAILABLE = 0, OFFLINE = 1, ON_BREAK = 2, BUSY = 3
           CASE
-            WHEN availability_status = 'AVAILABLE' THEN 0
-            WHEN availability_status = 'OFFLINE' THEN 1
-            WHEN availability_status = 'ON_BREAK' THEN 2
+            WHEN u.availability_status = 'AVAILABLE' THEN 0
+            WHEN u.availability_status = 'OFFLINE' THEN 1
+            WHEN u.availability_status = 'ON_BREAK' THEN 2
             ELSE 3
           END as status_priority
-        FROM "RESPONSE_UNIT"
+        FROM "RESPONSE_UNIT" u
+        LEFT JOIN "BARANGAYS" b ON u.barangay_id = b.barangay_id
         WHERE
-          latitude IS NOT NULL
-          AND longitude IS NOT NULL
-          AND unit_type = ${unitType}::"UnitType"
+          u.latitude IS NOT NULL
+          AND u.longitude IS NOT NULL
+          AND u.unit_type = ${unitType}::"UnitType"
         ORDER BY
-          status_priority ASC,        -- AVAILABLE units first
-          jurisdiction_priority ASC,  -- Same barangay next
+          jurisdiction_priority ASC,  -- Same city/district jurisdiction FIRST
+          status_priority ASC,        -- AVAILABLE units next
           distance_meters ASC         -- Closest units last
         LIMIT ${limit};
       `;

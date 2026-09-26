@@ -12,7 +12,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    contact_number: '+63',
+    contact_number: '+639',
     role: 'RESPONSE_UNIT'
   });
   const [loading, setLoading] = useState(false);

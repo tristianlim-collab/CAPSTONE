@@ -42,9 +42,18 @@ export default function ResponseDashboard() {
   }, []);
 
   useEffect(() => {
-    const handleVerified = (data) => {
-      const verifiedInc = data.incident || data;
+    const handleVerified = async (data) => {
+      let verifiedInc = data.incident || data;
       const incId = verifiedInc.incident_id || data.incident_id;
+
+      if (!verifiedInc.map_pin_address || !verifiedInc.incident_type) {
+        try {
+          const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });
+          if (res.data) verifiedInc = res.data?.data || res.data;
+        } catch (err) {
+          console.error('Failed to fetch verified incident details:', err);
+        }
+      }
 
       setIncidents(prev => {
         const exists = prev.some(i => i.incident_id === incId);
@@ -54,7 +63,6 @@ export default function ResponseDashboard() {
               ? { ...inc, ...verifiedInc, status: 'VERIFIED' }
               : inc
           );
-          // Move updated verified incident to the top
           const target = updated.find(i => i.incident_id === incId);
           const others = updated.filter(i => i.incident_id !== incId);
           return target ? [target, ...others] : updated;

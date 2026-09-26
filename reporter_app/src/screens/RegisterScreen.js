@@ -14,7 +14,7 @@ export default function RegisterScreen({ navigation }) {
     email: '',
     password: '',
     confirmPassword: '',
-    contact_number: '+63',
+    contact_number: '+639',
     role: 'REPORTER',
   });
   const [loading, setLoading] = useState(false);

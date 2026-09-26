@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -42,7 +42,14 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white/80 backdrop-blur-xl w-full max-w-[430px] rounded-[2rem] border border-white/40 p-8 shadow-xl">
+      <div className="bg-white/80 backdrop-blur-xl w-full max-w-[430px] rounded-[2rem] border border-white/40 p-8 shadow-xl relative">
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors shadow-sm border border-slate-200"
+          title="Go Back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl mb-4 shadow-sm border border-blue-100/50 transform rotate-3">
             <ShieldCheck className="w-7 h-7 -rotate-3" />

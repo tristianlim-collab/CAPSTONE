@@ -106,12 +106,12 @@ const ResponseUnitManagement = () => {
       setFormData({
         unit_name: unit.unit_name,
         unit_type: unit.unit_type,
-        contact_number: unit.contact_number || '',
+        contact_number: unit.contact_number || '+639',
         barangay_id: unit.barangay_id || ''
       });
     } else {
       setEditingId(null);
-      setFormData({ unit_name: '', unit_type: 'POLICE', contact_number: '', barangay_id: '' });
+      setFormData({ unit_name: '', unit_type: 'POLICE', contact_number: '+639', barangay_id: '' });
     }
     setIsModalOpen(true);
   };
@@ -352,7 +352,25 @@ const ResponseUnitManagement = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contact Number</label>
-                <input type="text" value={formData.contact_number} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none" placeholder="+63 900 000 0000" />
+                <input
+                  type="text"
+                  value={formData.contact_number}
+                  onChange={e => {
+                    const raw = e.target.value || '';
+                    const digitsOnly = raw.replace(/\D/g, '');
+                    let normalized = digitsOnly;
+                    if (normalized.startsWith('63')) {
+                      normalized = normalized.slice(2);
+                    } else if (normalized.startsWith('0')) {
+                      normalized = normalized.slice(1);
+                    }
+                    normalized = normalized.slice(0, 10);
+                    setFormData({ ...formData, contact_number: `+63${normalized}` });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none"
+                  placeholder="+639XXXXXXXXX"
+                  maxLength={13}
+                />
               </div>
               <div className="pt-2">
                 <button disabled={saving} type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm shadow-indigo-600/30 flex justify-center items-center gap-2 transition-all disabled:opacity-50">

@@ -162,7 +162,7 @@ export default function IncidentReportScreen({ navigation }) {
   const [severity, setSeverity] = useState('LOW');
   const [landmark, setLandmark] = useState('');
   const [fullName, setFullName] = useState('');
-  const [contactNumber, setContactNumber] = useState('+63');
+  const [contactNumber, setContactNumber] = useState('+639');
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [incidentTypes, setIncidentTypes] = useState([]);
   const [showMap, setShowMap] = useState(true);

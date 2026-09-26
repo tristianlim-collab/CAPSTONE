@@ -292,10 +292,11 @@ export const getIncidents = async (req, res) => {
     }
 
     // ADMIN / SUB-ADMIN / RESPONSE_UNIT District Restrictions
-    if (req.user?.congressional_district) {
+    const userDistrict = req.user?.congressional_district || req.user?.unit?.barangay?.congressional_district;
+    if (userDistrict) {
       where.barangay = {
         ...(where.barangay || {}),
-        congressional_district: { equals: req.user.congressional_district, mode: 'insensitive' }
+        congressional_district: { equals: userDistrict, mode: 'insensitive' }
       };
     }
 
