@@ -6,6 +6,7 @@ import { analyticsAPI, incidentAPI } from '../../api';
 import MapFilterModal from '../../components/map/MapFilterModal';
 import api from '../../api';
 import { useSocketContext } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
@@ -17,6 +18,8 @@ export default function AdminDashboard() {
   const [filters, setFilters] = useState({ status: 'REPORTED,VERIFIED,RESPONDING,ON_SCENE' });
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
+  const { user } = useAuth();
+
   useEffect(() => {
     fetchDashboardData();
   }, [filters]);
@@ -26,6 +29,26 @@ export default function AdminDashboard() {
       let inc = data.incident || data;
       if (!inc || (!inc.incident_id && !inc.id)) return;
       const incId = inc.incident_id || inc.id;
+
+      // Filter socket events by District for District Admins
+      const userDist = user?.congressional_district;
+      if (userDist) {
+        const districtLgus = userDist.includes('2')
+          ? ['Cadiz', 'Sagay', 'Manapla']
+          : userDist.includes('3')
+            ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
+            : userDist.includes('1')
+              ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
+              : [userDist];
+
+        const incAddress = (inc.map_pin_address || inc.city || inc.barangay?.city || inc.barangay?.municipality || '').toLowerCase();
+        const incDistrict = (inc.district?.name || inc.barangay?.congressional_district || '').toLowerCase();
+        const isMatch = districtLgus.some(lgu => incAddress.includes(lgu.toLowerCase())) || incDistrict.includes(userDist.toLowerCase());
+
+        if (!isMatch) {
+          return; // Ignore real-time reports outside this district
+        }
+      }
 
       // If lat/lng missing from socket payload, fetch full incident
       if (!inc.latitude || !inc.longitude) {

@@ -166,7 +166,7 @@ export const getIncidents = async (req, res) => {
     if (severity) where.severity = severity;
     if (barangay_id) where.barangay_id = barangay_id;
     if (type_id) where.incident_type_id = type_id;
-    
+
     // Barangay / City / District filters
     const barangayWhere = {};
     if (district) {
@@ -219,7 +219,7 @@ export const getIncidents = async (req, res) => {
     } else if (req.user?.role === 'RESPONSE_UNIT') {
       const unit = req.user.unit;
       const unitType = unit?.unit_type;
-      
+
       // Determine unit's city/municipality from barangay, map_pin_address, or unit name
       let userMunicipality = unit?.barangay?.municipality || unit?.barangay?.city;
       if (!userMunicipality && unit?.map_pin_address) {
@@ -244,12 +244,12 @@ export const getIncidents = async (req, res) => {
 
       if (req.user.unit_id || unitType) {
         const roleFilters = [];
-        
+
         // 1. Always see explicitly assigned incidents (including backup requests assigned to this unit)
         if (req.user.unit_id) {
           roleFilters.push({ assignments: { some: { unit_id: req.user.unit_id } } });
         }
-        
+
         // 2. See incidents of their type within their jurisdiction
         if (unitType) {
           const typeFilter = { incident_type: { default_unit_type: unitType } };
@@ -292,12 +292,37 @@ export const getIncidents = async (req, res) => {
     }
 
     // ADMIN / SUB-ADMIN / RESPONSE_UNIT District Restrictions
-    const userDistrict = req.user?.congressional_district || req.user?.unit?.barangay?.congressional_district;
-    if (userDistrict) {
-      where.barangay = {
-        ...(where.barangay || {}),
-        congressional_district: { equals: userDistrict, mode: 'insensitive' }
+    if (req.user?.congressional_district) {
+      const dist = req.user.congressional_district;
+      const districtLgus = dist.includes('2')
+        ? ['Cadiz', 'Sagay', 'Manapla']
+        : dist.includes('3')
+          ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
+          : dist.includes('1')
+            ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
+            : [dist];
+
+      const lguAddressConditions = districtLgus.map(lgu => ({ map_pin_address: { contains: lgu, mode: 'insensitive' } }));
+      const lguCityConditions = districtLgus.map(lgu => ({ city: { contains: lgu, mode: 'insensitive' } }));
+
+      const districtFilter = {
+        OR: [
+          { barangay: { congressional_district: { equals: dist, mode: 'insensitive' } } },
+          { district: { name: { contains: dist, mode: 'insensitive' } } },
+          ...lguAddressConditions,
+          ...lguCityConditions
+        ]
       };
+
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          districtFilter
+        ];
+        delete where.OR;
+      } else {
+        where.AND = [districtFilter];
+      }
     }
 
     // ADMIN can see all incidents (subject to district restriction if assigned)
@@ -553,11 +578,11 @@ export const requestBackup = async (req, res) => {
         const distB = Math.sqrt(Math.pow(b.latitude - incident.latitude, 2) + Math.pow(b.longitude - incident.longitude, 2));
         return distA - distB;
       });
-    
+
     if (available.length === 0) {
       const foundCount = allUnits.length;
-      return res.status(404).json({ 
-        message: foundCount > 0 
+      return res.status(404).json({
+        message: foundCount > 0
           ? `All ${foundCount} nearby ${unit_type} units are already assigned to this incident.`
           : `No ${unit_type} units found in the system coordinates. Please check unit locations.`
       });
@@ -574,7 +599,7 @@ export const requestBackup = async (req, res) => {
         assigned_by: req.user.id,
         status: 'PENDING'
       },
-      include: { 
+      include: {
         unit: true,
         incident: { include: { incident_type: true } }
       }
@@ -708,7 +733,7 @@ export const verifyIncident = async (req, res) => {
 
       // Task K: Allow manual assignment via manual_unit_ids dropdown
       let assignedUnits = [];
-      
+
       if (manual_unit_ids && Array.isArray(manual_unit_ids) && manual_unit_ids.length > 0) {
         // Fetch manual units from database
         assignedUnits = await prisma.responseUnit.findMany({

@@ -29,6 +29,7 @@ export const authenticate = async (req, res, next) => {
         role: true,
         contact_number: true,
         unit_id: true,
+        congressional_district: true,
         unit: { include: { barangay: true } },
       },
     });
@@ -107,6 +108,7 @@ export const optionalAuthenticate = async (req, res, next) => {
         role: true,
         contact_number: true,
         unit_id: true,
+        congressional_district: true,
         unit: true,
       },
     });

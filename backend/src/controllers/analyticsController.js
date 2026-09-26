@@ -2,13 +2,25 @@ import { prisma } from '../config/database.js';
 import { success, error } from "../utils/apiResponse.js";
 import predictionService from '../services/predictionService.js';
 
-export const getSummary = async (_req, res) => {
+export const getSummary = async (req, res) => {
   try {
+    const userDistrict = req.user?.congressional_district;
+    const whereIncident = {};
+
+    if (userDistrict) {
+      whereIncident.OR = [
+        { barangay: { congressional_district: { equals: userDistrict, mode: 'insensitive' } } },
+        { district: { name: { contains: userDistrict, mode: 'insensitive' } } },
+        { map_pin_address: { contains: userDistrict, mode: 'insensitive' } },
+        { city: { contains: userDistrict, mode: 'insensitive' } }
+      ];
+    }
+
     const [total, active, resolved, users] = await Promise.all([
-      prisma.incident.count(),
-      prisma.incident.count({ where: { status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
-      prisma.incident.count({ where: { status: { in: ["RESOLVED", "CLOSED", "FALSE_ALARM"] } } }),
-      prisma.user.count(),
+      prisma.incident.count({ where: whereIncident }),
+      prisma.incident.count({ where: { ...whereIncident, status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
+      prisma.incident.count({ where: { ...whereIncident, status: { in: ["RESOLVED", "CLOSED", "FALSE_ALARM"] } } }),
+      prisma.user.count({ where: userDistrict ? { congressional_district: { equals: userDistrict, mode: 'insensitive' } } : {} }),
     ]);
 
     return res.status(200).json(success({ data: { total, active, resolved, users }, message: "Analytics summary fetched" }));

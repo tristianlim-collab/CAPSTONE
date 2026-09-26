@@ -96,21 +96,12 @@ const Login = () => {
               <input type="checkbox" className="mr-2 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
               Remember me
             </label>
-            <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-              Forgot password?
-            </a>
           </div>
 
           <Button type="submit" fullWidth loading={loading} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20">
             {loading ? 'Connecting...' : 'Sign In'}
           </Button>
 
-          <div className="text-center text-sm text-slate-500 mt-6">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium tracking-normal">
-              Register here
-            </Link>
-          </div>
         </form>
 
         <div className="flex flex-col items-center gap-4 mt-8 pt-6 border-t border-slate-100 uppercase tracking-tighter">

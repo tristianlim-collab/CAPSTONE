@@ -6,7 +6,7 @@ import { incidentAPI } from '../../api';
 import {
   Home, FileText, User, Bell, ChevronRight,
   MapPin, Clock, AlertTriangle, ShieldCheck,
-  Flame, Activity, Stethoscope, Car, Loader2
+  Flame, Activity, Stethoscope, Car, Loader2, LogOut
 } from 'lucide-react';
 
 const TYPE_ICONS = {
@@ -18,10 +18,15 @@ const TYPE_ICONS = {
 
 export default function ReporterHome() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { on, connected } = useSocketContext();
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const handleExit = () => {
+    if (logout) logout();
+    navigate('/login');
+  };
 
   // Fetch reporter's own incidents
   useEffect(() => {
@@ -154,6 +159,15 @@ export default function ReporterHome() {
               {user?.name || 'Citizen'} <span className="text-xl">👋</span>
             </h1>
           </div>
+
+          <button
+            onClick={handleExit}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+            title="Exit Application"
+          >
+            <LogOut size={16} />
+            <span>Exit</span>
+          </button>
         </div>
 
         {/* Big Report Button */}

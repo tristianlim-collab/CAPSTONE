@@ -8,8 +8,9 @@ export const getAllUsers = async (req, res) => {
     const { district, limit } = req.query;
 
     const where = {};
-    if (district) {
-      where.congressional_district = { contains: district, mode: 'insensitive' };
+    const effectiveDistrict = district || req.user?.congressional_district;
+    if (effectiveDistrict) {
+      where.congressional_district = { contains: effectiveDistrict, mode: 'insensitive' };
     }
 
     const queryOptions = {

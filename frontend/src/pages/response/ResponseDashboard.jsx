@@ -46,6 +46,24 @@ export default function ResponseDashboard() {
       let verifiedInc = data.incident || data;
       const incId = verifiedInc.incident_id || data.incident_id;
 
+      // Filter by district for response unit user
+      const userDist = user?.congressional_district || user?.unit?.barangay?.congressional_district;
+      if (userDist) {
+        const districtLgus = userDist.includes('2')
+          ? ['Cadiz', 'Sagay', 'Manapla']
+          : userDist.includes('3')
+            ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
+            : userDist.includes('1')
+              ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
+              : [userDist];
+
+        const incAddress = (verifiedInc.map_pin_address || verifiedInc.city || verifiedInc.barangay?.city || verifiedInc.barangay?.municipality || '').toLowerCase();
+        const incDistrict = (verifiedInc.district?.name || verifiedInc.barangay?.congressional_district || '').toLowerCase();
+        const isMatch = districtLgus.some(lgu => incAddress.includes(lgu.toLowerCase())) || incDistrict.includes(userDist.toLowerCase());
+
+        if (!isMatch) return; // Do not display emergency outside assigned district
+      }
+
       if (!verifiedInc.map_pin_address || !verifiedInc.incident_type) {
         try {
           const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });

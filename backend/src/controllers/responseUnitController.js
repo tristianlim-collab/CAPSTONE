@@ -7,7 +7,29 @@ import { logAuditEvent } from './auditController.js';
 
 export const getAll = async (req, res) => {
   try {
+    const where = {};
+    if (req.user?.congressional_district) {
+      const dist = req.user.congressional_district;
+      // Define LGUs per district to ensure proper filtering even if barangay is not linked
+      const districtLgus = dist.includes('2')
+        ? ['Cadiz', 'Sagay', 'Manapla']
+        : dist.includes('3')
+          ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
+          : dist.includes('1')
+            ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
+            : [dist];
+
+      const lguConditions = districtLgus.map(lgu => ({ unit_name: { contains: lgu, mode: 'insensitive' } }));
+
+      where.OR = [
+        { barangay: { congressional_district: { equals: dist, mode: 'insensitive' } } },
+        { unit_name: { contains: dist, mode: 'insensitive' } },
+        ...lguConditions
+      ];
+    }
+
     const units = await prisma.responseUnit.findMany({
+      where,
       include: {
         barangay: {
           select: {
@@ -234,12 +256,22 @@ export const deleteUnit = async (req, res) => {
 
 export const getActiveUnitPositions = async (req, res) => {
   try {
+    const where = {
+      availability_status: {
+        not: 'OFFLINE'
+      }
+    };
+
+    if (req.user?.congressional_district) {
+      const dist = req.user.congressional_district;
+      where.OR = [
+        { barangay: { congressional_district: { equals: dist, mode: 'insensitive' } } },
+        { unit_name: { contains: dist, mode: 'insensitive' } }
+      ];
+    }
+
     const units = await prisma.responseUnit.findMany({
-      where: {
-        availability_status: {
-          not: 'OFFLINE'
-        }
-      },
+      where,
       select: {
         unit_id: true,
         unit_name: true,

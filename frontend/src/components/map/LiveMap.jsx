@@ -27,7 +27,7 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
     if (!enabled || !incidents || incidents.length === 0) return;
 
     const latestIncident = incidents[0];
-    const latestId = latestIncident?.incident_id;
+    const latestId = latestIncident?.incident_id || latestIncident?.id;
     const latestStatus = latestIncident?.status;
     const latestKey = `${latestId}_${latestStatus}`;
     const lat = Number(latestIncident?.latitude);
@@ -36,28 +36,14 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
     if (!hasValidCoordinates) return;
 
-    // Zoom on first load or when a new latest incident / status update arrives
+    // Zoom whenever a new incident arrives or is updated
     if (previousLatestKey.current !== latestKey) {
-      const isUpdate = previousLatestKey.current !== null;
-      const isApprovedOrVerified = latestStatus === 'VERIFIED' || latestStatus === 'RESPONDING';
       previousLatestKey.current = latestKey;
 
       map.flyTo([lat, lng], 16, {
-        duration: 1.8,
+        duration: 1.5,
         easeLinearity: 0.25
       });
-
-      if (isUpdate) {
-        const msg = isApprovedOrVerified
-          ? `🟢 Incident #${latestIncident?.incident_code || ''} Approved! Map zoomed to location.`
-          : '🔴 New incident reported! Map zoomed to location.';
-
-        toast(msg, {
-          icon: '🚨',
-          style: { fontWeight: 'bold', borderLeft: `4px solid ${isApprovedOrVerified ? '#10B981' : '#EF4444'}` },
-          duration: 5000
-        });
-      }
     }
   }, [enabled, incidents, map]);
 
@@ -66,19 +52,17 @@ function AutoZoomToLatestIncident({ incidents, enabled }) {
 
 function FlyToSelectedIncident({ selectedIncident }) {
   const map = useMap();
-  const prevSelectedId = useRef(null);
 
   useEffect(() => {
     if (!selectedIncident?.latitude || !selectedIncident?.longitude) return;
-    const selectedId = selectedIncident.incident_id;
-
-    if (prevSelectedId.current !== null && prevSelectedId.current !== selectedId) {
-      map.flyTo([Number(selectedIncident.latitude), Number(selectedIncident.longitude)], 17, {
-        duration: 1.5,
+    const lat = Number(selectedIncident.latitude);
+    const lng = Number(selectedIncident.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      map.flyTo([lat, lng], 16, {
+        duration: 1.2,
         easeLinearity: 0.25,
       });
     }
-    prevSelectedId.current = selectedId;
   }, [selectedIncident, map]);
 
   return null;

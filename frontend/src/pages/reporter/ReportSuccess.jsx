@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, ArrowRight, UserCheck, AlertTriangle, Truck, Camera, CheckCircle2, Clock, Check, Image as ImageIcon } from 'lucide-react';
+import { ShieldCheck, ArrowRight, UserCheck, AlertTriangle, Truck, Camera, CheckCircle2, Clock, Check, Image as ImageIcon, X } from 'lucide-react';
 import { useSocketContext } from '../../context/SocketContext';
 import { incidentAPI } from '../../api';
 
@@ -92,6 +92,15 @@ export default function ReportSuccess() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 p-4 sm:p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+      {/* Top Exit Button */}
+      <button 
+        onClick={() => navigate('/reporter/home')}
+        className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-white flex items-center justify-center shadow-sm transition-all active:scale-95"
+        title="Exit"
+      >
+        <X size={20} />
+      </button>
+
       {/* Background Graphic */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 -translate-y-1/2 translate-x-1/3"></div>
       
