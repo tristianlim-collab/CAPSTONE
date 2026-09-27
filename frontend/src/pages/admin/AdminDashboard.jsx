@@ -261,7 +261,29 @@ export default function AdminDashboard() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 truncate">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
+                    <p className="text-[11px] text-slate-400 truncate mb-2">{inc.map_pin_address || inc.barangay?.name || 'No location'}</p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVerifyFromMap(inc.incident_id, 'APPROVE');
+                        }}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-1 px-2 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1"
+                      >
+                        <CheckCircle2 size={12} /> Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVerifyFromMap(inc.incident_id, 'REJECT');
+                        }}
+                        className="px-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 text-[10px] font-bold py-1 rounded-lg transition-colors"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 );
               })}

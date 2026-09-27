@@ -14,7 +14,6 @@ import {
   Flame, Stethoscope, Car, FileText, RefreshCw, ChevronDown
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OfflineQueueService } from '../services/offlineQueueService';
 import api, { incidentAPI, SOCKET_URL } from '../api';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../theme/colors';
 
@@ -161,6 +160,7 @@ export default function IncidentReportScreen({ navigation }) {
   const [selectedType, setSelectedType] = useState('');
   const [severity, setSeverity] = useState('LOW');
   const [landmark, setLandmark] = useState('');
+  const [customDescription, setCustomDescription] = useState('');
   const [fullName, setFullName] = useState('');
   const [contactNumber, setContactNumber] = useState('+639');
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -345,8 +345,10 @@ export default function IncidentReportScreen({ navigation }) {
   };
 
   const generatedDescription = selectedType
-    ? `${selectedType} - ${severity}: ${getSeverityDescription()}`
-    : '';
+    ? customDescription.trim()
+      ? `${selectedType} - ${severity}: ${getSeverityDescription()} | ${customDescription.trim()}`
+      : `${selectedType} - ${severity}: ${getSeverityDescription()}`
+    : customDescription.trim();
 
   const handleSubmit = async () => {
     if (!location) { Alert.alert('Error', 'Please detect your location'); return; }
@@ -438,6 +440,8 @@ export default function IncidentReportScreen({ navigation }) {
       if (isMounted.current) {
         setPhotos([]);
         setSelectedType('');
+        setCustomDescription('');
+        setLandmark('');
         setLoading(false);
         navigation.replace('ReportSuccess');
       }
@@ -445,36 +449,6 @@ export default function IncidentReportScreen({ navigation }) {
     } catch (err) {
       if (isMounted.current) {
         console.error('Submission error details:', err);
-        const isNetworkError = err.message === 'OFFLINE' || !err.response || err.code === 'ERR_NETWORK' || err.message?.toLowerCase().includes('network');
-
-        if (isNetworkError) {
-          try {
-            await OfflineQueueService.saveToQueue({
-              incident_type_id: typeId,
-              description: generatedDescription,
-              latitude: location.lat,
-              longitude: location.lng,
-              map_pin_address: locationAddress,
-              landmark: landmark || undefined,
-              severity,
-              reporter_name: fullName || undefined,
-              reporter_phone: contactNumber,
-              photos
-            });
-            Alert.alert(
-              'Report Queued Offline',
-              'Server response timed out or network was unstable. Your report has been securely saved on your phone and will automatically send when reconnected.',
-              [{ text: 'OK', onPress: () => navigation.replace('ReportSuccess') }]
-            );
-            setPhotos([]);
-            setSelectedType('');
-            setLoading(false);
-            return;
-          } catch (queueErr) {
-            console.error('Queue save failed:', queueErr);
-          }
-        }
-
         const errorMsg = err.response?.data?.message || 'Failed to submit. Check connection.';
         Alert.alert('Submission Error', errorMsg);
         setLoading(false);
@@ -682,10 +656,27 @@ export default function IncidentReportScreen({ navigation }) {
           <View style={styles.descBox}>
             <Text style={styles.descText}>{getSeverityDescription()}</Text>
           </View>
+
+          {/* Detailed Description */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={[styles.sectionLabel, { fontSize: 12, marginBottom: 6, color: '#475569' }]}>
+              ADDITIONAL DETAILS / DESCRIPTION
+            </Text>
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
+              placeholder="Describe what is happening at the scene in detail..."
+              placeholderTextColor="#94A3B8"
+              multiline={true}
+              numberOfLines={3}
+              value={customDescription}
+              onChangeText={setCustomDescription}
+            />
+          </View>
+
           {generatedDescription ? (
             <View style={styles.autoDescBox}>
               <Text style={styles.autoDescText}>
-                <Text style={{ fontWeight: '600' }}>Description: </Text>
+                <Text style={{ fontWeight: '600' }}>Full Report Summary: </Text>
                 {generatedDescription}
               </Text>
             </View>

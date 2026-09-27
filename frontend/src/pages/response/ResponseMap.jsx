@@ -494,19 +494,17 @@ const ResponseMap = () => {
       const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
       
       const unitCity = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
-      const incidentCity = (incObj.barangay?.city || incObj.barangay?.municipality || incObj.map_pin_address || '').toLowerCase();
+      const incidentAddress = (incObj.map_pin_address || incObj.city || incObj.barangay?.city || incObj.barangay?.municipality || '').toLowerCase();
 
-      const isSilayUnit = unitCity.includes('silay');
-      const isTalisayUnit = unitCity.includes('talisay');
-      const isSilayIncident = incidentCity.includes('silay');
-      const isTalisayIncident = incidentCity.includes('talisay');
+      const lgus = ['silay', 'talisay', 'victorias', 'magalona', 'murcia'];
+      const myLgu = lgus.find(lgu => unitCity.includes(lgu));
 
       let shouldShow = true;
-      if (isSilayUnit && !isSilayIncident && isTalisayIncident) shouldShow = false;
-      if (isTalisayUnit && !isTalisayIncident && isSilayIncident) shouldShow = false;
-      if (isTalisayUnit && isSilayIncident && !isTalisayIncident) shouldShow = false;
+      if (myLgu) {
+        shouldShow = incidentAddress.includes(myLgu);
+      }
 
-      // Show if assigned OR if within unit jurisdiction
+      // Show if assigned OR if within unit LGU jurisdiction
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
           const others = prev.filter(i => i.incident_id !== incId);
@@ -607,19 +605,17 @@ const ResponseMap = () => {
           const isAssignedToMe = inc.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
           if (isAssignedToMe) return true;
 
-          // Priority 2: Keyword-based Jurisdiction Filter
-          const unitName = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
-          const incidentAddress = (inc.barangay?.city || inc.barangay?.municipality || inc.map_pin_address || '').toLowerCase();
+          // Priority 2: City/LGU Jurisdiction Filtering
+          const unitCity = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
+          const incidentAddress = (inc.map_pin_address || inc.city || inc.barangay?.city || inc.barangay?.municipality || '').toLowerCase();
 
-          const isSilayUnit = unitName.includes('silay');
-          const isTalisayUnit = unitName.includes('talisay');
-          const isSilayIncident = incidentAddress.includes('silay');
-          const isTalisayIncident = incidentAddress.includes('talisay');
-
-          // If I'm a Silay unit, I only want to see Silay incidents
-          if (isSilayUnit && !isSilayIncident && isTalisayIncident) return false;
-          // If I'm a Talisay unit, I only want to see Talisay incidents
-          if (isTalisayUnit && !isTalisayIncident && isSilayIncident) return false;
+          const lgus = ['silay', 'talisay', 'victorias', 'magalona', 'murcia'];
+          const myLgu = lgus.find(lgu => unitCity.includes(lgu));
+          
+          if (myLgu) {
+            const isMyLguIncident = incidentAddress.includes(myLgu);
+            if (!isMyLguIncident) return false;
+          }
 
           return true;
         });

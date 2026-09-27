@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, FileText, MapPin, Clock } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OfflineQueueService } from '../services/offlineQueueService';
 import { incidentAPI } from '../api';
 import { useSocketContext } from '../context/SocketContext';
 import { Colors, FontSizes, BorderRadius } from '../theme/colors';
@@ -17,19 +16,6 @@ export default function MyReportsScreen({ navigation }) {
   const loadReports = useCallback(async () => {
     try {
       setLoading(true);
-      // 0. Load any pending offline queued items
-      const offlineItems = await OfflineQueueService.getQueue();
-      const offlineFormatted = offlineItems.map(item => ({
-        incident_id: item.id,
-        incident_code: 'OFFLINE QUEUE',
-        status: 'PENDING_OFFLINE',
-        description: item.description,
-        map_pin_address: item.map_pin_address,
-        landmark: item.landmark,
-        reported_at: item.timestamp,
-        incident_type: { name: 'Emergency Report' }
-      }));
-
       // 1. Try loading report IDs saved locally on this device
       const stored = await AsyncStorage.getItem('my_report_ids');
       const ids = stored ? JSON.parse(stored) : [];
@@ -40,7 +26,7 @@ export default function MyReportsScreen({ navigation }) {
           .filter(r => r.status === 'fulfilled' && r.value?.data)
           .map(r => r.value.data);
         if (fetched.length > 0) {
-          setReports([...offlineFormatted, ...fetched]);
+          setReports(fetched);
           return;
         }
       }
@@ -48,30 +34,19 @@ export default function MyReportsScreen({ navigation }) {
       // 2. Fallback: fetch all incidents directly from API endpoint
       const res = await incidentAPI.getAll({ limit: 50 });
       const apiIncidents = res.data?.data || res.data || [];
-      setReports([...offlineFormatted, ...(Array.isArray(apiIncidents) ? apiIncidents : [])]);
+      setReports(Array.isArray(apiIncidents) ? apiIncidents : []);
     } catch (e) {
       console.error('Fetch reports failed:', e);
-      const offlineItems = await OfflineQueueService.getQueue();
-      const offlineFormatted = offlineItems.map(item => ({
-        incident_id: item.id,
-        incident_code: 'OFFLINE QUEUE',
-        status: 'PENDING_OFFLINE',
-        description: item.description,
-        map_pin_address: item.map_pin_address,
-        landmark: item.landmark,
-        reported_at: item.timestamp,
-        incident_type: { name: 'Emergency Report' }
-      }));
-      setReports(offlineFormatted);
+      setReports([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { 
-    OfflineQueueService.syncQueue().then(() => loadReports()); 
+    loadReports(); 
     const interval = setInterval(() => {
-      OfflineQueueService.syncQueue().then(() => loadReports());
+      loadReports();
     }, 10000);
     return () => clearInterval(interval);
   }, [loadReports]);

@@ -9,13 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Home, FileText, ChevronRight,
   MapPin, Clock, AlertTriangle, ShieldCheck,
-  Flame, Activity, Stethoscope, Car
+  Flame, Activity, Stethoscope, Car, LogOut
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { useSocketContext } from '../context/SocketContext';
 import { incidentAPI } from '../api';
-import { OfflineQueueService } from '../services/offlineQueueService';
 
 const TYPE_ICONS = {
   'FIRE': Flame,
@@ -33,30 +33,37 @@ export default function ReporterHomeScreen({ navigation }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const { logout } = useAuth();
+
+  const handleExit = () => {
+    if (logout) logout();
+    navigation.replace('Login');
+  };
+
   useEffect(() => {
-    // Attempt auto-syncing any offline queued reports on screen load
-    OfflineQueueService.syncQueue();
-
-    // Auto-sync every 15 seconds in case Wi-Fi/Internet comes back while user is inside the app
-    const syncInterval = setInterval(() => {
-      OfflineQueueService.syncQueue();
-    }, 15000);
-
     const fetchIncidents = async () => {
       try {
-        const res = await incidentAPI.getAll({ limit: 50 });
-        const list = res.data?.data || [];
-        setIncidents(list);
+        const stored = await AsyncStorage.getItem('my_report_ids');
+        let ids = stored ? JSON.parse(stored) : [];
+
+        if (ids.length > 0) {
+          const results = await Promise.allSettled(ids.map(id => incidentAPI.getById(id)));
+          const fetched = results
+            .filter(r => r.status === 'fulfilled' && (r.value?.data?.data || r.value?.data))
+            .map(r => r.value.data?.data || r.value.data);
+          setIncidents(fetched);
+        } else {
+          setIncidents([]);
+        }
       } catch (err) {
         console.error('Failed to fetch incidents:', err);
+        setIncidents([]);
       } finally {
         setLoading(false);
       }
     };
     fetchIncidents();
-
-    return () => clearInterval(syncInterval);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     (async () => {
@@ -66,14 +73,25 @@ export default function ReporterHomeScreen({ navigation }) {
 
   useEffect(() => {
     const unsub1 = on('incident_status_updated', (data) => {
-      setIncidents(prev => {
-        const newList = prev.map(inc =>
-          inc.incident_id === data.incident_id
-            ? { ...inc, status: data.status, ...(data.incident || {}) }
-            : inc
-        );
-        return newList;
-      });
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === data.incident_id
+          ? { ...inc, status: data.status, ...(data.incident || {}) }
+          : inc
+      ));
+    });
+    const unsub1b = on('incident_verified', (data) => {
+      const incId = data.incident_id || data.incident?.incident_id;
+      const newStatus = data.status || 'RESPONDING';
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === incId ? { ...inc, status: newStatus, ...(data.incident || {}) } : inc
+      ));
+    });
+    const unsub1c = on('incident_approved', (data) => {
+      const incId = data.incident_id || data.incident?.incident_id;
+      const newStatus = data.status || 'RESPONDING';
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === incId ? { ...inc, status: newStatus, ...(data.incident || {}) } : inc
+      ));
     });
     const unsub2 = on('incident_updated', (data) => {
       setIncidents(prev => prev.map(inc =>
@@ -100,7 +118,7 @@ export default function ReporterHomeScreen({ navigation }) {
         inc.incident_id === data.incident_id ? { ...inc, status: 'RESOLVED' } : inc
       ));
     });
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
+    return () => { unsub1(); unsub1b(); unsub1c(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, [on]);
 
 
@@ -151,24 +169,27 @@ export default function ReporterHomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.slate50} />
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
 
-      {/* Light clean header background */}
-      <View style={[styles.headerBg, { paddingTop: insets.top }]} />
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Row */}
-        <View style={styles.headerRow}>
+      {/* Dark Curved Header Background */}
+      <View style={[styles.headerBg, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
           <View>
             <Text style={styles.greetingText}>{getGreeting()},</Text>
             <Text style={styles.userName}>{user?.name || 'Citizen'} 👋</Text>
           </View>
+          <TouchableOpacity style={styles.exitBtn} onPress={handleExit}>
+            <LogOut size={14} color="#FFFFFF" />
+            <Text style={styles.exitText}>Exit</Text>
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 70 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Big Emergency Report Button */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -191,41 +212,12 @@ export default function ReporterHomeScreen({ navigation }) {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <FileText size={60} color={Colors.primaryFaint} style={styles.statBgIcon} />
-            <Text style={styles.statLabel}>TOTAL REPORTS</Text>
-            {loading ? (
-              <ActivityIndicator color={Colors.slate300} size="small" />
-            ) : (
-              <Text style={styles.statValue}>{totalReports}</Text>
-            )}
-          </View>
-          <View style={styles.statCard}>
-            <Activity size={60} color={Colors.orangeLight} style={styles.statBgIcon} />
-            <View style={styles.statLabelRow}>
-              {activeCount > 0 && <View style={styles.pulseDot} />}
-              <Text style={[styles.statLabel, { color: Colors.orange }]}>ACTIVE</Text>
-            </View>
-            {loading ? (
-              <ActivityIndicator color={Colors.slate300} size="small" />
-            ) : (
-              <Text style={styles.statValue}>{activeCount}</Text>
-            )}
-          </View>
-        </View>
-
-
-        {/* Recent Activity Header */}
+        {/* Status Tracking Header */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>RECENT ACTIVITY</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('MyReports')}>
-            <Text style={styles.viewAllBtn}>View All</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>MY REPORT STATUS TRACKING</Text>
         </View>
 
-        {/* Recent Incidents List */}
+        {/* Recent Incidents List with 4-Step Tracker */}
         {loading ? (
           <View style={styles.emptyCenter}>
             <ActivityIndicator size="large" color={Colors.slate400} />
@@ -235,55 +227,75 @@ export default function ReporterHomeScreen({ navigation }) {
             <View style={styles.emptyIconWrap}>
               <FileText size={24} color={Colors.slate400} />
             </View>
-            <Text style={styles.emptyText}>No reports yet. Tap the button above to submit one.</Text>
+            <Text style={styles.emptyText}>No reports submitted yet. Tap the button above to submit an emergency report.</Text>
           </View>
         ) : (
           recentIncidents.map((incident) => {
             const IconComp = getTypeIcon(incident);
             const badge = getStatusBadge(incident.status);
             const isResolved = incident.status === 'RESOLVED' || incident.status === 'CLOSED';
+            const statusStr = incident.status || 'REPORTED';
+
+            const isReportedActive = ['REPORTED', 'VERIFIED', 'RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED'].includes(statusStr);
+            const isRespondingActive = ['RESPONDING', 'ON_SCENE', 'RESOLVED', 'CLOSED'].includes(statusStr);
+            const isOnSceneActive = ['ON_SCENE', 'RESOLVED', 'CLOSED'].includes(statusStr);
+            const isResolvedActive = statusStr === 'RESOLVED';
+
             return (
               <TouchableOpacity
                 key={incident.incident_id}
                 onPress={() => navigation.navigate('ReportDetails', { incident })}
-                activeOpacity={0.7}
-                style={[styles.incidentCard, isResolved && { opacity: 0.85 }]}
+                activeOpacity={0.8}
+                style={styles.incidentCard}
               >
-                <View style={[
-                  styles.incidentIcon,
-                  { backgroundColor: isResolved ? Colors.slate50 : Colors.orangeLight }
-                ]}>
-                  <IconComp size={24} color={isResolved ? Colors.slate400 : Colors.orange} />
-                </View>
-                <View style={styles.incidentInfo}>
-                  <View style={styles.incidentTopRow}>
-                    <Text style={styles.incidentType} numberOfLines={1}>
-                      {incident.incident_type?.name || 'Incident'}
-                    </Text>
-                    <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-                      {isResolved && <ShieldCheck size={10} color={badge.text} />}
-                      <Text style={[styles.statusText, { color: badge.text }]}>{badge.label}</Text>
-                    </View>
+                <View style={styles.incidentTopBlock}>
+                  <View style={[
+                    styles.incidentIcon,
+                    { backgroundColor: isResolved ? Colors.slate50 : '#FEF2F2' }
+                  ]}>
+                    <IconComp size={24} color={isResolved ? Colors.slate400 : '#EF4444'} />
                   </View>
-                  <View style={styles.incidentMeta}>
-                    <View style={styles.metaItem}>
-                      <Clock size={12} color={Colors.slate500} />
-                      <Text style={styles.metaText}>{getTimeAgo(incident.reported_at)}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <MapPin size={12} color={Colors.slate500} />
-                      <Text style={styles.metaText} numberOfLines={1}>
-                        {incident.map_pin_address || 'Unknown'}
+                  <View style={styles.incidentInfo}>
+                    <View style={styles.incidentTopRow}>
+                      <Text style={styles.incidentType} numberOfLines={1}>
+                        {incident.incident_type?.name || 'Incident'}
                       </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+                        {isResolved && <ShieldCheck size={10} color={badge.text} />}
+                        <Text style={[styles.statusText, { color: badge.text }]}>{badge.label}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.incidentMeta}>
+                      <View style={styles.metaItem}>
+                        <Clock size={12} color={Colors.slate500} />
+                        <Text style={styles.metaText}>{getTimeAgo(incident.reported_at)}</Text>
+                      </View>
+                      <View style={styles.metaItem}>
+                        <MapPin size={12} color={Colors.slate500} />
+                        <Text style={styles.metaText} numberOfLines={1}>
+                          {incident.map_pin_address || 'Unknown'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
+                </View>
+
+                {/* Direct 4-Step Progress Tracker */}
+                <View style={styles.stepTrackerBox}>
+                  <Text style={[styles.stepItemText, isReportedActive && styles.stepItemActive]}>1. Reported</Text>
+                  <View style={styles.stepLine} />
+                  <Text style={[styles.stepItemText, isRespondingActive && styles.stepItemActive]}>2. Responding</Text>
+                  <View style={styles.stepLine} />
+                  <Text style={[styles.stepItemText, isOnSceneActive && styles.stepItemActive]}>3. On Scene</Text>
+                  <View style={styles.stepLine} />
+                  <Text style={[styles.stepItemText, isResolvedActive && styles.stepItemDone]}>4. Resolved</Text>
                 </View>
               </TouchableOpacity>
             );
           })
         )}
 
-        {/* Bottom spacing for tab bar */}
+        {/* Bottom spacing */}
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
@@ -303,7 +315,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 180,
-    backgroundColor: Colors.slate50,
+    backgroundColor: '#0F172A',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  greetingText: {
+    color: '#94A3B8',
+    fontSize: FontSizes.sm,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  userName: {
+    color: '#FFFFFF',
+    fontSize: FontSizes.xl,
+    fontWeight: '800',
+  },
+  exitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  exitText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
@@ -311,33 +359,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  greetingText: {
-    color: Colors.slate500,
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  userName: {
-    color: Colors.slate800,
-    fontSize: FontSizes.xxl,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
   emergencyBtn: {
-    borderRadius: BorderRadius.xxxl,
-    padding: 28,
+    borderRadius: 28,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
     shadowColor: '#DC2626',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
     elevation: 8,
   },
   emergencyIconCircle: {
@@ -347,14 +377,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   emergencyTitle: {
-    fontSize: FontSizes.xxl,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: Colors.white,
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    marginBottom: 4,
   },
   emergencySubRow: {
     flexDirection: 'row',
@@ -362,75 +391,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   emergencySub: {
-    fontSize: FontSizes.sm,
-    color: 'rgba(255,228,230,0.9)',
+    fontSize: 13,
+    color: 'rgba(255, 228, 230, 0.9)',
     fontWeight: '500',
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: 16,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    overflow: 'hidden',
-  },
-  statBgIcon: {
-    position: 'absolute',
-    right: -12,
-    top: -12,
-    opacity: 0.6,
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.slate400,
-    letterSpacing: 1.5,
-    marginBottom: 10,
-  },
-  statLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-  },
-  pulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.orange,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.slate800,
-  },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
-    color: Colors.slate800,
+    color: '#334155',
     letterSpacing: 0.5,
-  },
-  viewAllBtn: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.primaryDark,
+    textTransform: 'uppercase',
   },
   emptyCenter: {
     paddingVertical: 32,
@@ -462,28 +435,29 @@ const styles = StyleSheet.create({
   },
   incidentCard: {
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 20,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 12,
+    marginBottom: 14,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
     borderColor: Colors.slate200,
   },
+  incidentTopBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
   incidentIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: BorderRadius.md,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.slate100,
   },
   incidentInfo: {
     flex: 1,
@@ -492,7 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   incidentType: {
     fontSize: 15,
@@ -517,7 +491,7 @@ const styles = StyleSheet.create({
   },
   incidentMeta: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   metaItem: {
     flexDirection: 'row',
@@ -525,8 +499,36 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.slate500,
     fontWeight: '500',
+  },
+  stepTrackerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  stepItemText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#CBD5E1',
+  },
+  stepItemActive: {
+    color: '#4F46E5',
+  },
+  stepItemDone: {
+    color: '#10B981',
+    fontWeight: '800',
+  },
+  stepLine: {
+    width: 8,
+    height: 2,
+    backgroundColor: '#E2E8F0',
   },
 });

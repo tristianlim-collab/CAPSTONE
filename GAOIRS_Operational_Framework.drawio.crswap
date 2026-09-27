@@ -1,0 +1,22 @@
+<mxfile host="app.diagrams.net" agent="Antigravity">
+  <diagram id="GAOIRS_Operational_Framework" name="GAOIRS Operational Framework">
+    <mxGraphModel dx="1717" dy="937" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eF9c9Z7IGTTt5PaJE9ID-5" parent="1" style="verticalLabelPosition=bottom;sketch=0;html=1;fillColor=#282828;strokeColor=none;verticalAlign=top;pointerEvents=1;align=center;shape=mxgraph.cisco_safe.people_places_things_icons.icon2;" value="" vertex="1">
+          <mxGeometry height="150" width="170" x="500" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="eF9c9Z7IGTTt5PaJE9ID-7" parent="1" style="verticalLabelPosition=bottom;sketch=0;html=1;fillColor=#282828;strokeColor=none;verticalAlign=top;pointerEvents=1;align=center;shape=mxgraph.cisco_safe.people_places_things_icons.icon2;" value="" vertex="1">
+          <mxGeometry height="150" width="170" x="120" y="264" as="geometry" />
+        </mxCell>
+        <mxCell id="eF9c9Z7IGTTt5PaJE9ID-8" parent="1" style="verticalLabelPosition=bottom;sketch=0;html=1;fillColor=#282828;strokeColor=none;verticalAlign=top;pointerEvents=1;align=center;shape=mxgraph.cisco_safe.people_places_things_icons.icon2;" value="" vertex="1">
+          <mxGeometry height="150" width="170" x="840" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="eF9c9Z7IGTTt5PaJE9ID-9" parent="1" style="image;aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;shadow=0;dashed=0;spacingTop=3;image=img/lib/active_directory/internet_cloud.svg;" value="" vertex="1">
+          <mxGeometry height="120" width="190.48" x="560" y="320" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
