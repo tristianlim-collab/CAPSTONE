@@ -56,15 +56,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Pre-logout cleanup: If logged in as Response Unit, update duty status to OFFLINE
-      if (user?.unit_id || user?.role === 'RESPONSE_UNIT') {
-        const unitId = user.unit_id || user.unit?.unit_id;
-        if (unitId) {
-          await axiosInstance.put(`/response-units/${unitId}/status`, { status: 'OFFLINE' }).catch(() => {});
-        }
-      }
+      // Station units remain active / standby even when a user logs out
     } catch (err) {
-      console.warn('Pre-logout cleanup error:', err);
+      console.warn('Logout error:', err);
     } finally {
       localStorage.removeItem('token');
       delete axiosInstance.defaults.headers.common['Authorization'];

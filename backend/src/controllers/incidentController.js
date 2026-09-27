@@ -372,25 +372,26 @@ export const getIncidents = async (req, res) => {
 export const tagSameReports = (incidents) => {
   if (!Array.isArray(incidents) || incidents.length === 0) return incidents;
 
-  // Pre-group incidents by type to reduce comparison complexity from O(N^2) to O(N)
-  const groupedByType = new Map();
+  // Faster O(N) grouping by barangay_id or rounded lat/lng grid cell
+  const gridGroups = new Map();
   incidents.forEach(inc => {
-    const key = inc.incident_type_id || 'default';
-    if (!groupedByType.has(key)) groupedByType.set(key, []);
-    groupedByType.get(key).push(inc);
+    const latGrid = Math.round((inc.latitude || 0) / 0.006);
+    const lngGrid = Math.round((inc.longitude || 0) / 0.006);
+    const key = `${inc.incident_type_id || 'type'}_${inc.barangay_id || `${latGrid}_${lngGrid}`}`;
+    if (!gridGroups.has(key)) gridGroups.set(key, []);
+    gridGroups.get(key).push(inc);
   });
 
   return incidents.map(incA => {
-    const typeGroup = groupedByType.get(incA.incident_type_id || 'default') || [];
-    const sameGroup = typeGroup.filter(incB => {
+    const latGrid = Math.round((incA.latitude || 0) / 0.006);
+    const lngGrid = Math.round((incA.longitude || 0) / 0.006);
+    const key = `${incA.incident_type_id || 'type'}_${incA.barangay_id || `${latGrid}_${lngGrid}`}`;
+    const group = gridGroups.get(key) || [];
+
+    const sameGroup = group.filter(incB => {
       if (incB.incident_id === incA.incident_id) return false;
-      const sameBarangay = (incB.barangay_id && incA.barangay_id && incB.barangay_id === incA.barangay_id);
-      const closeLat = Math.abs((incB.latitude || 0) - (incA.latitude || 0)) <= 0.006;
-      const closeLng = Math.abs((incB.longitude || 0) - (incA.longitude || 0)) <= 0.006;
-      const sameLocation = sameBarangay || (closeLat && closeLng);
       const timeDiff = Math.abs(new Date(incB.reported_at || Date.now()) - new Date(incA.reported_at || Date.now()));
-      const within24Hours = timeDiff <= 24 * 60 * 60 * 1000;
-      return sameLocation && within24Hours;
+      return timeDiff <= 24 * 60 * 60 * 1000;
     });
 
     if (sameGroup.length > 0) {

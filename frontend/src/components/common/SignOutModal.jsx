@@ -52,20 +52,7 @@ export default function SignOutModal({ isOpen, onClose, onConfirm, loading = fal
             Are you sure you want to end your current active session?
           </p>
 
-          {/* Special Context Warning for Responders */}
-          {isResponder && (
-            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
-              <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider mb-1">
-                  Duty Status Synchronization
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
-                  Signing out will automatically mark your unit status as <span className="font-black underline">OFFLINE</span> and unregister your device from live dispatching.
-                </p>
-              </div>
-            </div>
-          )}
+
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3 mt-8">
