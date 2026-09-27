@@ -327,22 +327,23 @@ export const getIncidents = async (req, res) => {
 
     // ADMIN can see all incidents (subject to district restriction if assigned)
 
-    // Build include object based on ?include query param
+    // Build lightweight include object for list view performance
     const includeParam = req.query.include?.split(',').map(s => s.trim()) || [];
     const includeObj = {
       incident_type: true,
-      barangay: true,
+      barangay: { select: { barangay_id: true, name: true, city: true, municipality: true, congressional_district: true } },
       reporter: { select: { name: true, email: true, contact_number: true } },
-      assignments: { include: { unit: { include: { barangay: true } } } },
-      evidence: true,
-      post_report: true,
+      assignments: { include: { unit: { select: { unit_id: true, unit_name: true, unit_type: true } } } },
     };
 
-    // Allow selective includes for performance - always keep core data
-    if (includeParam.length > 0) {
-      if (includeParam.includes('status_logs')) {
-        includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
-      }
+    if (includeParam.includes('evidence')) {
+      includeObj.evidence = true;
+    }
+    if (includeParam.includes('post_report')) {
+      includeObj.post_report = true;
+    }
+    if (includeParam.includes('status_logs')) {
+      includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
     }
 
     const incidents = await prisma.incident.findMany({

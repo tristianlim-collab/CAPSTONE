@@ -64,6 +64,8 @@ export default function IncidentVerificationQueue() {
   const [selectedUnitIds, setSelectedUnitIds] = useState([]);
   const [exporting, setExporting] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
 
   // Track new incident IDs for pulse effect
   const [newIncidentIds, setNewIncidentIds] = useState(new Set());
@@ -202,6 +204,18 @@ export default function IncidentVerificationQueue() {
   };
 
   const filteredIncidents = activeTab === 'ALL' ? incidents : incidents.filter(i => i.status === activeTab);
+  const totalPages = Math.ceil(filteredIncidents.length / ITEMS_PER_PAGE) || 1;
+  const paginatedIncidents = filteredIncidents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    setCurrentPage(1);
+  };
+
+  const handleFiltersChangeWithReset = (filters) => {
+    setCurrentPage(1);
+    handleFiltersChange(filters);
+  };
 
   const handleSelectIncident = async (incident) => {
     setSelectedIncident(incident);
@@ -477,65 +491,90 @@ export default function IncidentVerificationQueue() {
                 <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Try adjusting your filters or status tabs.</p>
               </motion.div>
             ) : (
-              filteredIncidents.map((incident) => {
-                const isSelected = selectedIncident?.incident_id === incident.incident_id;
-                const isNew = newIncidentIds.has(incident.incident_id);
-                return (
-                  <motion.div
-                    layout
-                    key={incident.incident_id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    onClick={() => handleSelectIncident(incident)}
-                    className={`group p-5 rounded-3xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden
-                      ${isSelected
-                        ? 'bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-500 shadow-xl shadow-indigo-500/10'
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-md'
-                      } ${isNew ? 'pulse-primary ring-2 ring-orange-500 dark:ring-orange-600 border-transparent' : ''}`}
-                  >
-                    {isNew && (
-                      <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl shadow-sm">
-                        New Alert
-                      </div>
-                    )}
-                    <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: getTypeColor(incident.incident_type_id) }}>
-                        {React.createElement(getTypeIcon(incident.incident_type_id), { size: 28 })}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-black text-slate-900 dark:text-white truncate">#{incident.incident_code}</h3>
-                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-transparent ${getStatusBadge(incident.status)}`}>
-                              {incident.status.replace('_', ' ')}
-                            </span>
-                            {incident.same_report_tag?.is_same_report && (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-sm">
-                                🔗 Same Report ({incident.same_report_tag.group_count})
+              <>
+                {paginatedIncidents.map((incident) => {
+                  const isSelected = selectedIncident?.incident_id === incident.incident_id;
+                  const isNew = newIncidentIds.has(incident.incident_id);
+                  return (
+                    <motion.div
+                      layout
+                      key={incident.incident_id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      onClick={() => handleSelectIncident(incident)}
+                      className={`group p-5 rounded-3xl border-2 cursor-pointer transition-all duration-300 relative overflow-hidden
+                        ${isSelected
+                          ? 'bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-500 shadow-xl shadow-indigo-500/10'
+                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:shadow-md'
+                        } ${isNew ? 'pulse-primary ring-2 ring-orange-500 dark:ring-orange-600 border-transparent' : ''}`}
+                    >
+                      {isNew && (
+                        <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl shadow-sm">
+                          New Alert
+                        </div>
+                      )}
+                      <div className="flex items-start gap-5">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: getTypeColor(incident.incident_type_id) }}>
+                          {React.createElement(getTypeIcon(incident.incident_type_id), { size: 28 })}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-black text-slate-900 dark:text-white truncate">#{incident.incident_code}</h3>
+                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-transparent ${getStatusBadge(incident.status)}`}>
+                                {incident.status.replace('_', ' ')}
                               </span>
-                            )}
+                              {incident.same_report_tag?.is_same_report && (
+                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                                  🔗 Same Report ({incident.same_report_tag.group_count})
+                                </span>
+                              )}
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSeverityColor(incident.severity)} shadow-sm`}>
+                              {incident.severity}
+                            </span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getSeverityColor(incident.severity)} shadow-sm`}>
-                            {incident.severity}
-                          </span>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                            {incident.description}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-400" /> {getTimeAgo(incident.reported_at)}</span>
+                            <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || incident.reporter_name || 'Local Resident'}</span>
+                            <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.landmark ? `${incident.barangay?.name || 'Area'} (${incident.landmark})` : (incident.barangay?.name || 'Area Known')}</span>
+                          </div>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                          {incident.description}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                          <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-400" /> {getTimeAgo(incident.reported_at)}</span>
-                          <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || incident.reporter_name || 'Local Resident'}</span>
-                          <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.landmark ? `${incident.barangay?.name || 'Area'} (${incident.landmark})` : (incident.barangay?.name || 'Area Known')}</span>
+                        <div className={`self-center ${isSelected ? 'text-indigo-500' : 'text-slate-300'} transition-all group-hover:translate-x-1`}>
+                          <ChevronRight size={24} />
                         </div>
                       </div>
-                      <div className={`self-center ${isSelected ? 'text-indigo-500' : 'text-slate-300'} transition-all group-hover:translate-x-1`}>
-                        <ChevronRight size={24} />
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })
+                    </motion.div>
+                  );
+                })}
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Page {currentPage} of {totalPages} ({filteredIncidents.length} items)
+                    </span>
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </AnimatePresence>
         </div>

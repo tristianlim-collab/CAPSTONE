@@ -25,7 +25,10 @@ const IncidentArchive = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [incRes, tRes] = await Promise.all([incidentAPI.getAll(), incidentTypeAPI.getAll()]);
+      const [incRes, tRes] = await Promise.all([
+        incidentAPI.getAll({ limit: 500 }),
+        incidentTypeAPI.getAll()
+      ]);
       const raw = incRes.data?.data || incRes.data || [];
       setIncidents(Array.isArray(raw) ? raw.filter(i => ['RESOLVED','CLOSED','FALSE_ALARM'].includes(i.status)) : []);
       const tRaw = tRes.data?.data || tRes.data || [];
