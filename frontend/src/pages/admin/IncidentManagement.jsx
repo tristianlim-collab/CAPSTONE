@@ -265,7 +265,6 @@ const IncidentManagement = () => {
                   <select required value={formData.default_unit_type} onChange={e => setFormData({ ...formData, default_unit_type: e.target.value })} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm font-bold outline-none appearance-none cursor-pointer transition-all">
                     <option value="BARANGAY">Barangay Responders</option>
                     <option value="FIRE">Fire Department</option>
-                    <option value="POLICE">Police</option>
                     <option value="MEDICAL">Medical Emergency</option>
                     <option value="DRRMO">DRRMO</option>
                   </select>

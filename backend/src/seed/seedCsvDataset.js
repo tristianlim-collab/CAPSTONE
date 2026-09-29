@@ -61,7 +61,7 @@ export async function seedCsvDataset() {
     { name: 'Landslide', color_code: '#D97706', icon_label: '⛰️', default_unit_type: 'DRRMO' },
     { name: 'Medical Emergency', color_code: '#10B981', icon_label: '🚑', default_unit_type: 'MEDICAL' },
     { name: 'Flood/Typhoon', color_code: '#3B82F6', icon_label: '🌊', default_unit_type: 'DRRMO' },
-    { name: 'Vehicular Accident', color_code: '#F59E0B', icon_label: '🚗', default_unit_type: 'POLICE' },
+    { name: 'Vehicular Accident', color_code: '#F59E0B', icon_label: '🚗', default_unit_type: 'DRRMO' },
     { name: 'Other Emergency', color_code: '#6B7280', icon_label: '⚠️', default_unit_type: 'BARANGAY' },
     { name: 'Chemical Leak', color_code: '#EC4899', icon_label: '☣️', default_unit_type: 'DRRMO' }
   ];

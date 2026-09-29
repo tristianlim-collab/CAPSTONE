@@ -150,18 +150,6 @@ async function main() {
     },
   });
 
-  const policeUnit = await prisma.responseUnit.create({
-    data: {
-      unit_name: "PNP Station - Talisay",
-      unit_type: "POLICE",
-      contact_number: "+639171110003",
-      latitude: 10.7380,
-      longitude: 122.9660,
-      barangay_id: barangays[2].barangay_id,
-      availability_status: "AVAILABLE",
-    },
-  });
-
   // Users
   const adminUser = await prisma.user.create({
     data: {
@@ -199,20 +187,6 @@ async function main() {
       contact_number: "+639171110002",
       unit_id: drrmoUnit.unit_id,
       barangay_id: drrmoUnit.barangay_id,
-      district_id: defaultDistrict?.district_id || null,
-      congressional_district: "3rd District of Negros Occidental"
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: "Police Responder",
-      email: "police@gaoirs.com",
-      password_hash: passwordPolice,
-      role: "RESPONSE_UNIT",
-      contact_number: "+639171110003",
-      unit_id: policeUnit.unit_id,
-      barangay_id: policeUnit.barangay_id,
       district_id: defaultDistrict?.district_id || null,
       congressional_district: "3rd District of Negros Occidental"
     },

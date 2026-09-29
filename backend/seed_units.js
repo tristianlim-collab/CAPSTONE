@@ -24,14 +24,6 @@ async function seed() {
       lng: 122.810000,
       email: 'fire@gaoirs.com',
       contact: '09173334444'
-    },
-    {
-      name: 'Kabankalan Police HQ',
-      type: 'POLICE',
-      lat: 9.985000,
-      lng: 122.820000,
-      email: 'police@gaoirs.com',
-      contact: '09175556666'
     }
   ];
 

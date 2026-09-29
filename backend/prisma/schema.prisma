@@ -293,7 +293,6 @@ enum Role {
 
 enum UnitType {
   FIRE
-  POLICE
   MEDICAL
   BARANGAY
   DRRMO

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, CheckCircle2, XCircle, X } from 'lucide-react';
+import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, Download } from 'lucide-react';
 import { incidentAPI, incidentTypeAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -59,28 +59,84 @@ const IncidentArchive = () => {
     false_alarm: incidents.filter(i => i.status === 'FALSE_ALARM').length,
   }), [incidents]);
 
+  const handleExportCSV = () => {
+    if (!filtered.length) {
+      toast.error('No records to export');
+      return;
+    }
+    const headers = ['Incident Code', 'Type', 'Status', 'Severity', 'Priority', 'Location', 'Reported At', 'Description'];
+    const rows = filtered.map(i => [
+      `"${i.incident_code || ''}"`,
+      `"${typeName(i.incident_type_id)}"`,
+      `"${i.status || ''}"`,
+      `"${i.severity || ''}"`,
+      `"${i.priority || ''}"`,
+      `"${(i.map_pin_address || '').replace(/"/g, '""')}"`,
+      `"${fmt(i.reported_at)}"`,
+      `"${(i.description || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `incident_archive_${statusFilter.toLowerCase()}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Archived records exported successfully');
+  };
+
   const Badge = ({ status }) => {
     const c = STATUS_CFG[status] || STATUS_CFG.CLOSED;
     return <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${c.bg} ${c.text} border ${c.border}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label}</span>;
   };
 
+  const statCards = [
+    { label: 'Total Archived', val: counts.total, color: 'text-slate-800', statusKey: 'ALL' },
+    { label: 'Resolved', val: counts.resolved, color: 'text-emerald-600', statusKey: 'RESOLVED' },
+    { label: 'Closed', val: counts.closed, color: 'text-slate-600', statusKey: 'CLOSED' },
+    { label: 'False Alarms', val: counts.false_alarm, color: 'text-rose-600', statusKey: 'FALSE_ALARM' }
+  ];
+
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Incident Archive</h2>
           <p className="text-sm text-slate-500 mt-1">Browse and review resolved, closed, and false-alarm incidents.</p>
         </div>
+        <button
+          onClick={handleExportCSV}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-indigo-600/20 active:scale-95 shrink-0"
+        >
+          <Download size={16} />
+          Export
+        </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[{ label: 'Total Archived', val: counts.total, color: 'text-slate-800' }, { label: 'Resolved', val: counts.resolved, color: 'text-emerald-600' }, { label: 'Closed', val: counts.closed, color: 'text-slate-600' }, { label: 'False Alarms', val: counts.false_alarm, color: 'text-rose-600' }].map(s => (
-          <div key={s.label} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
-            <h3 className={`text-2xl font-black ${s.color}`}>{loading ? <Loader2 className="animate-spin w-5 h-5" /> : s.val}</h3>
-          </div>
-        ))}
+        {statCards.map(s => {
+          const isSelected = statusFilter === s.statusKey;
+          return (
+            <div
+              key={s.label}
+              onClick={() => {
+                setStatusFilter(s.statusKey);
+                setPage(1);
+              }}
+              className={`bg-white p-5 rounded-2xl border transition-all cursor-pointer select-none ${
+                isSelected
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+                  : 'border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md'
+              }`}
+            >
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
+              <h3 className={`text-2xl font-black ${s.color}`}>{loading ? <Loader2 className="animate-spin w-5 h-5" /> : s.val}</h3>
+            </div>
+          );
+        })}
       </div>
 
       {/* Table */}

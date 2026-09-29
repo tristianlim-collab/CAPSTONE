@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACTIVITY: LOW FIDELITY WIREFRAME & SITEMAP - GAOIRS (All 3 Roles)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: #111;
+    padding: 40px;
+    max-width: 1280px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .activity-title {
+    font-size: 26px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+    color: #000;
+  }
+
+  .section-heading {
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 36px;
+    margin-bottom: 12px;
+    color: #000;
+    border-bottom: 2px solid #111;
+    padding-bottom: 6px;
+  }
+
+  /* Sitemap list styling */
+  .sitemap-list {
+    margin-left: 28px;
+    margin-bottom: 30px;
+  }
+  .sitemap-list li {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: #222;
+  }
+  .sitemap-list code {
+    font-family: monospace;
+    font-weight: 600;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Outer container for wireframe + callouts */
+  .wireframe-wrapper {
+    position: relative;
+    padding-right: 260px; /* Space for red callouts */
+    margin-top: 16px;
+    margin-bottom: 40px;
+  }
+
+  .wireframe-container {
+    border: 2.5px solid #111;
+    background: #fff;
+    font-family: 'Architects Daughter', cursive, sans-serif;
+  }
+
+  /* ─── Sections ─── */
+  .wf-section {
+    border-bottom: 2px solid #222;
+    padding: 20px 24px;
+    position: relative;
+  }
+  .wf-section:last-child { border-bottom: none; }
+
+  /* ─── Annotation Callouts (Red - Handwritten Style) ─── */
+  .callout {
+    position: absolute;
+    right: -250px;
+    font-family: 'Architects Daughter', cursive;
+    font-size: 15px;
+    color: #c0392b;
+    line-height: 1.3;
+    width: 230px;
+    pointer-events: none;
+  }
+  .callout::before {
+    content: '';
+    position: absolute;
+    left: -35px;
+    top: 10px;
+    width: 30px;
+    height: 1.5px;
+    background: #c0392b;
+  }
+  .callout-num {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #c0392b;
+    margin-right: 4px;
+  }
+
+  /* ─── Placeholder boxes ─── */
+  .placeholder-box {
+    border: 2px solid #333;
+    background: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Architects Daughter', cursive;
+    font-size: 16px;
+    color: #333;
+    position: relative;
+  }
+
+  /* X cross on image placeholders */
+  .img-placeholder {
+    position: relative;
+    overflow: hidden;
+    background: #f4f4f4;
+  }
+  .img-placeholder::before,
+  .img-placeholder::after {
+    content: '';
+    position: absolute;
+    background: #999;
+    width: 150%;
+    height: 1.5px;
+    top: 50%;
+    left: 50%;
+  }
+  .img-placeholder::before { transform: translate(-50%, -50%) rotate(22deg); }
+  .img-placeholder::after { transform: translate(-50%, -50%) rotate(-22deg); }
+
+  /* ─── Buttons ─── */
+  .wf-btn {
+    display: inline-block;
+    border: 2px solid #222;
+    padding: 8px 18px;
+    font-family: 'Architects Daughter', cursive;
+    font-size: 16px;
+    font-weight: 600;
+    background: #fff;
+    margin: 4px 6px 4px 0;
+    border-radius: 4px;
+    color: #111;
+  }
+  .wf-btn.shaded {
+    background: #e0e0e0;
+  }
+
+  /* ─── Chip / Tag ─── */
+  .wf-chip {
+    display: inline-block;
+    border: 1.5px solid #333;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 15px;
+    margin: 3px 4px;
+    background: #fff;
+    color: #111;
+  }
+  .wf-chip.active {
+    background: #e0e0e0;
+    border-width: 2px;
+    font-weight: 600;
+  }
+
+  /* ─── Flex helpers ─── */
+  .flex-row { display: flex; gap: 16px; align-items: flex-start; }
+  .flex-col { display: flex; flex-direction: column; gap: 10px; }
+  .flex-1 { flex: 1; }
+  .text-center { text-align: center; }
+  .mt-sm { margin-top: 8px; }
+  .mt-md { margin-top: 14px; }
+  .mb-sm { margin-bottom: 8px; }
+
+  /* ─── Typography ─── */
+  .wf-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #000;
+  }
+  .wf-sub {
+    font-size: 15px;
+    color: #444;
+    margin-bottom: 12px;
+  }
+
+  /* Cards */
+  .card {
+    border: 2px solid #333;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 15px;
+  }
+
+  /* Dashed border boxes */
+  .dashed-box {
+    border: 2px dashed #444;
+    padding: 16px;
+    background: #fafafa;
+  }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1.5px dashed #666;
+    margin: 12px 0;
+  }
+
+  /* Status dot */
+  .status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #000;
+    margin-right: 6px;
+  }
+
+  /* Two column equal box */
+  .dual-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Footer */
+  .footer-bar {
+    font-size: 14px;
+    color: #333;
+    text-align: center;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="activity-title">ACTIVITY: LOW FIDELITY</h1>
+
+<h2 class="section-heading">Site Map</h2>
+
+<ul class="sitemap-list">
+  <li><strong>1. Resident Reporter Portal ( <code>/reporter</code> )</strong> — public landing page, GPS report submission modal, my reports status tracking timeline</li>
+  <li><strong>2. Response Unit Mobile Dashboard ( <code>/response</code> )</strong> — shift start/status toggle, live incident map, nearest dispatch alerts, unit status update</li>
+  <li><strong>3. Admin Command Center ( <code>/admin</code> )</strong> — verification queue (1-click approve/reject), live GIS map, response unit management, analytics & PDF reports</li>
+</ul>
+
+<!-- ========================================================================= -->
+<!-- WIREFRAME 1: RESIDENT REPORTER PORTAL -->
+<!-- ========================================================================= -->
+<h2 class="section-heading">Wireframe 1: Resident Reporter Portal (Desktop / Mobile Responsive)</h2>
+
+<div class="wireframe-wrapper">
+  <div class="wireframe-container">
+
+    <!-- TOP BAR -->
+    <div class="wf-section" style="padding: 12px 24px;">
+      <div class="callout" style="top: 8px;">
+        <span class="callout-num">1</span> Top bar: brand + My Reports
+      </div>
+      <div class="flex-row" style="align-items: center; justify-content: space-between;">
+        <div class="flex-row" style="align-items: center; gap: 14px;">
+          <div class="placeholder-box" style="width: 48px; height: 38px; border-radius: 3px; font-size: 14px;">logo</div>
+          <span style="font-size: 20px; font-weight: 600;">GAOIRS</span>
+          <span style="font-size: 16px; color: #666;">Resident Reporter</span>
+        </div>
+        <div class="wf-btn">My Reports</div>
+      </div>
+      <div style="margin-top: 8px; font-size: 14px; border-top: 1px dashed #aaa; padding-top: 6px;">
+        <span class="status-dot"></span>
+        <span>System Operational - Talisay City, Negros Occidental</span>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="wf-section text-center">
+      <div class="callout" style="top: 15px;">
+        <span class="callout-num">2</span> Hero: Report Incident CTA + Live Counters
+      </div>
+      <div class="wf-title" style="font-size: 26px; margin-top: 4px;">
+        Report Incidents with Auto GPS & Photo Evidence
+      </div>
+      <div class="wf-sub" style="font-size: 16px;">
+        Direct line to Talisay City CDRRMO, BFP, and Barangay Responders.
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 14px; margin: 18px 0;">
+        <div class="wf-btn shaded" style="padding: 10px 22px;">Report an Incident Now</div>
+        <div class="wf-btn" style="padding: 10px 22px;">View My Active Reports</div>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 18px; margin-top: 12px;">
+        <div class="card" style="padding: 6px 20px;">Active Incidents: 0</div>
+        <div class="card" style="padding: 6px 20px;">Units On Duty: 12</div>
+      </div>
+    </div>
+
+    <!-- INCIDENT MAP + LIST -->
+    <div class="wf-section">
+      <div class="callout" style="top: 10px;">
+        <span class="callout-num">3</span> Filter chips by incident status
+      </div>
+
+      <div class="wf-title">Find an Incident Near You</div>
+      <div class="wf-sub">Official incident management portal. Updated in real time.</div>
+
+      <div style="margin: 12px 0;">
+        <span class="wf-chip active">All</span>
+        <span class="wf-chip">Reported</span>
+        <span class="wf-chip">Verified</span>
+        <span class="wf-chip">Responding</span>
+        <span class="wf-chip">Closed</span>
+      </div>
+
+      <div class="callout" style="top: 160px;">
+        <span class="callout-num">4</span> Map + list, synced on click
+      </div>
+
+      <div class="flex-row" style="margin-top: 12px;">
+        <div class="flex-col flex-1" style="max-width: 280px;">
+          <div style="font-size: 14px; color: #444; margin-bottom: 4px;">Showing 4 of 4 incidents</div>
+          <div class="card text-center" style="padding: 16px;">Incident card 1</div>
+          <div class="card text-center" style="padding: 16px;">Incident card 2</div>
+          <div class="card text-center" style="padding: 16px;">Incident card 3</div>
+          <div class="card text-center" style="padding: 16px;">Incident card 4</div>
+        </div>
+
+        <div class="flex-1">
+          <div class="placeholder-box img-placeholder" style="height: 270px; border-width: 2px;">
+            <span style="z-index: 1; background: #fff; padding: 4px 14px; font-size: 18px; border: 1px solid #666;">MAP (Leaflet) + pins</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION DUAL BOX -->
+    <div class="wf-section">
+      <div class="callout" style="top: 12px;">
+        <span class="callout-num">5</span> Reporter Action CTAs
+      </div>
+      <div class="dual-box">
+        <div class="dashed-box">
+          <div style="font-size: 19px; font-weight: 600;">Report an Incident</div>
+          <div style="font-size: 14px; color: #444; margin: 8px 0;">
+            • GPS auto-capture &nbsp; • Photo evidence &nbsp; • Live tracking
+          </div>
+          <div style="text-align: right; margin-top: 14px;">
+            <div class="wf-btn shaded">Report Now</div>
+          </div>
+        </div>
+        <div class="dashed-box">
+          <div style="font-size: 19px; font-weight: 600;">Already Reported?</div>
+          <div style="font-size: 14px; color: #444; margin: 8px 0;">
+            Track your incident status and assigned response unit live.
+          </div>
+          <div style="text-align: center; margin-top: 14px;">
+            <div class="wf-btn">View My Status</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="wf-section" style="padding: 12px 24px;">
+      <div class="callout" style="top: 8px;">
+        <span class="callout-num">6</span> Footer / hotlines
+      </div>
+      <div class="footer-bar">
+        Footer: Quick Access · Hotlines (DRRMO/BFP/PNP) · City Hall address · © 2026
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ========================================================================= -->
+<!-- WIREFRAME 2: RESPONSE UNIT MOBILE DASHBOARD -->
+<!-- ========================================================================= -->
+<h2 class="section-heading">Wireframe 2: Response Unit Mobile Dashboard (Responder View)</h2>
+
+<div class="wireframe-wrapper">
+  <div class="wireframe-container">
+
+    <!-- TOP BAR -->
+    <div class="wf-section" style="padding: 12px 24px;">
+      <div class="callout" style="top: 8px;">
+        <span class="callout-num">1</span> Responder Bar: Unit ID + Shift Status Toggle
+      </div>
+      <div class="flex-row" style="align-items: center; justify-content: space-between;">
+        <div class="flex-row" style="align-items: center; gap: 14px;">
+          <div class="placeholder-box" style="width: 48px; height: 38px; border-radius: 3px; font-size: 14px;">logo</div>
+          <span style="font-size: 20px; font-weight: 600;">GAOIRS</span>
+          <span style="font-size: 16px; color: #666;">Response Unit (BFP-Unit-01)</span>
+        </div>
+        <div class="wf-btn shaded">Shift: ON DUTY</div>
+      </div>
+    </div>
+
+    <!-- DISPATCH ALERT POPUP WIREFRAME -->
+    <div class="wf-section text-center">
+      <div class="callout" style="top: 15px;">
+        <span class="callout-num">2</span> Real-time WebSocket Alert Modal
+      </div>
+      <div class="dashed-box" style="max-width: 500px; margin: 0 auto; border-color: #000; background: #fff;">
+        <div style="font-size: 20px; font-weight: 600; color: #000;">🚨 NEW INCIDENT DISPATCHED</div>
+        <div style="font-size: 15px; margin: 8px 0;">
+          <strong>Type:</strong> Fire Incident &nbsp;|&nbsp; <strong>Location:</strong> Brgy. Zone 4<br>
+          <strong>Distance:</strong> 1.2 km away (Nearest Responder)
+        </div>
+        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 14px;">
+          <div class="wf-btn shaded" style="padding: 8px 24px;">Accept Dispatch</div>
+          <div class="wf-btn" style="padding: 8px 24px;">Decline / Busy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE MAP & INCIDENT NAVIGATION -->
+    <div class="wf-section">
+      <div class="callout" style="top: 10px;">
+        <span class="callout-num">3</span> Route Navigation Map + Assigned Details
+      </div>
+
+      <div class="flex-row">
+        <!-- Navigation Map -->
+        <div class="flex-1">
+          <div class="placeholder-box img-placeholder" style="height: 250px; border-width: 2px;">
+            <span style="z-index: 1; background: #fff; padding: 4px 14px; font-size: 18px; border: 1px solid #666;">Route Map (Unit GPS → Incident Scene)</span>
+          </div>
+        </div>
+
+        <!-- Incident Action Control -->
+        <div class="flex-col flex-1" style="max-width: 320px;">
+          <div class="card">
+            <div style="font-weight: 600; font-size: 17px;">Assigned: Fire #104</div>
+            <div style="font-size: 14px; color: #444; margin: 6px 0;">
+              Reporter: 0917-XXX-XXXX<br>
+              Photo evidence attached (1 photo)
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-weight: 600; margin-bottom: 6px;">Update Status:</div>
+            <div class="wf-btn shaded" style="width: 100%; text-align: center; margin-bottom: 4px;">En Route</div>
+            <div class="wf-btn" style="width: 100%; text-align: center; margin-bottom: 4px;">Arrived on Scene</div>
+            <div class="wf-btn" style="width: 100%; text-align: center;">Mark Resolved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ========================================================================= -->
+<!-- WIREFRAME 3: LGU ADMIN COMMAND CENTER -->
+<!-- ========================================================================= -->
+<h2 class="section-heading">Wireframe 3: Admin Command Center (LGU Administrator View)</h2>
+
+<div class="wireframe-wrapper">
+  <div class="wireframe-container">
+
+    <!-- ADMIN HEADER -->
+    <div class="wf-section" style="padding: 12px 24px;">
+      <div class="callout" style="top: 8px;">
+        <span class="callout-num">1</span> Admin Header: District Isolation + Export Options
+      </div>
+      <div class="flex-row" style="align-items: center; justify-content: space-between;">
+        <div class="flex-row" style="align-items: center; gap: 14px;">
+          <div class="placeholder-box" style="width: 48px; height: 38px; border-radius: 3px; font-size: 14px;">logo</div>
+          <span style="font-size: 20px; font-weight: 600;">GAOIRS Admin</span>
+          <span style="font-size: 15px; color: #666;">District: Talisay City (NIR)</span>
+        </div>
+        <div>
+          <div class="wf-btn">Export PDF Report</div>
+          <div class="wf-btn">Export Excel</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERIFICATION QUEUE & GIS COMMAND MAP -->
+    <div class="wf-section">
+      <div class="callout" style="top: 10px;">
+        <span class="callout-num">2</span> 1-Click Verification Queue + Command GIS Map
+      </div>
+
+      <div class="flex-row">
+        <!-- Verification Queue -->
+        <div class="flex-col flex-1" style="max-width: 320px;">
+          <div style="font-size: 16px; font-weight: 600;">Pending Verification (2)</div>
+
+          <div class="card">
+            <div style="font-weight: 600;">Fire - Brgy. Zone 4</div>
+            <div style="font-size: 13px; color: #666; margin: 4px 0;">Auto-nearest: BFP Station 1</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <div class="wf-btn shaded" style="font-size: 13px; padding: 4px 12px; margin: 0;">✓ Verify</div>
+              <div class="wf-btn" style="font-size: 13px; padding: 4px 12px; margin: 0;">✗ Reject</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="font-weight: 600;">Road Accident - Brgy. 3</div>
+            <div style="font-size: 13px; color: #666; margin: 4px 0;">Auto-nearest: CDRRMO Team A</div>
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <div class="wf-btn shaded" style="font-size: 13px; padding: 4px 12px; margin: 0;">✓ Verify</div>
+              <div class="wf-btn" style="font-size: 13px; padding: 4px 12px; margin: 0;">✗ Reject</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Command Map -->
+        <div class="flex-1">
+          <div class="placeholder-box img-placeholder" style="height: 250px; border-width: 2px;">
+            <span style="z-index: 1; background: #fff; padding: 4px 14px; font-size: 18px; border: 1px solid #666;">COMMAND GIS MAP (PostGIS Boundaries + Live Heatmap)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS CHARTS PANEL -->
+    <div class="wf-section">
+      <div class="callout" style="top: 10px;">
+        <span class="callout-num">3</span> Analytics Engine (Recharts & ML Trend Data)
+      </div>
+
+      <div class="wf-title" style="font-size: 18px;">Incident Analytics & Trend Predictions</div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 10px;">
+        <div class="placeholder-box img-placeholder" style="height: 120px;">
+          <span style="z-index: 1; background: #fff; padding: 2px 8px; font-size: 14px;">Bar Chart — Incident Types</span>
+        </div>
+        <div class="placeholder-box img-placeholder" style="height: 120px;">
+          <span style="z-index: 1; background: #fff; padding: 2px 8px; font-size: 14px;">Line Chart — Monthly Trends</span>
+        </div>
+        <div class="placeholder-box img-placeholder" style="height: 120px;">
+          <span style="z-index: 1; background: #fff; padding: 2px 8px; font-size: 14px;">Pie Chart — Response Time</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN FOOTER -->
+    <div class="wf-section" style="padding: 12px 24px;">
+      <div class="footer-bar">
+        GAOIRS Admin Command Center · Talisay City, Negros Occidental · System Security & Role Isolation Active
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

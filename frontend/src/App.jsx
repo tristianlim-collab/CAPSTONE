@@ -50,7 +50,7 @@ const App = () => {
     // Silent warm-up ping to wake up free Render backend on app load
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-    fetch(`${baseUrl}/health`).catch(() => {});
+    fetch(`${baseUrl}/health`).catch(() => { });
   }, []);
 
   return (
@@ -106,8 +106,8 @@ const App = () => {
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             </Suspense>
-            <Toaster 
-              position="top-right" 
+            <Toaster
+              position="top-right"
               toastOptions={{
                 duration: 10000,
                 style: {

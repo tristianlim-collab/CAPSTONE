@@ -128,9 +128,6 @@ const Login = () => {
             <p className="text-xs text-gray-500">
               <span className="text-gray-400">Fire Unit:</span> fire.alpha@gaoirs.com / response123
             </p>
-            <p className="text-xs text-gray-500">
-              <span className="text-gray-400">Police Unit:</span> police.bravo@gaoirs.com / response123
-            </p>
           </div>
         </div>
       </div>

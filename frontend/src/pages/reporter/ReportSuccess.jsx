@@ -184,7 +184,7 @@ export default function ReportSuccess() {
                   {['RESPONDING','ON_SCENE','RESOLVED'].includes(incident.status) ? (
                     <span className="text-amber-600 font-bold">Response Unit is en route to your location.</span>
                   ) : (
-                    'Nearest Police/Fire/Medical unit assigned.'
+                    'Nearest Fire/DRRMO/Medical unit assigned.'
                   )}
                 </p>
               </div>
