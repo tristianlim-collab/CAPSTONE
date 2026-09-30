@@ -73,7 +73,7 @@ export default function IncidentVerificationQueue() {
   const fetchIncidents = useCallback(async (filters = {}, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const params = { limit: 200, ...filters };
+      const params = { limit: 50, ...filters };
       const [incRes, typesRes] = await Promise.all([
         api.get('/incidents', { params }),
         api.get('/incident-types')

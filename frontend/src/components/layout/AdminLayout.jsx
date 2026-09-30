@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, ShieldAlert, AlertTriangle,
   Activity, BarChart3, Bell, Settings, LogOut, Search,
-  Menu, X, FileText, Truck, Archive, Megaphone, ScrollText, 
+  Menu, X, FileText, Truck, Archive, Megaphone, ScrollText,
   ClipboardList, Moon, Sun, ChevronsLeft, ChevronsRight, BookOpen
 } from 'lucide-react';
 import NotificationDropdown from '../notifications/NotificationDropdown';
@@ -63,7 +63,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ 
+        animate={{
           width: sidebarOpen ? 288 : 0,
           x: sidebarOpen ? 0 : -288,
         }}
@@ -112,9 +112,9 @@ const AdminLayout = () => {
                   </div>
                   <span className="text-sm font-semibold whitespace-nowrap">{item.name}</span>
                   {isActive && (
-                    <motion.div 
+                    <motion.div
                       layoutId="activeNav"
-                      className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.6)]" 
+                      className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.6)]"
                     />
                   )}
                 </NavLink>
@@ -156,7 +156,7 @@ const AdminLayout = () => {
               {sidebarOpen ? <ChevronsLeft size={22} /> : <ChevronsRight size={22} />}
             </button>
             <div>
-              <motion.h1 
+              <motion.h1
                 key={currentPage}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -164,7 +164,7 @@ const AdminLayout = () => {
               >
                 {currentPage}
               </motion.h1>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest hidden sm:block">GAOIRS Management System</p>
+              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest hidden sm:block">GAOIRS </p>
             </div>
           </div>
 
@@ -176,14 +176,14 @@ const AdminLayout = () => {
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            
+
             {/* Notifications */}
             <NotificationDropdown />
           </div>
         </header>
 
         {/* Page Content */}
-        <motion.div 
+        <motion.div
           className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 p-6 lg:p-8 hide-scrollbar"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
