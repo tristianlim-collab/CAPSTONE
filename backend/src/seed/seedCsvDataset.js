@@ -164,6 +164,9 @@ export async function seedCsvDataset() {
     const lng = parseFloat(longitude_str);
     if (isNaN(lat) || isNaN(lng)) continue;
 
+    // Filter out coordinates located in the ocean / sea (off-shore Guimaras Strait)
+    if (lng < 122.955 || lat < 10.685) continue;
+
     const barangayId = barangayMap.get((barangay_name || '').toLowerCase()) || null;
     let typeId = incidentTypeMap.get((incident_type_name || '').toLowerCase());
     if (!typeId) {

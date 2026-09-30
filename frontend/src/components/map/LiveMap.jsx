@@ -346,6 +346,8 @@ export default function LiveMap({
 
 
       <MapContainer
+        center={center}
+        zoom={zoom}
         bounds={NIR_BOUNDS}
         minZoom={5}
         scrollWheelZoom={true}

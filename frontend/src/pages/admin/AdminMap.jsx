@@ -36,8 +36,8 @@ const AdminMap = () => {
       {/* Map Area */}
       <div className="flex-1 min-h-[800px] w-full rounded-2xl overflow-hidden shadow-md border border-slate-200 relative">
         <LiveMap
-          zoom={13}
-          center={[14.6760, 121.0437]}
+          zoom={12}
+          center={[10.7350, 122.9700]}
           autoZoomOnNewIncident
           markerColorMode="lgu"
           filters={filters}
