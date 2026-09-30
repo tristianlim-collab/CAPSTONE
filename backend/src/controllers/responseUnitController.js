@@ -69,6 +69,13 @@ export const create = async (req, res) => {
     const defaultPassword = 'password123';
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
+    // Determine district from creating admin or assigned barangay
+    let unitDistrict = req.user?.congressional_district || null;
+    if (!unitDistrict && barangay_id) {
+      const bgy = await prisma.barangay.findUnique({ where: { barangay_id } });
+      if (bgy?.congressional_district) unitDistrict = bgy.congressional_district;
+    }
+
     await prisma.user.create({
       data: {
         name: unit_name,
@@ -76,7 +83,8 @@ export const create = async (req, res) => {
         password_hash: hashedPassword,
         role: 'RESPONSE_UNIT',
         contact_number,
-        unit_id: unit.unit_id
+        unit_id: unit.unit_id,
+        congressional_district: unitDistrict
       }
     });
 

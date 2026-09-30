@@ -10,7 +10,11 @@ export const getAllUsers = async (req, res) => {
     const where = {};
     const effectiveDistrict = district || req.user?.congressional_district;
     if (effectiveDistrict) {
-      where.congressional_district = { contains: effectiveDistrict, mode: 'insensitive' };
+      where.OR = [
+        { congressional_district: { contains: effectiveDistrict, mode: 'insensitive' } },
+        { congressional_district: null },
+        { congressional_district: '' }
+      ];
     }
 
     const queryOptions = {
