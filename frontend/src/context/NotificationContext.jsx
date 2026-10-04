@@ -103,14 +103,29 @@ export const NotificationProvider = ({ children }) => {
     });
 
     const cleanupStatusUpdate = on('incident_status_updated', (data) => {
+      const msg = `Incident ${data.incident?.incident_code || ''} status updated to ${data.status}`;
       const notif = {
         notification_id: `su-${data.incident_id}-${Date.now()}`,
-        message_body: `Status updated to ${data.status}`,
+        message_body: msg,
         sent_at: new Date().toISOString(),
         delivery_status: 'SENT',
         incident: data.incident
       };
       addNotification(notif);
+      toast(msg, { icon: '📋', duration: 7000 });
+    });
+
+    const cleanupAnonUpdate = on('incident_status_anonymous_update', (data) => {
+      const msg = `Incident ${data.incident?.incident_code || ''} status updated to ${data.status}`;
+      const notif = {
+        notification_id: `su-anon-${data.incident_id}-${Date.now()}`,
+        message_body: msg,
+        sent_at: new Date().toISOString(),
+        delivery_status: 'SENT',
+        incident: data.incident
+      };
+      addNotification(notif);
+      toast(msg, { icon: '📋', duration: 7000 });
     });
 
     return () => {
@@ -119,6 +134,7 @@ export const NotificationProvider = ({ children }) => {
       cleanupAwaitingVerification();
       cleanupNewAssignment();
       cleanupStatusUpdate();
+      cleanupAnonUpdate();
     };
   }, [isAuthenticated, socket, on, user, addNotification]);
 

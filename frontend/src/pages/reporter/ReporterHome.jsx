@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
 import { incidentAPI } from '../../api';
+import NotificationDropdown from '../../components/notifications/NotificationDropdown';
 import {
   Home, FileText, User, Bell, ChevronRight,
   MapPin, Clock, AlertTriangle, ShieldCheck,
@@ -160,14 +161,19 @@ export default function ReporterHome() {
             </h1>
           </div>
 
-          <button
-            onClick={handleExit}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
-            title="Exit Application"
-          >
-            <LogOut size={16} />
-            <span>Exit</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="bg-white/10 backdrop-blur rounded-full p-1 border border-white/20 text-white">
+              <NotificationDropdown />
+            </div>
+            <button
+              onClick={handleExit}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="Exit Application"
+            >
+              <LogOut size={16} />
+              <span>Exit</span>
+            </button>
+          </div>
         </div>
 
         {/* Big Report Button */}

@@ -27,12 +27,14 @@ const NotificationDropdown = () => {
 
     // Navigate based on incident or message content
     if (notification.incident_id) {
-      // Check if we are admin or response to route correctly
+      // Check role or path to route correctly
       const currentPath = window.location.pathname;
       if (currentPath.startsWith('/admin')) {
         navigate(`/admin/verification?id=${notification.incident_id}`);
       } else if (currentPath.startsWith('/response')) {
         navigate(`/response/dashboard?id=${notification.incident_id}`);
+      } else {
+        navigate('/reporter/reports');
       }
     }
     setIsOpen(false);
