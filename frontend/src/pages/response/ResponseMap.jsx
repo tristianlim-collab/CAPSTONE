@@ -308,10 +308,8 @@ const ResponseMap = () => {
         ...reportData
       });
 
-      // Filter out of active
-      setIncidents(prev => prev.map(inc =>
-        inc.incident_id === selectedIncidentForAction.incident_id ? { ...inc, status: 'RESOLVED' } : inc
-      ));
+      // Filter out of active dispatches
+      setIncidents(prev => prev.filter(inc => inc.incident_id !== selectedIncidentForAction.incident_id));
       toast.success('Incident resolved and report submitted');
       setShowReportModal(false);
       setReportData({ actions_taken: '', casualties: 0, damages_estimate: '', remarks: '' });
@@ -419,8 +417,13 @@ const ResponseMap = () => {
       }
     });
 
-    // 2. Status Updates (Keep if in area/assigned, remove if not)
+    // 2. Status Updates (Keep if in area/assigned, remove if resolved/closed)
     const unsub2 = on('incident_status_updated', (data) => {
+      if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(data.status)) {
+        setIncidents(prev => prev.filter(i => i.incident_id !== data.incident_id));
+        return;
+      }
+
       const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id);
       const unitName = user?.unit?.unit_name?.toLowerCase() || '';
       const incidentAddress = (data.incident?.map_pin_address || '').toLowerCase();
@@ -598,6 +601,7 @@ const ResponseMap = () => {
       const res = await incidentAPI.getAll(apiParams);
       if (res.data?.data) {
         const relevantIncidents = res.data.data.filter(inc => {
+          if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(inc.status)) return false;
           const hasCoordinates = inc.latitude && inc.longitude;
           if (!hasCoordinates) return false;
 
@@ -884,14 +888,16 @@ const ResponseMap = () => {
                       </div>
 
                       {/* Interactive Response Buttons */}
-                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
-                        <button
-                          onClick={(e) => handleGetDirections(e, incident)}
-                          disabled={routeLoading}
-                          className="flex items-center justify-center gap-1 bg-slate-900 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all"
-                        >
-                          <Navigation2 size={12} /> Directions
-                        </button>
+                      <div className={`grid ${isOnScene ? 'grid-cols-1' : 'grid-cols-2'} gap-2 pt-2 border-t border-slate-200/60`}>
+                        {!isOnScene && (
+                          <button
+                            onClick={(e) => handleGetDirections(e, incident)}
+                            disabled={routeLoading}
+                            className="flex items-center justify-center gap-1 bg-slate-900 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 active:scale-95 transition-all"
+                          >
+                            <Navigation2 size={12} /> Directions
+                          </button>
+                        )}
 
                         {!isResponding && !isOnScene && (
                           <button
@@ -1043,14 +1049,16 @@ const ResponseMap = () => {
 
                       {/* Action Buttons */}
                       <div className="mt-4 flex flex-col gap-2">
-                        <button
-                          onClick={(e) => handleGetDirections(e, incident)}
-                          disabled={routeLoading}
-                          className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 text-white shadow-lg py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
-                        >
-                          {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
-                          Get Directions
-                        </button>
+                        {incident.status !== 'ON_SCENE' && (
+                          <button
+                            onClick={(e) => handleGetDirections(e, incident)}
+                            disabled={routeLoading}
+                            className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 text-white shadow-lg py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                          >
+                            {routeLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
+                            Get Directions
+                          </button>
+                        )}
 
                         {(incident.status === 'VERIFIED' || incident.status === 'RESPONDING') && (
                           <div className="grid grid-cols-2 gap-2">

@@ -18,7 +18,7 @@ export default function ShiftStart() {
     // API Call to Update unit status to 'AVAILABLE'
     setTimeout(() => {
       toast.success("Shift Started - You are now active.");
-      navigate('/response/dashboard');
+      navigate('/response/map');
     }, 1000);
   };
 

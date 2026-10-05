@@ -33,7 +33,6 @@ const ResponseLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/response/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Live Map', path: '/response/map', icon: <MapIcon size={20} /> },
     { name: 'Notifications', path: '/response/notifications', icon: <Bell size={20} /> },
   ];

@@ -86,7 +86,7 @@ const App = () => {
 
                 <Route path="/response" element={<ProtectedRoute role="RESPONSE_UNIT"><ResponseLayout /></ProtectedRoute>}>
                   <Route index element={<Navigate to="/response/map" replace />} />
-                  <Route path="dashboard" element={<ResponseDashboard />} />
+                  <Route path="dashboard" element={<Navigate to="/response/map" replace />} />
                   <Route path="map" element={<ResponseMap />} />
                   <Route path="incidents" element={<ResponseIncidents />} />
                   <Route path="notifications" element={<ResponseNotifications />} />

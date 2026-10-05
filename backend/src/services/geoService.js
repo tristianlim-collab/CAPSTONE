@@ -237,9 +237,8 @@ const geoService = {
           AND u.longitude IS NOT NULL
           AND u.unit_type = ${unitType}::"UnitType"
         ORDER BY
-          jurisdiction_priority ASC,  -- Same city/district jurisdiction FIRST
-          status_priority ASC,        -- AVAILABLE units next
-          distance_meters ASC         -- Closest units last
+          status_priority ASC,        -- AVAILABLE units first
+          distance_meters ASC         -- Nearest unit by physical distance first (cross-border friendly)
         LIMIT ${limit};
       `;
 

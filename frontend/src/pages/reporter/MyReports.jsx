@@ -51,7 +51,11 @@ const MyReports = () => {
         setLoading(false);
       }
     };
+
     fetchReports();
+
+    const timer = setInterval(fetchReports, 4000);
+    return () => clearInterval(timer);
   }, []);
 
   // Listen for real-time status updates and new reports

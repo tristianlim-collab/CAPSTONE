@@ -25,8 +25,6 @@ const ResponseLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { path: '/response/dashboard', icon: FiHome, label: 'Dashboard' },
-    { path: '/response/incidents', icon: FiList, label: 'Incidents' },
     { path: '/response/map', icon: FiMapPin, label: 'Live Map' },
   ];
 

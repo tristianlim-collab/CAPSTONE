@@ -19,53 +19,60 @@ export default function ReportSuccess() {
     resolution_notes: ''
   });
 
+  // Fetch initial status and poll every 3s so status updates automatically without page refresh
   useEffect(() => {
     sessionStorage.removeItem('incidentLocation');
     sessionStorage.removeItem('incidentType');
 
-    // Fetch initial status if ID exists
-    if (targetIncidentId) {
+    if (!targetIncidentId) return;
+
+    const fetchLatest = () => {
       incidentAPI.getById(targetIncidentId)
         .then(res => {
-          if (res.data) {
+          const data = res.data?.data || res.data;
+          if (data) {
             setIncident(prev => ({
               ...prev,
-              incident_code: res.data.incident_code || prev.incident_code,
-              status: res.data.status || 'REPORTED',
-              resolution_photo: res.data.resolution_photo || res.data.resolved_photo_url || null,
-              resolution_notes: res.data.resolution_notes || ''
+              incident_code: data.incident_code || prev.incident_code,
+              status: data.status || prev.status,
+              resolution_photo: data.resolution_photo || data.resolved_photo_url || prev.resolution_photo,
+              resolution_notes: data.resolution_notes || prev.resolution_notes
             }));
           }
         })
         .catch(err => console.log('Could not load status:', err));
-    }
+    };
+
+    fetchLatest();
+
+    const timer = setInterval(fetchLatest, 3000);
+    return () => clearInterval(timer);
   }, [targetIncidentId]);
 
   // Real-time socket updates for this active report
   useEffect(() => {
     if (!on || !targetIncidentId) return;
 
-    const unsub1 = on('incident_status_updated', (data) => {
-      if (String(data.incident_id) === String(targetIncidentId)) {
+    const handleUpdate = (data) => {
+      const incId = data.incident_id || data.incident?.incident_id;
+      if (String(incId) === String(targetIncidentId)) {
         setIncident(prev => ({
           ...prev,
-          status: data.status,
-          resolution_photo: data.resolution_photo || data.incident?.resolution_photo || prev.resolution_photo
+          status: data.status || data.incident?.status || prev.status,
+          resolution_photo: data.resolution_photo || data.incident?.resolution_photo || data.photo_url || prev.resolution_photo
         }));
       }
-    });
+    };
 
-    const unsub2 = on('incident_resolved', (data) => {
-      if (String(data.incident_id) === String(targetIncidentId)) {
-        setIncident(prev => ({
-          ...prev,
-          status: 'RESOLVED',
-          resolution_photo: data.resolution_photo || data.photo_url || prev.resolution_photo
-        }));
-      }
-    });
+    const unsub1 = on('incident_status_updated', handleUpdate);
+    const unsub2 = on('incident_resolved', handleUpdate);
+    const unsub3 = on('incident_verified', handleUpdate);
+    const unsub4 = on('incident_updated', handleUpdate);
+    const unsub5 = on('incident_status_anonymous_update', handleUpdate);
 
-    return () => { unsub1(); unsub2(); };
+    return () => {
+      unsub1(); unsub2(); unsub3(); unsub4(); unsub5();
+    };
   }, [on, targetIncidentId]);
 
   const getStatusBadge = () => {

@@ -193,7 +193,13 @@ export const exportIncidents = async (req, res) => {
     const { format = 'xlsx', startDate, endDate, status, type_id, severity, includeHistorical } = req.query;
 
     const where = {};
-    if (status && status !== 'ALL') where.status = status;
+    if (status && status !== 'ALL') {
+      if (status.includes(',')) {
+        where.status = { in: status.split(',') };
+      } else {
+        where.status = status;
+      }
+    }
     if (severity && severity !== 'ALL') where.severity = severity;
 
     if (type_id && type_id !== 'ALL') {
@@ -363,7 +369,13 @@ export const exportIncidentsPDF = async (req, res) => {
     const { startDate, endDate, status, type_id, severity, includeHistorical } = req.query;
 
     const where = {};
-    if (status && status !== 'ALL') where.status = status;
+    if (status && status !== 'ALL') {
+      if (status.includes(',')) {
+        where.status = { in: status.split(',') };
+      } else {
+        where.status = status;
+      }
+    }
     if (severity && severity !== 'ALL') where.severity = severity;
 
     if (type_id && type_id !== 'ALL') {

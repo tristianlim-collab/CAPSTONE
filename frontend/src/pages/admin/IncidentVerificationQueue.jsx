@@ -23,6 +23,7 @@ const INCIDENT_TYPE_ICONS = {
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'All Reports' },
+  { key: 'REPORTED', label: 'Pending Review' },
   { key: 'RESPONDING', label: 'Responding' },
   { key: 'ON_SCENE', label: 'On Scene' },
   { key: 'RESOLVED', label: 'Resolved' },

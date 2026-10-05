@@ -724,14 +724,9 @@ export const verifyIncident = async (req, res) => {
       const incidentLng = edited_data?.longitude || incident.longitude;
       const incidentBarangayId = incident.barangay_id;
 
-      // Determine how many units to assign based on severity
-      // CRITICAL = up to 5 units, HIGH = up to 3 units, MEDIUM = 2 units, LOW = 1 unit
-      const severityLimitMap = {
-        CRITICAL: 5,
-        HIGH: 3,
-        MEDIUM: 2,
-      };
-      const unitsToAssign = severityLimitMap[edited_data?.severity || incident.severity] || 1;
+      // Default to assigning 1 primary nearest available response unit by proximity
+      // (Admins can select multiple manual units if needed or request backup later)
+      const unitsToAssign = 1;
 
       // Task K: Allow manual assignment via manual_unit_ids dropdown
       let assignedUnits = [];

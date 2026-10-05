@@ -29,7 +29,7 @@ export default function ReporterHome() {
     navigate('/login');
   };
 
-  // Fetch reporter's own incidents
+  // Fetch reporter's own incidents with 4-second polling fallback
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -51,25 +51,38 @@ export default function ReporterHome() {
         }
       } catch (err) {
         console.error('Failed to fetch incidents:', err);
-        setIncidents([]);
       } finally {
         setLoading(false);
       }
     };
+
     fetchIncidents();
+
+    const interval = setInterval(fetchIncidents, 4000);
+    return () => clearInterval(interval);
   }, [user]);
 
   // Listen for real-time updates
   useEffect(() => {
     const unsub1 = on('incident_status_updated', (data) => {
+      const targetId = data.incident_id || data.incident?.incident_id;
       setIncidents(prev => prev.map(inc =>
-        inc.incident_id === data.incident_id
-          ? { ...inc, status: data.status, ...(data.incident || {}) }
+        inc.incident_id === targetId
+          ? { ...inc, status: data.status || data.incident?.status || inc.status, ...(data.incident || {}) }
           : inc
       ));
     });
 
-    const unsub2 = on('incident_updated', (data) => {
+    const unsub2 = on('incident_verified', (data) => {
+      const targetId = data.incident_id || data.incident?.incident_id;
+      setIncidents(prev => prev.map(inc =>
+        inc.incident_id === targetId
+          ? { ...inc, status: data.status || 'VERIFIED', ...(data.incident || {}) }
+          : inc
+      ));
+    });
+
+    const unsub3 = on('incident_updated', (data) => {
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === data.incident_id
           ? { ...inc, ...data }
@@ -77,7 +90,7 @@ export default function ReporterHome() {
       ));
     });
 
-    const unsub3 = on('new_incident', (incident) => {
+    const unsub4 = on('new_incident', (incident) => {
       // Add newly submitted incident to the top
       setIncidents(prev => {
         if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
@@ -85,12 +98,12 @@ export default function ReporterHome() {
       });
     });
 
-    const unsub4 = on('incident_deleted', (data) => {
+    const unsub5 = on('incident_deleted', (data) => {
       // Remove if admin rejects
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
 
-    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, [on]);
 
   // Extract initials for the avatar
@@ -153,7 +166,7 @@ export default function ReporterHome() {
       <div className="flex-1 max-w-[430px] mx-auto w-full px-5 pt-10 relative z-10">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-10 relative z-50">
           <div>
             <p className="text-blue-100 text-sm font-medium mb-1 opacity-90">{getGreeting()},</p>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">

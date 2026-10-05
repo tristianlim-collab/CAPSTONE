@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, Download } from 'lucide-react';
-import { incidentAPI, incidentTypeAPI } from '../../api';
+import { Archive, Search, Loader2, Eye, ChevronLeft, ChevronRight, MapPin, Download, X, FileText, ChevronDown } from 'lucide-react';
+import { incidentAPI, incidentTypeAPI, reportAPI } from '../../api';
 import toast from 'react-hot-toast';
 
 const STATUS_CFG = {
@@ -18,6 +18,8 @@ const IncidentArchive = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const PER_PAGE = 15;
 
   useEffect(() => { fetchData(); }, []);
@@ -58,6 +60,43 @@ const IncidentArchive = () => {
     closed: incidents.filter(i => i.status === 'CLOSED').length,
     false_alarm: incidents.filter(i => i.status === 'FALSE_ALARM').length,
   }), [incidents]);
+
+  const handleExport = async (format = 'xlsx') => {
+    if (!filtered.length) {
+      toast.error('No records to export');
+      return;
+    }
+
+    try {
+      setExporting(true);
+      if (format === 'csv') {
+        handleExportCSV();
+        return;
+      }
+
+      const response = await reportAPI.export(format, {
+        status: statusFilter === 'ALL' ? 'RESOLVED,CLOSED,FALSE_ALARM' : statusFilter,
+        type_id: typeFilter === 'ALL' ? undefined : typeFilter,
+        search: search || undefined
+      });
+
+      const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GAOIRS_Archive_${statusFilter}_${new Date().toISOString().split('T')[0]}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success(`${format.toUpperCase()} export downloaded successfully`);
+    } catch (err) {
+      console.error('Export failed:', err);
+      toast.error(`Failed to generate ${format.toUpperCase()} export`);
+    } finally {
+      setExporting(false);
+      setShowExportDropdown(false);
+    }
+  };
 
   const handleExportCSV = () => {
     if (!filtered.length) {
@@ -106,13 +145,43 @@ const IncidentArchive = () => {
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Incident Archive</h2>
           <p className="text-sm text-slate-500 mt-1">Browse and review resolved, closed, and false-alarm incidents.</p>
         </div>
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-indigo-600/20 active:scale-95 shrink-0"
-        >
-          <Download size={16} />
-          Export
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowExportDropdown(!showExportDropdown)}
+            disabled={exporting || filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shadow-indigo-600/20 active:scale-95 shrink-0 disabled:opacity-50"
+          >
+            {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            Export
+            <ChevronDown size={14} className={`transition-transform duration-300 ${showExportDropdown ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showExportDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[2000] overflow-hidden">
+              <button
+                onClick={() => handleExport('xlsx')}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition-colors"
+              >
+                <Download size={14} className="text-emerald-500" />
+                Excel (.xlsx)
+              </button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2 transition-colors"
+              >
+                <FileText size={14} className="text-rose-500" />
+                PDF Document
+              </button>
+              <button
+                onClick={() => handleExport('csv')}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors"
+              >
+                <Download size={14} className="text-indigo-500" />
+                CSV Format
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats */}

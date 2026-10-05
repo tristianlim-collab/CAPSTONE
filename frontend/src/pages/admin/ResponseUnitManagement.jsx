@@ -343,10 +343,8 @@ const ResponseUnitManagement = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Unit Type</label>
                 <select value={formData.unit_type} onChange={e => setFormData({ ...formData, unit_type: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm outline-none bg-slate-50">
-                  <option value="FIRE">Fire Engine</option>
-                  <option value="MEDICAL">Medical / EMS</option>
-                  <option value="BARANGAY">Barangay Responders</option>
                   <option value="DRRMO">DRRMO Team</option>
+                  <option value="FIRE">Fire Engine</option>
                 </select>
               </div>
               <div>
