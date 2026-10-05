@@ -124,15 +124,21 @@ export const getResponseTime = async (_req, res) => {
     const times = [];
 
     postReports.forEach(r => {
-      if (r.response_time_minutes > 0) times.push(r.response_time_minutes);
+      // Ignore negative or unrealistically huge numbers (e.g. > 1 day / 1440 mins)
+      if (r.response_time_minutes > 0 && r.response_time_minutes <= 1440) {
+        times.push(r.response_time_minutes);
+      }
     });
 
     assignments.forEach(a => {
       const diffMins = (new Date(a.acknowledged_at).getTime() - new Date(a.assigned_at).getTime()) / 60000;
-      if (diffMins > 0 && diffMins < 300) times.push(diffMins);
+      // Valid response times are positive and within reasonable operational limits (e.g. under 2 hours / 120 mins)
+      if (diffMins > 0 && diffMins <= 120) {
+        times.push(diffMins);
+      }
     });
 
-    // Compute average, default to 8.5 minutes benchmark if insufficient live logs exist
+    // Compute average, default to 8.5 minutes benchmark if no valid operational logs exist
     const avg = times.length > 0
       ? times.reduce((sum, m) => sum + m, 0) / times.length
       : 8.5;

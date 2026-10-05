@@ -1,0 +1,19 @@
+PAGE 13: 1 2   community   and   emergency   responders   while   promoting   faster   reporting   and   improved   public   safety .   Future   Researchers.   This   study   will   serve   as   a   valuable   reference   for   future   researchers   interested   in   disaster   management,   geographic   in
+
+PAGE 14: 1 3   system   is   accessible   through   a   modern   web   browser   and   requires   a   stable   internet   connection.   While   the   system   provides   features   for   incident   reporting,   response   coordination,   monitoring,   and   spatial   analysis,   it   has   several   limitati
+
+PAGE 16: 1 5   Incident   Response.   In   this   study ,   this   term   refers   to   the   actions   taken   by   designated   response   units   after   a   reported   incident   has   been   verified   and   assigned   for   response.   Geographic   Information   System   (GIS).   In   this   study ,   
+
+PAGE 21: 2 0   arriving   quickly   at   an   incident   matters   most.   This   supports   the   value   of   GIS   network   analysis   in   GAOIRS   for   helping   response   units   identify   the   fastest   way   to   reach   a   verified   incident,   not   just   the   shortest   path   (Gupta   & 
+
+PAGE 22: 2 1   time.   When   tested   with   W aze   data   and   of ficial   incident   records   from   Nashville,   T ennessee,   the   method   outperformed   strong   baselines   in   F1-score   and   AUC.   This   supports   the   need   in   GAOIRS   to   check   the   reliability   of   citizen   re
+
+PAGE 25: 2 4   Black   Spot   Cluster   Analysis   of   Road   Crash   Involving   Public   Utility   V ehicles   (PUV)   Along   Commonwealth   A venue   Using   Kernel   Density   Estimation   This   study   identified   road   crash   hotspots   involving   public   utility   vehicles   along   Commonweal
+
+PAGE 76: 7 5   ●   GPS-capable   smartphone   or   tablet:   required   for   capturing   GPS   coordinates   when   reporting   from   the   field   Recommended   Software   Requirements   ●   Operating   System:   Windows   1 1   or   macOS   ●   Front   end:   React.js,   V ite,   and   T ailwind   CSS   
+
+PAGE 79: 7 8   results.   The   project   timeline   concludes   with   the   completion   of   the   final   manuscript   and   appendices   on   September   22,   2026.   Overall,   the   GAOIRS   project   timeline   provides   a   structured   progression   from   planning   and   requirements   gatherin
+
+PAGE 93: 9 2   Figure   14                       Monitoring   and   Analysis   Dashboard       Figure   14   shows   the   Monitoring   and   Analysis   module.   The   upper   screen   shows   key   indicators   (total   incidents,   average   response   time,   active   incidents,   and   resolved   incide
+
+PAGE 110: 1 0 9   T e s t    C  a s e   I D   D e s c r i p t i o n   E x p e c t e d   O u t c o m e   A c t u a l   O u t c o m e   P a s s /   F a i l    C  o m m e n t s   T  C  - M g R e s p - 0 0 3   S t a t u s / a v a i l a b i l i t y   v i s i b i l i t y   a c c u r a c y   E a c h   u n i t ' s   

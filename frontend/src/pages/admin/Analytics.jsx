@@ -182,15 +182,15 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
-                    data={byTypeData}
+                    data={byTypeData.filter(item => item.count > 0)}
                     dataKey="count"
                     nameKey="name"
                     cx="50%"
                     cy="45%"
                     outerRadius={75}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }) => percent >= 0.05 ? `${name} (${(percent * 100).toFixed(0)}%)` : null}
                   >
-                    {byTypeData.map((entry, index) => (
+                    {byTypeData.filter(item => item.count > 0).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
