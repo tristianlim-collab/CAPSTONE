@@ -56,7 +56,9 @@ const ResponseLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden ${sidebarOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full'} lg:!w-72 lg:!translate-x-0 transition-all duration-300`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl lg:shadow-none overflow-hidden transition-all duration-300 ${
+          sidebarOpen ? 'w-72 translate-x-0' : 'w-0 -translate-x-full pointer-events-none border-none'
+        } lg:!w-72 lg:!translate-x-0 lg:!pointer-events-auto`}
       >
         {/* Logo Area */}
         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-800">

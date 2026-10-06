@@ -101,6 +101,111 @@ const generateIncidentsPDFKit = (incidents, res) => {
 };
 
 /**
+ * Helper: Generate PDF for a Single Post-Incident Report using PDFKit (Full detailed view guaranteed without Puppeteer)
+ */
+const generateSinglePostReportPDFKit = (report, res) => {
+  const doc = new PDFDocument({ margin: 35, size: 'A4', layout: 'portrait' });
+  const inc = report.incident || {};
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="Incident_Report_${inc.incident_code || 'Details'}.pdf"`);
+
+  doc.pipe(res);
+
+  const fmt = (d) => d ? new Date(d).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+
+  // Title Banner
+  doc.rect(35, 35, 525, 45).fill('#1E1B4B');
+  doc.fillColor('#FFFFFF').fontSize(16).font('Helvetica-Bold').text('POST-INCIDENT ANALYSIS REPORT', 45, 45);
+  doc.fontSize(9).font('Helvetica').fillColor('#A5B4FC').text(`GAOIRS System Code: ${inc.incident_code || 'N/A'}   |   Status: ${report.status || 'SUBMITTED'}`, 45, 63);
+
+  let y = 95;
+
+  // Section 1: Incident Summary
+  doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('1. INCIDENT SUMMARY', 35, y);
+  doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+  y += 22;
+
+  const grid1 = [
+    [ 'Incident Type:', inc.incident_type?.name || 'N/A', 'Barangay / Loc:', inc.barangay?.name || inc.map_pin_address || 'N/A' ],
+    [ 'Reported At:', fmt(inc.reported_at), 'Severity Level:', inc.severity || 'N/A' ],
+    [ 'City / District:', `${inc.city || 'Talisay City'} (3rd District)`, 'Reporter Name:', inc.reporter?.name || inc.reporter_name || 'Resident' ]
+  ];
+
+  doc.fontSize(9).font('Helvetica');
+  grid1.forEach(row => {
+    doc.font('Helvetica-Bold').fillColor('#475569').text(row[0], 35, y, { width: 90 });
+    doc.font('Helvetica').fillColor('#0F172A').text(row[1], 125, y, { width: 150 });
+
+    doc.font('Helvetica-Bold').fillColor('#475569').text(row[2], 295, y, { width: 90 });
+    doc.font('Helvetica').fillColor('#0F172A').text(row[3], 385, y, { width: 175 });
+    y += 18;
+  });
+
+  y += 10;
+
+  // Section 2: Response Unit Operations
+  doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('2. RESPONSE UNIT OPERATIONS', 35, y);
+  doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+  y += 22;
+
+  const grid2 = [
+    [ 'Responding Unit:', report.submitter?.name || 'N/A', 'Response Time:', `${report.response_time_minutes || 0} Minutes` ],
+    [ 'Submitted At:', fmt(report.submitted_at), 'Casualties:', `${report.casualties ?? 0}` ],
+    [ 'Financial Damage:', report.damages_estimate || 'None Reported', 'Report Status:', report.status || 'SUBMITTED' ]
+  ];
+
+  grid2.forEach(row => {
+    doc.font('Helvetica-Bold').fillColor('#475569').text(row[0], 35, y, { width: 100 });
+    doc.font('Helvetica').fillColor('#0F172A').text(row[1], 135, y, { width: 140 });
+
+    doc.font('Helvetica-Bold').fillColor('#475569').text(row[2], 295, y, { width: 100 });
+    doc.font('Helvetica').fillColor('#2563EB').text(row[3], 395, y, { width: 165 });
+    y += 18;
+  });
+
+  y += 10;
+
+  // Section 3: Actions Taken
+  doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('3. ACTIONS TAKEN & OPERATIONAL DETAILS', 35, y);
+  doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+  y += 22;
+
+  doc.rect(35, y, 525, 50).fill('#F8FAFC');
+  doc.rect(35, y, 525, 50).strokeColor('#E2E8F0').stroke();
+  doc.fillColor('#1E293B').fontSize(9).font('Helvetica').text(report.actions_taken || 'No specific operational actions specified.', 45, y + 8, { width: 505 });
+  y += 62;
+
+  // Section 4: Remarks & Admin Notes
+  if (report.remarks) {
+    doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('4. RESPONDING UNIT REMARKS', 35, y);
+    doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+    y += 22;
+
+    doc.rect(35, y, 525, 40).fill('#F1F5F9');
+    doc.rect(35, y, 525, 40).strokeColor('#CBD5E1').stroke();
+    doc.fillColor('#334155').fontSize(9).font('Helvetica').text(report.remarks, 45, y + 8, { width: 505 });
+    y += 52;
+  }
+
+  if (report.admin_notes) {
+    doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('5. ADMINISTRATIVE ACKNOWLEDGEMENT NOTES', 35, y);
+    doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+    y += 22;
+
+    doc.rect(35, y, 525, 40).fill('#ECFDF5');
+    doc.rect(35, y, 525, 40).strokeColor('#A7F3D0').stroke();
+    doc.fillColor('#065F46').fontSize(9).font('Helvetica').text(report.admin_notes, 45, y + 8, { width: 505 });
+    y += 52;
+  }
+
+  // Footer
+  doc.fontSize(8).fillColor('#94A3B8').text('GAOIRS — Government Agency Operations Incident Response System • Official Single Incident Report', 35, doc.page.height - 30, { align: 'center' });
+
+  doc.end();
+};
+
+/**
  * Helper: Generate PDF for Post-Incident Reports using PDFKit
  */
 const generatePostReportsPDFKit = (reports, res) => {
@@ -816,9 +921,12 @@ export const exportPostReportsPDF = async (req, res) => {
           res.setHeader('Content-Length', pdfBuffer.length);
           return res.end(pdfBuffer);
         } catch (pErr) {
-          console.warn('Puppeteer launch failed for single report, fallback to table:', pErr.message);
+          console.warn('Puppeteer launch failed for single report, fallback to PDFKit:', pErr.message);
         }
       }
+
+      // Single Report PDFKit fallback (when Puppeteer isn't available e.g. production servers)
+      return generateSinglePostReportPDFKit(r, res);
     }
 
     // Default Multi-report summary PDF renderer
