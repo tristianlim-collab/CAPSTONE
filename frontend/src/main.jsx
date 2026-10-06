@@ -1,6 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import 'leaflet/dist/leaflet.css'
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+if (typeof window !== 'undefined') {
+  window.L = L;
+}
 import { ThemeProvider } from './context/ThemeContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import './index.css'
