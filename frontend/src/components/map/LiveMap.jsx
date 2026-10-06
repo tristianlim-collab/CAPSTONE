@@ -37,32 +37,18 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
     const selectedLat = Number(selectedIncident?.latitude);
     const selectedLng = Number(selectedIncident?.longitude);
 
-    // Initial render: track initial state without flying automatically to avoid page-load jump
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    // If explicit selected incident is set and changed
+    if (selectedId && selectedId !== previousSelectedIdRef.current && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+      previousSelectedIdRef.current = selectedId;
       previousLatestIdRef.current = latestId;
-      if (selectedId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-        previousSelectedIdRef.current = selectedId;
-        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
-      }
+      map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
       return;
     }
 
-    // 1. User explicitly selected an incident (or selected incident changed)
-    if (selectedId && selectedId !== previousSelectedIdRef.current) {
-      previousSelectedIdRef.current = selectedId;
-      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
-        return;
-      }
-    }
-
-    // 2. New incident arrived & autozoom enabled
-    if (autoZoomOnNewIncident && latestId && latestId !== previousLatestIdRef.current) {
+    // Autozoom on new incident arriving or on initial autoZoom parameter
+    if (autoZoomOnNewIncident && latestId && latestId !== previousLatestIdRef.current && Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
       previousLatestIdRef.current = latestId;
-      if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
-        map.flyTo([latestLat, latestLng], 16, { duration: 1.5, easeLinearity: 0.25 });
-      }
+      map.flyTo([latestLat, latestLng], 16, { duration: 1.2, easeLinearity: 0.25 });
     }
   }, [incidents, selectedIncident, autoZoomOnNewIncident, map]);
 
@@ -98,22 +84,26 @@ export default function LiveMap({
   selectedIncidentId: externalSelectedId = null,
   onSelect: externalOnSelect = null
 }) {
-  const [incidents, setIncidents] = useState([]);
+  const [internalIncidents, setInternalIncidents] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
   const [units, setUnits] = useState([]);
   const [mode, setMode] = useState('markers'); // 'markers' | 'heatmap' | 'lgu_zones'
-  const [selectedIncidentId, setSelectedIncidentId] = useState(externalSelectedId);
+  const [internalSelectedId, setInternalSelectedId] = useState(externalSelectedId);
+
+  // Synchronously compute active incidents & selected ID to avoid React state sync lag
+  const incidents = externalIncidents && Array.isArray(externalIncidents) ? externalIncidents : internalIncidents;
+  const selectedIncidentId = externalSelectedId !== undefined && externalSelectedId !== null ? externalSelectedId : internalSelectedId;
 
   useEffect(() => {
     if (externalSelectedId !== undefined) {
-      setSelectedIncidentId(externalSelectedId);
+      setInternalSelectedId(externalSelectedId);
     }
   }, [externalSelectedId]);
 
-  // Sync external incidents (from AdminDashboard state / socket polling)
+  // Sync external incidents
   useEffect(() => {
     if (externalIncidents && Array.isArray(externalIncidents)) {
-      setIncidents(externalIncidents);
+      setInternalIncidents(externalIncidents);
     }
   }, [externalIncidents]);
 
@@ -173,7 +163,7 @@ export default function LiveMap({
 
       incidentAPI.getAll(params).then(async (res) => {
         const activeIncidents = res.data?.data || [];
-        setIncidents(activeIncidents);
+        setInternalIncidents(activeIncidents);
       }).catch(err => console.error("Map fetch error:", err));
     }
 
@@ -186,55 +176,59 @@ export default function LiveMap({
       })
       .catch(err => console.error("Unit position fetch error:", err));
 
-    // Socket.io Subscriptions
-    const unsub1 = on('new_incident', (data) => {
-      const incident = data?.incident || data;
-      if (incident?.latitude && incident?.longitude) {
-        setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
-        setSelectedIncidentId(incident.incident_id);
-      }
-    });
+    // Socket.io Subscriptions (Only handle incident sockets if externalIncidents is NOT provided)
+    let unsub1 = () => {}, unsub2 = () => {}, unsub3 = () => {}, unsub4 = () => {}, unsub5 = () => {};
 
-    const unsub3 = on('incident_awaiting_verification', (data) => {
-      const incident = data?.incident || data;
-      if (incident?.latitude && incident?.longitude) {
-        setIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
-        setSelectedIncidentId(incident.incident_id);
-      }
-    });
-
-    const unsub2 = on('incident_status_updated', (updatedData) => {
-      const targetId = updatedData.incident_id || updatedData.incident?.incident_id;
-      setIncidents(prev => {
-        if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(updatedData.status)) {
-          return prev.filter(inc => inc.incident_id !== targetId);
+    if (!externalIncidents) {
+      unsub1 = on('new_incident', (data) => {
+        const incident = data?.incident || data;
+        if (incident?.latitude && incident?.longitude) {
+          setInternalIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
+          setInternalSelectedId(incident.incident_id);
         }
-        const fullIncident = updatedData.incident || {};
-        return prev.map(inc =>
-          inc.incident_id === targetId
-            ? { ...inc, ...fullIncident, status: updatedData.status || inc.status }
-            : inc
-        );
       });
-    });
 
-    const unsub4 = on('incident_deleted', (data) => {
-      setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
-      setSelectedIncidentId(prev => prev === data.incident_id ? null : prev);
-    });
+      unsub3 = on('incident_awaiting_verification', (data) => {
+        const incident = data?.incident || data;
+        if (incident?.latitude && incident?.longitude) {
+          setInternalIncidents(prev => [incident, ...prev.filter(i => i.incident_id !== incident.incident_id)]);
+          setInternalSelectedId(incident.incident_id);
+        }
+      });
 
-    const unsub5 = on('incident_verified', (data) => {
-      const inc = data?.incident || data;
-      if (inc?.latitude && inc?.longitude) {
-        setIncidents(prev => {
-          const existing = prev.find(i => i.incident_id === inc.incident_id);
-          if (existing) {
-            return prev.map(item => item.incident_id === inc.incident_id ? { ...item, ...inc } : item);
+      unsub2 = on('incident_status_updated', (updatedData) => {
+        const targetId = updatedData.incident_id || updatedData.incident?.incident_id;
+        setInternalIncidents(prev => {
+          if (['RESOLVED', 'CLOSED', 'FALSE_ALARM'].includes(updatedData.status)) {
+            return prev.filter(inc => inc.incident_id !== targetId);
           }
-          return [inc, ...prev];
+          const fullIncident = updatedData.incident || {};
+          return prev.map(inc =>
+            inc.incident_id === targetId
+              ? { ...inc, ...fullIncident, status: updatedData.status || inc.status }
+              : inc
+          );
         });
-      }
-    });
+      });
+
+      unsub4 = on('incident_deleted', (data) => {
+        setInternalIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
+        setInternalSelectedId(prev => prev === data.incident_id ? null : prev);
+      });
+
+      unsub5 = on('incident_verified', (data) => {
+        const inc = data?.incident || data;
+        if (inc?.latitude && inc?.longitude) {
+          setInternalIncidents(prev => {
+            const existing = prev.find(i => i.incident_id === inc.incident_id);
+            if (existing) {
+              return prev.map(item => item.incident_id === inc.incident_id ? { ...item, ...inc } : item);
+            }
+            return [inc, ...prev];
+          });
+        }
+      });
+    }
 
     const unsub6 = on('unit_location_updated', (data) => {
       setUnits(prev => {
@@ -355,9 +349,9 @@ export default function LiveMap({
         className="w-full h-full z-0"
       >
         <TileLayer
-          attribution='&copy; Google Maps'
-          url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
-          maxZoom={20}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
         />
 
         <BoundaryLayer boundaries={boundaries} />

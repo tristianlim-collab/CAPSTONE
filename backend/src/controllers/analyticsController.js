@@ -19,7 +19,7 @@ export const getSummary = async (req, res) => {
     const [total, active, resolved, users] = await Promise.all([
       prisma.incident.count({ where: whereIncident }),
       prisma.incident.count({ where: { ...whereIncident, status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
-      prisma.incident.count({ where: { ...whereIncident, status: { in: ["RESOLVED", "CLOSED", "FALSE_ALARM"] } } }),
+      prisma.incident.count({ where: { ...whereIncident, status: { in: ["RESOLVED", "CLOSED"] } } }),
       prisma.user.count({ where: userDistrict ? { congressional_district: { equals: userDistrict, mode: 'insensitive' } } : {} }),
     ]);
 
@@ -53,8 +53,8 @@ export const getByBarangay = async (req, res) => {
   try {
     const { incident_type_id } = req.query;
     const where = {};
+
     if (incident_type_id && incident_type_id !== 'ALL') {
-      // Check if incident_type_id is a UUID or a name string
       const matchedType = await prisma.incidentType.findFirst({
         where: {
           OR: [
@@ -76,16 +76,41 @@ export const getByBarangay = async (req, res) => {
       where,
       _count: { _all: true }
     });
-    const barangays = await prisma.barangay.findMany();
-    const bgyMap = new Map(barangays.map(b => [b.barangay_id, b.name]));
+    const barangays = await prisma.barangay.findMany({
+      include: {
+        district: true
+      }
+    });
+
+    const bgyMap = new Map();
+    barangays.forEach(b => {
+      const cityStr = b.city || b.municipality || '';
+      const distStr = b.district?.name || b.congressional_district || '';
+      bgyMap.set(b.barangay_id, {
+        barangay: b.name,
+        city: cityStr,
+        district: distStr
+      });
+    });
 
     const counts = {};
     rows.forEach(r => {
-      const name = bgyMap.get(r.barangay_id) || 'Unspecified';
-      counts[name] = (counts[name] || 0) + r._count._all;
+      const info = bgyMap.get(r.barangay_id) || { barangay: 'Unspecified', city: '', district: '' };
+      const key = r.barangay_id || 'unspecified';
+      if (!counts[key]) {
+        counts[key] = {
+          barangay: info.barangay,
+          city: info.city,
+          district: info.district,
+          name: info.barangay, // Primary X-axis label
+          count: 0
+        };
+      }
+      counts[key].count += r._count._all;
     });
 
-    const data = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    const data = Object.values(counts)
+      .sort((a, b) => b.count - a.count);
 
     return res.status(200).json(success({ data, message: "Analytics by barangay fetched" }));
   } catch (err) {

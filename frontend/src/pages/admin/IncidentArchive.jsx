@@ -42,7 +42,8 @@ const IncidentArchive = () => {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return incidents.filter(i => {
-      if (statusFilter !== 'ALL' && i.status !== statusFilter) return false;
+      if (statusFilter === 'RESOLVED' && i.status !== 'RESOLVED' && i.status !== 'CLOSED') return false;
+      if (statusFilter !== 'ALL' && statusFilter !== 'RESOLVED' && i.status !== statusFilter) return false;
       if (typeFilter !== 'ALL' && i.incident_type_id !== typeFilter) return false;
       if (q && !i.incident_code?.toLowerCase().includes(q) && !i.description?.toLowerCase().includes(q) && !i.map_pin_address?.toLowerCase().includes(q)) return false;
       return true;
@@ -56,8 +57,7 @@ const IncidentArchive = () => {
 
   const counts = useMemo(() => ({
     total: incidents.length,
-    resolved: incidents.filter(i => i.status === 'RESOLVED').length,
-    closed: incidents.filter(i => i.status === 'CLOSED').length,
+    resolved: incidents.filter(i => i.status === 'RESOLVED' || i.status === 'CLOSED').length,
     false_alarm: incidents.filter(i => i.status === 'FALSE_ALARM').length,
   }), [incidents]);
 
@@ -75,7 +75,7 @@ const IncidentArchive = () => {
       }
 
       const response = await reportAPI.export(format, {
-        status: statusFilter === 'ALL' ? 'RESOLVED,CLOSED,FALSE_ALARM' : statusFilter,
+        status: statusFilter === 'ALL' ? 'RESOLVED,CLOSED,FALSE_ALARM' : (statusFilter === 'RESOLVED' ? 'RESOLVED,CLOSED' : statusFilter),
         type_id: typeFilter === 'ALL' ? undefined : typeFilter,
         search: search || undefined
       });
@@ -127,14 +127,13 @@ const IncidentArchive = () => {
   };
 
   const Badge = ({ status }) => {
-    const c = STATUS_CFG[status] || STATUS_CFG.CLOSED;
-    return <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${c.bg} ${c.text} border ${c.border}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label}</span>;
+    const c = (status === 'CLOSED' ? STATUS_CFG.RESOLVED : STATUS_CFG[status]) || STATUS_CFG.RESOLVED;
+    return <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${c.bg} ${c.text} border ${c.border}`}><span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />Resolved</span>;
   };
 
   const statCards = [
     { label: 'Total Archived', val: counts.total, color: 'text-slate-800', statusKey: 'ALL' },
     { label: 'Resolved', val: counts.resolved, color: 'text-emerald-600', statusKey: 'RESOLVED' },
-    { label: 'Closed', val: counts.closed, color: 'text-slate-600', statusKey: 'CLOSED' },
     { label: 'False Alarms', val: counts.false_alarm, color: 'text-rose-600', statusKey: 'FALSE_ALARM' }
   ];
 
@@ -143,7 +142,7 @@ const IncidentArchive = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Incident Archive</h2>
-          <p className="text-sm text-slate-500 mt-1">Browse and review resolved, closed, and false-alarm incidents.</p>
+          <p className="text-sm text-slate-500 mt-1">Browse and review resolved and false-alarm incidents.</p>
         </div>
         <div className="relative">
           <button
@@ -185,7 +184,7 @@ const IncidentArchive = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {statCards.map(s => {
           const isSelected = statusFilter === s.statusKey;
           return (
@@ -216,7 +215,7 @@ const IncidentArchive = () => {
             <input type="text" placeholder="Search by code, description, address…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white" />
           </div>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-            <option value="ALL">All Statuses</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option><option value="FALSE_ALARM">False Alarm</option>
+            <option value="ALL">All Statuses</option><option value="RESOLVED">Resolved</option><option value="FALSE_ALARM">False Alarm</option>
           </select>
           <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }} className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
             <option value="ALL">All Types</option>

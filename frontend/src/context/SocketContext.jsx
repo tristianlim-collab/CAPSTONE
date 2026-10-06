@@ -21,7 +21,7 @@ export const SocketProvider = ({ children }) => {
 		}
 
 		const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-		const defaultUrl = "https://gaoirs-backend.onrender.com";
+		const defaultUrl = isLocal ? window.location.origin : "https://gaoirs-backend.onrender.com";
 		const socketUrl = import.meta.env.VITE_SOCKET_URL && import.meta.env.VITE_SOCKET_URL !== '/' 
 			? import.meta.env.VITE_SOCKET_URL 
 			: defaultUrl;

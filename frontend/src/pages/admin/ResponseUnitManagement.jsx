@@ -403,9 +403,9 @@ const ResponseUnitManagement = () => {
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer
-                  attribution='&copy; Google Maps'
-                  url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
-                  maxZoom={20}
+                  attribution='&copy; OpenStreetMap'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  maxZoom={19}
                 />
                 <MapClickHandler position={pinPosition} setPosition={handleSelectPosition} />
               </MapContainer>

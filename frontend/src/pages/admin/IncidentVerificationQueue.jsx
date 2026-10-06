@@ -74,7 +74,7 @@ export default function IncidentVerificationQueue() {
   const fetchIncidents = useCallback(async (filters = {}, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const params = { limit: 50, ...filters };
+      const params = { limit: 500, ...filters };
       const [incRes, typesRes] = await Promise.all([
         api.get('/incidents', { params }),
         api.get('/incident-types')
@@ -704,7 +704,7 @@ export default function IncidentVerificationQueue() {
                       <div className="relative group overflow-hidden rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 h-48 shadow-lg">
                         {selectedIncident.latitude && (
                           <MapContainer center={[selectedIncident.latitude, selectedIncident.longitude]} zoom={16} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                            <TileLayer url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}" />
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                             <Marker
                               position={[selectedIncident.latitude, selectedIncident.longitude]}
                               icon={L.divIcon({
@@ -748,46 +748,7 @@ export default function IncidentVerificationQueue() {
                     )}
                   </div>
 
-                  {/* Assignment Controls if canVerify */}
-                  {canVerify && (
-                    <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manual Dispatch override</p>
-                        <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">Optional</span>
-                      </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {responseUnits.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic py-4 text-center">Scanning for available units...</p>
-                        ) : (
-                          responseUnits.map(unit => {
-                            const isSelected = selectedUnitIds.includes(unit.unit_id);
-                            return (
-                              <label key={unit.unit_id} className={`flex items-center gap-4 p-4 rounded-3xl border-2 transition-all cursor-pointer group
-                                  ${isSelected
-                                  ? 'bg-indigo-600 border-indigo-600 text-white'
-                                  : 'bg-slate-50 dark:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700'}`}>
-                                <input type="checkbox" checked={isSelected} className="hidden"
-                                  onChange={(e) => {
-                                    if (e.target.checked) setSelectedUnitIds([...selectedUnitIds, unit.unit_id]);
-                                    else setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.unit_id));
-                                  }}
-                                />
-                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors
-                                    ${isSelected ? 'bg-white/20' : 'bg-white dark:bg-slate-700 text-slate-600'}`}>
-                                  <Car size={18} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className={`text-xs font-black ${isSelected ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{unit.unit_name}</p>
-                                  <p className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>{unit.unit_type} • {unit.availability_status}</p>
-                                </div>
-                                {isSelected && <CheckCircle size={18} />}
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Assigned Units List (For already verified) */}
                   {selectedIncident.assignments?.length > 0 && (

@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { analyticsAPI, incidentTypeAPI } from '../../api';
 import KDEHeatmap from '../../components/admin/KDEHeatmap';
+import TrendForecast from '../../components/admin/TrendForecast';
 
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6'];
 
@@ -204,26 +205,55 @@ const Analytics = () => {
 
         {/* Barangay Ranking Bar Chart */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 mb-4">
+          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 mb-1">
             <MapPin size={18} className="text-emerald-600" />
             Barangay Incident Ranking
           </h3>
-          <p className="text-xs text-slate-500 mb-4">Incident volume ranking across local Barangays</p>
+          <p className="text-xs text-slate-500 mb-4">Top incident volume by Barangay (hover bar for City & District details)</p>
           <div className="h-[280px] w-full">
             {byBarangayData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No barangay data available</div>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={byBarangayData.slice(0, 8)} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
+                <BarChart data={byBarangayData.slice(0, 8)} margin={{ top: 15, right: 20, left: -10, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '11px' }} interval={0} angle={-25} textAnchor="end" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="#64748b"
+                    style={{ fontSize: '11px', fontWeight: '600' }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                  />
                   <YAxis stroke="#64748b" style={{ fontSize: '11px' }} allowDecimals={false} />
-                  <Tooltip formatter={(value) => [`${value} incidents`, 'Total']} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const item = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl text-xs space-y-1 border border-slate-700">
+                            <p className="font-bold text-sm text-emerald-400">{item.barangay || item.name}</p>
+                            {item.city && <p className="text-slate-300">City: <span className="font-semibold text-white">{item.city}</span></p>}
+                            {item.district && <p className="text-slate-300">District: <span className="font-semibold text-white">{item.district}</span></p>}
+                            <div className="border-t border-slate-800 pt-1 mt-1 font-bold text-slate-200">
+                              Total Incidents: <span className="text-emerald-400">{item.count}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   <Bar dataKey="count" fill="#10B981" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+
+        {/* Predictive Trend Forecasting */}
+        <div className="lg:col-span-2">
+          <TrendForecast days={7} />
         </div>
 
         {/* KDE Heatmap Density */}

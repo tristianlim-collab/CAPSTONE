@@ -41,36 +41,49 @@ export default function ResponseDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  const getFullLocationString = (inc) => {
+    if (!inc) return '';
+    return [
+      inc.map_pin_address,
+      inc.city,
+      inc.barangay?.name,
+      inc.barangay?.city,
+      inc.barangay?.municipality,
+      inc.district?.name,
+      inc.barangay?.congressional_district
+    ].filter(Boolean).join(' ').toLowerCase();
+  };
+
   useEffect(() => {
     const handleVerified = async (data) => {
       let verifiedInc = data.incident || data;
       const incId = verifiedInc.incident_id || data.incident_id;
 
-      // Filter by district for response unit user
-      const userDist = user?.congressional_district || user?.unit?.barangay?.congressional_district;
-      if (userDist) {
-        const districtLgus = userDist.includes('2')
-          ? ['Cadiz', 'Sagay', 'Manapla']
-          : userDist.includes('3')
-            ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
-            : userDist.includes('1')
-              ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
-              : [userDist];
-
-        const incAddress = (verifiedInc.map_pin_address || verifiedInc.city || verifiedInc.barangay?.city || verifiedInc.barangay?.municipality || '').toLowerCase();
-        const incDistrict = (verifiedInc.district?.name || verifiedInc.barangay?.congressional_district || '').toLowerCase();
-        const isMatch = districtLgus.some(lgu => incAddress.includes(lgu.toLowerCase())) || incDistrict.includes(userDist.toLowerCase());
-
-        if (!isMatch) return; // Do not display emergency outside assigned district
-      }
-
-      if (!verifiedInc.map_pin_address || !verifiedInc.incident_type) {
+      if (!verifiedInc.map_pin_address || !verifiedInc.incident_type || !verifiedInc.barangay) {
         try {
           const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });
           if (res.data) verifiedInc = res.data?.data || res.data;
         } catch (err) {
           console.error('Failed to fetch verified incident details:', err);
         }
+      }
+
+      // Filter by district for response unit user
+      const userDist = user?.congressional_district || user?.unit?.barangay?.congressional_district;
+      if (userDist) {
+        const districtLgus = userDist.includes('2')
+          ? ['cadiz', 'sagay', 'manapla']
+          : userDist.includes('3')
+            ? ['silay', 'talisay', 'victorias', 'e.b. magalona', 'magalona', 'murcia']
+            : userDist.includes('1')
+              ? ['san carlos', 'escalante', 'toboso', 'calatrava']
+              : [userDist.toLowerCase()];
+
+        const fullLoc = getFullLocationString(verifiedInc);
+        const incDistrict = (verifiedInc.district?.name || verifiedInc.barangay?.congressional_district || '').toLowerCase();
+        const isMatch = districtLgus.some(lgu => fullLoc.includes(lgu)) || incDistrict.includes(userDist.toLowerCase());
+
+        if (!isMatch) return; // Do not display emergency outside assigned district
       }
 
       setIncidents(prev => {

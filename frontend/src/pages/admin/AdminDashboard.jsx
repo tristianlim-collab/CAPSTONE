@@ -24,39 +24,57 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, [filters]);
 
+  const getFullLocationString = (inc) => {
+    if (!inc) return '';
+    return [
+      inc.map_pin_address,
+      inc.city,
+      inc.barangay?.name,
+      inc.barangay?.city,
+      inc.barangay?.municipality,
+      inc.district?.name,
+      inc.barangay?.congressional_district
+    ].filter(Boolean).join(' ').toLowerCase();
+  };
+
   useEffect(() => {
     const handleNewIncident = async (data) => {
       let inc = data.incident || data;
       if (!inc || (!inc.incident_id && !inc.id)) return;
       const incId = inc.incident_id || inc.id;
 
-      // Filter socket events by District for District Admins
-      const userDist = user?.congressional_district;
-      if (userDist) {
-        const districtLgus = userDist.includes('2')
-          ? ['Cadiz', 'Sagay', 'Manapla']
-          : userDist.includes('3')
-            ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
-            : userDist.includes('1')
-              ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
-              : [userDist];
-
-        const incAddress = (inc.map_pin_address || inc.city || inc.barangay?.city || inc.barangay?.municipality || '').toLowerCase();
-        const incDistrict = (inc.district?.name || inc.barangay?.congressional_district || '').toLowerCase();
-        const isMatch = districtLgus.some(lgu => incAddress.includes(lgu.toLowerCase())) || incDistrict.includes(userDist.toLowerCase());
-
-        if (!isMatch) {
-          return; // Ignore real-time reports outside this district
-        }
-      }
-
-      // If lat/lng missing from socket payload, fetch full incident
-      if (!inc.latitude || !inc.longitude) {
+      // Ensure full incident details (with coordinates & barangay) are present
+      if (!inc.latitude || !inc.longitude || !inc.barangay) {
         try {
           const res = await incidentAPI.getById(incId);
           if (res.data) inc = res.data?.data || res.data;
         } catch (err) {
           console.error('Failed to fetch full new incident details:', err);
+        }
+      }
+
+      // Filter socket events by District for District Admins
+      const userDist = user?.congressional_district;
+      if (userDist) {
+        const fullLocText = getFullLocationString(inc);
+        const incDistrict = (inc.district?.name || inc.barangay?.congressional_district || '').toLowerCase();
+        
+        // Flexible district matching (e.g. "3rd District", "3", "District 3")
+        const distNum = userDist.match(/\d+/)?.[0];
+        const isDistrictMatch = distNum && (incDistrict.includes(distNum) || fullLocText.includes(`district ${distNum}`) || fullLocText.includes(`${distNum}rd district`) || fullLocText.includes(`${distNum}nd district`) || fullLocText.includes(`${distNum}st district`));
+
+        const districtLgus = userDist.includes('2')
+          ? ['cadiz', 'sagay', 'manapla']
+          : userDist.includes('3')
+            ? ['silay', 'talisay', 'victorias', 'e.b. magalona', 'magalona', 'murcia']
+            : userDist.includes('1')
+              ? ['san carlos', 'escalante', 'toboso', 'calatrava']
+              : [];
+
+        const isLguMatch = districtLgus.some(lgu => fullLocText.includes(lgu));
+
+        if (!isDistrictMatch && !isLguMatch) {
+          return; // Ignore reports strictly outside this district
         }
       }
 
@@ -110,7 +128,7 @@ export default function AdminDashboard() {
     });
 
     return () => { unsub1(); unsub_awaiting(); unsub2(); unsub_verified(); unsub_rejected(); unsub3(); };
-  }, [on]);
+  }, [on, user]);
 
   const fetchDashboardData = async () => {
     try {

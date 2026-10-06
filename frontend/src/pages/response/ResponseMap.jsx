@@ -409,18 +409,31 @@ const ResponseMap = () => {
     setRouteLoading(false);
   };
 
+  const getFullLocationString = (inc) => {
+    if (!inc) return '';
+    return [
+      inc.map_pin_address,
+      inc.city,
+      inc.barangay?.name,
+      inc.barangay?.city,
+      inc.barangay?.municipality,
+      inc.district?.name,
+      inc.barangay?.congressional_district
+    ].filter(Boolean).join(' ').toLowerCase();
+  };
+
   // Listen for new incidents in real-time
   useEffect(() => {
     // 1. New Incident (Only if in my city or assigned)
     const unsub1 = on('new_incident', (incident) => {
-      const isAssigned = incident.assignments?.some(a => a.unit_id === user?.unit_id);
+      const isAssigned = incident.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
       const unitName = user?.unit?.unit_name?.toLowerCase() || '';
-      const incidentAddress = (incident.map_pin_address || '').toLowerCase();
+      const fullLoc = getFullLocationString(incident);
 
       const isSilayUnit = unitName.includes('silay');
       const isTalisayUnit = unitName.includes('talisay');
-      const isSilayIncident = incidentAddress.includes('silay');
-      const isTalisayIncident = incidentAddress.includes('talisay');
+      const isSilayIncident = fullLoc.includes('silay');
+      const isTalisayIncident = fullLoc.includes('talisay');
 
       let shouldShow = true;
       if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
@@ -429,8 +442,6 @@ const ResponseMap = () => {
       if (shouldShow || isAssigned) {
         setIncidents(prev => {
           if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
-          // DOUBLE CHECK: Even if 'shouldShow' was true based on keywords, 
-          // if it's a cross-city incident and we aren't assigned, hide it.
           const isCrossCity = (isSilayUnit && isTalisayIncident) || (isTalisayUnit && isSilayIncident);
           if (isCrossCity && !isAssigned) return prev;
 
@@ -446,14 +457,14 @@ const ResponseMap = () => {
         return;
       }
 
-      const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id);
+      const isAssigned = data.incident?.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
       const unitName = user?.unit?.unit_name?.toLowerCase() || '';
-      const incidentAddress = (data.incident?.map_pin_address || '').toLowerCase();
+      const fullLoc = getFullLocationString(data.incident);
 
       const isSilayUnit = unitName.includes('silay');
       const isTalisayUnit = unitName.includes('talisay');
-      const isSilayIncident = incidentAddress.includes('silay');
-      const isTalisayIncident = incidentAddress.includes('talisay');
+      const isSilayIncident = fullLoc.includes('silay');
+      const isTalisayIncident = fullLoc.includes('talisay');
 
       let shouldShow = true;
       if (isSilayUnit && isTalisayIncident && !isSilayIncident) shouldShow = false;
@@ -498,7 +509,7 @@ const ResponseMap = () => {
       const incId = verifiedInc.incident_id || data.incident_id;
 
       // If lat/lng or barangay missing from socket payload, fetch full incident
-      if (!verifiedInc.latitude || !verifiedInc.longitude || !verifiedInc.map_pin_address) {
+      if (!verifiedInc.latitude || !verifiedInc.longitude || !verifiedInc.map_pin_address || !verifiedInc.barangay) {
         try {
           const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });
           if (res.data) verifiedInc = res.data?.data || res.data;
@@ -519,14 +530,14 @@ const ResponseMap = () => {
       const isAssigned = incObj.assignments?.some(a => a.unit_id === user?.unit_id || a.unit_id === user?.unit?.unit_id);
       
       const unitCity = (user?.unit?.barangay?.city || user?.unit?.barangay?.municipality || user?.unit?.unit_name || '').toLowerCase();
-      const incidentAddress = (incObj.map_pin_address || incObj.city || incObj.barangay?.city || incObj.barangay?.municipality || '').toLowerCase();
+      const fullLoc = getFullLocationString(incObj);
 
       const lgus = ['silay', 'talisay', 'victorias', 'magalona', 'murcia'];
       const myLgu = lgus.find(lgu => unitCity.includes(lgu));
 
       let shouldShow = true;
       if (myLgu) {
-        shouldShow = incidentAddress.includes(myLgu);
+        shouldShow = fullLoc.includes(myLgu);
       }
 
       // Show if assigned OR if within unit LGU jurisdiction

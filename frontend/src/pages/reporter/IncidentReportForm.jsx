@@ -409,9 +409,9 @@ export default function IncidentReportForm() {
                   className="z-0"
                 >
                   <TileLayer
-                    attribution='&copy; Google Maps'
-                    url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
-                    maxZoom={20}
+                    attribution='&copy; OpenStreetMap'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    maxZoom={19}
                   />
                   <LocationMarker location={location} setLocation={(loc) => {
                     setLocation(loc);
