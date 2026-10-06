@@ -67,7 +67,11 @@ export default function ReporterHomeScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      try {
+        await Location.requestForegroundPermissionsAsync();
+      } catch (err) {
+        console.warn('Location permission check failed:', err);
+      }
     })();
   }, []);
 

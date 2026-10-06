@@ -87,64 +87,86 @@ const createUnitIcon = (unit) => {
   });
 };
 
-// Auto-zoom to latest incident or newly approved report when one arrives
-function AutoZoomToLatestIncident({ incidents, enabled }) {
+function ResponseMapNavigationController({ incidents, selectedIncidentId, activeRoute }) {
   const map = useMap();
-  const previousLatestKey = useRef(null);
+  const previousLatestKeyRef = useRef(null);
+  const previousSelectedIdRef = useRef(null);
+  const previousRouteKeyRef = useRef(null);
+  const isFirstRender = useRef(true);
 
+  // 1. Route bounds fitting (only when activeRoute actually changes)
   useEffect(() => {
-    if (!enabled || !incidents || incidents.length === 0) return;
-
-    const latestIncident = incidents[0];
-    const latestId = latestIncident?.incident_id;
-    const latestStatus = latestIncident?.status;
-    const latestKey = `${latestId}_${latestStatus}`;
-    const lat = Number(latestIncident?.latitude);
-    const lng = Number(latestIncident?.longitude);
-    const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
-
-    if (!hasValidCoordinates) return;
-
-    if (previousLatestKey.current !== latestKey) {
-      const isUpdate = previousLatestKey.current !== null;
-      previousLatestKey.current = latestKey;
-
-      map.flyTo([lat, lng], 16, {
-        duration: 1.8,
-        easeLinearity: 0.25
-      });
-
-      if (isUpdate) {
-        const message = `🚨 Approved Incident #${latestIncident?.incident_code || ''}! Auto-zooming to location...`;
-        toast(message, {
-          icon: '📍',
-          style: { fontWeight: 'bold', borderLeft: '4px solid #3b82f6' },
-          duration: 5000
-        });
+    if (activeRoute && activeRoute.coords && activeRoute.coords.length > 1) {
+      const routeKey = `${activeRoute.incident_id}_${activeRoute.coords.length}`;
+      if (previousRouteKeyRef.current !== routeKey) {
+        previousRouteKeyRef.current = routeKey;
+        const bounds = L.latLngBounds(activeRoute.coords);
+        map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2 });
       }
     }
-  }, [enabled, incidents, map]);
+  }, [activeRoute, map]);
+
+  // 2. Autozoom & Selection flying
+  useEffect(() => {
+    if (!incidents || incidents.length === 0) return;
+
+    const latestIncident = incidents[0];
+    const latestId = latestIncident?.incident_id || latestIncident?.id;
+    const latestStatus = latestIncident?.status;
+    const latestKey = `${latestId}_${latestStatus}`;
+    const latestLat = Number(latestIncident?.latitude);
+    const latestLng = Number(latestIncident?.longitude);
+
+    const selectedIncident = incidents.find(i => (i.incident_id || i.id) === selectedIncidentId);
+    const selectedLat = Number(selectedIncident?.latitude);
+    const selectedLng = Number(selectedIncident?.longitude);
+
+    // Initial load: don't fly to top incident automatically unless user explicitly selected one
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      previousLatestKeyRef.current = latestKey;
+      if (selectedIncidentId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        previousSelectedIdRef.current = selectedIncidentId;
+        map.flyTo([selectedLat, selectedLng], 17, { duration: 1.5 });
+      }
+      return;
+    }
+
+    // Explicit User Selection OR selection change
+    if (selectedIncidentId && selectedIncidentId !== previousSelectedIdRef.current) {
+      previousSelectedIdRef.current = selectedIncidentId;
+      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        map.flyTo([selectedLat, selectedLng], 17, { duration: 1.5 });
+        map.eachLayer((layer) => {
+          if (layer.options && layer.options.incident_id === selectedIncidentId) {
+            layer.openPopup();
+          }
+        });
+        return;
+      }
+    }
+
+    // New incident or approved report arrival (latestKey changed)
+    if (latestKey && latestKey !== previousLatestKeyRef.current) {
+      const isUpdate = previousLatestKeyRef.current !== null;
+      previousLatestKeyRef.current = latestKey;
+
+      if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
+        map.flyTo([latestLat, latestLng], 16, { duration: 1.8, easeLinearity: 0.25 });
+        if (isUpdate) {
+          const message = `🚨 Incident #${latestIncident?.incident_code || ''} Updated! Auto-zooming to location...`;
+          toast(message, {
+            icon: '📍',
+            style: { fontWeight: 'bold', borderLeft: '4px solid #3b82f6' },
+            duration: 5000
+          });
+        }
+      }
+    }
+  }, [incidents, selectedIncidentId, map]);
 
   return null;
 }
-
-const FlyToSelectedIncident = ({ selectedIncident }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (selectedIncident && selectedIncident.latitude && selectedIncident.longitude) {
-      const pos = [selectedIncident.latitude, selectedIncident.longitude];
-      map.flyTo(pos, 18, { duration: 1.5 });
-
-      // Force open the popup for this specific incident
-      map.eachLayer((layer) => {
-        if (layer.options && layer.options.incident_id === selectedIncident.incident_id) {
-          layer.openPopup();
-        }
-      });
-    }
-  }, [selectedIncident, map]);
-  return null;
-};
 
 // Helper: fetch route from OSRM
 async function fetchRouteFromOSRM(fromLat, fromLng, toLat, toLng) {
@@ -967,10 +989,11 @@ const ResponseMap = () => {
                 url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
                 maxZoom={20}
               />
-              {/* Always enabled — a new verified incident should zoom even if a route is active */}
-              <AutoZoomToLatestIncident incidents={incidents} enabled={true} />
-              {activeRoute && <FlyToRouteBounds routeCoords={activeRoute.coords} />}
-              <FlyToSelectedIncident selectedIncident={incidents.find(i => i.incident_id === selectedIncidentId)} />
+              <ResponseMapNavigationController
+                incidents={incidents}
+                selectedIncidentId={selectedIncidentId}
+                activeRoute={activeRoute}
+              />
 
               {/* Dispatch Route Polyline */}
               {activeRoute && activeRoute.coords && (

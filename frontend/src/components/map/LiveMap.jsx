@@ -19,51 +19,52 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 let DefaultIcon = L.icon({ iconUrl: icon, shadowUrl: iconShadow });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-function AutoZoomToLatestIncident({ incidents, enabled }) {
+function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewIncident }) {
   const map = useMap();
-  const previousLatestKey = useRef(null);
+  const previousLatestIdRef = useRef(null);
+  const previousSelectedIdRef = useRef(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (!enabled || !incidents || incidents.length === 0) return;
+    if (!incidents || incidents.length === 0) return;
 
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id || latestIncident?.id;
-    const latestStatus = latestIncident?.status;
-    const latestKey = `${latestId}_${latestStatus}`;
-    const lat = Number(latestIncident?.latitude);
-    const lng = Number(latestIncident?.longitude);
-    const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+    const latestLat = Number(latestIncident?.latitude);
+    const latestLng = Number(latestIncident?.longitude);
 
-    if (!hasValidCoordinates) return;
+    const selectedId = selectedIncident?.incident_id || selectedIncident?.id;
+    const selectedLat = Number(selectedIncident?.latitude);
+    const selectedLng = Number(selectedIncident?.longitude);
 
-    // Zoom whenever a new incident arrives or is updated
-    if (previousLatestKey.current !== latestKey) {
-      previousLatestKey.current = latestKey;
-
-      map.flyTo([lat, lng], 16, {
-        duration: 1.5,
-        easeLinearity: 0.25
-      });
+    // Initial render: track initial state without flying automatically to avoid page-load jump
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      previousLatestIdRef.current = latestId;
+      if (selectedId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        previousSelectedIdRef.current = selectedId;
+        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
+      }
+      return;
     }
-  }, [enabled, incidents, map]);
 
-  return null;
-}
-
-function FlyToSelectedIncident({ selectedIncident }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!selectedIncident?.latitude || !selectedIncident?.longitude) return;
-    const lat = Number(selectedIncident.latitude);
-    const lng = Number(selectedIncident.longitude);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      map.flyTo([lat, lng], 16, {
-        duration: 1.2,
-        easeLinearity: 0.25,
-      });
+    // 1. User explicitly selected an incident (or selected incident changed)
+    if (selectedId && selectedId !== previousSelectedIdRef.current) {
+      previousSelectedIdRef.current = selectedId;
+      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
+        return;
+      }
     }
-  }, [selectedIncident, map]);
+
+    // 2. New incident arrived & autozoom enabled
+    if (autoZoomOnNewIncident && latestId && latestId !== previousLatestIdRef.current) {
+      previousLatestIdRef.current = latestId;
+      if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
+        map.flyTo([latestLat, latestLng], 16, { duration: 1.5, easeLinearity: 0.25 });
+      }
+    }
+  }, [incidents, selectedIncident, autoZoomOnNewIncident, map]);
 
   return null;
 }
@@ -285,11 +286,11 @@ export default function LiveMap({
 
 
 
-  // Determine the city for the LGU proximity layer
+  // Determine the selected incident object (or fallback to latest for proximity calculation)
   const selectedIncident = selectedIncidentId
-    ? incidents.find(i => i.incident_id === selectedIncidentId)
-    : incidents[0]; // Default to latest
-  const incidentCity = getIncidentCity(selectedIncident);
+    ? incidents.find(i => (i.incident_id || i.id) === selectedIncidentId)
+    : null;
+  const incidentCity = getIncidentCity(selectedIncident || incidents[0]);
 
   // Handler for when a marker is clicked — update the LGU zones focus
   const handleMarkerSelect = useCallback((incidentId) => {
@@ -360,8 +361,11 @@ export default function LiveMap({
         />
 
         <BoundaryLayer boundaries={boundaries} />
-        <AutoZoomToLatestIncident incidents={incidents} enabled={autoZoomOnNewIncident} />
-        <FlyToSelectedIncident selectedIncident={selectedIncident} />
+        <MapNavigationController
+          incidents={incidents}
+          selectedIncident={selectedIncident}
+          autoZoomOnNewIncident={autoZoomOnNewIncident}
+        />
 
         {/* LGU Proximity Zones — visible in both markers and lgu_zones modes when markerColorMode is lgu */}
         {(mode === 'lgu_zones' || (mode === 'markers' && markerColorMode === 'lgu')) && (
