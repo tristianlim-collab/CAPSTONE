@@ -7,33 +7,33 @@ import { NotificationProvider } from './context/NotificationContext';
 import { ProtectedRoute, PublicRoute } from './components/common/ProtectedRoute';
 
 // Lazy loading heavy pages for faster initial load
-const Login = lazy(() => import('./pages/auth/Login'));
-const Register = lazy(() => import('./pages/auth/Register'));
-const Unauthorized = lazy(() => import('./pages/auth/Unauthorized'));
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import Unauthorized from './pages/auth/Unauthorized';
 
-const ReporterHome = lazy(() => import('./pages/reporter/ReporterHome'));
-const IncidentReportForm = lazy(() => import('./pages/reporter/IncidentReportForm'));
-const ReportSuccess = lazy(() => import('./pages/reporter/ReportSuccess'));
-const ReporterProfile = lazy(() => import('./pages/reporter/ReporterProfile'));
-const MyReports = lazy(() => import('./pages/reporter/MyReports'));
+import ReporterHome from './pages/reporter/ReporterHome';
+import IncidentReportForm from './pages/reporter/IncidentReportForm';
+import ReportSuccess from './pages/reporter/ReportSuccess';
+import ReporterProfile from './pages/reporter/ReporterProfile';
+import MyReports from './pages/reporter/MyReports';
 
-const ShiftStart = lazy(() => import('./pages/response/ShiftStart'));
-const ResponseDashboard = lazy(() => import('./pages/response/ResponseDashboard'));
-const ResponseMap = lazy(() => import('./pages/response/ResponseMap'));
-const ResponseIncidents = lazy(() => import('./pages/response/ResponseIncidents'));
-const ResponseNotifications = lazy(() => import('./pages/response/ResponseNotifications'));
+import ShiftStart from './pages/response/ShiftStart';
+import ResponseDashboard from './pages/response/ResponseDashboard';
+import ResponseMap from './pages/response/ResponseMap';
+import ResponseIncidents from './pages/response/ResponseIncidents';
+import ResponseNotifications from './pages/response/ResponseNotifications';
 
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
-const ResponseUnitManagement = lazy(() => import('./pages/admin/ResponseUnitManagement'));
-const IncidentManagement = lazy(() => import('./pages/admin/IncidentManagement'));
-const Analytics = lazy(() => import('./pages/admin/Analytics'));
-const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'));
-const IncidentVerificationQueue = lazy(() => import('./pages/admin/IncidentVerificationQueue'));
-const PostIncidentReports = lazy(() => import('./pages/admin/PostIncidentReports'));
-const IncidentArchive = lazy(() => import('./pages/admin/IncidentArchive'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
-const UserGuide = lazy(() => import('./pages/common/UserGuide'));
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import ResponseUnitManagement from './pages/admin/ResponseUnitManagement';
+import IncidentManagement from './pages/admin/IncidentManagement';
+import Analytics from './pages/admin/Analytics';
+import SystemSettings from './pages/admin/SystemSettings';
+import IncidentVerificationQueue from './pages/admin/IncidentVerificationQueue';
+import PostIncidentReports from './pages/admin/PostIncidentReports';
+import IncidentArchive from './pages/admin/IncidentArchive';
+import AuditLogs from './pages/admin/AuditLogs';
+import UserGuide from './pages/common/UserGuide';
 
 // Administration Layouts
 import AdminLayout from './components/layout/AdminLayout';
