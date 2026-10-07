@@ -661,21 +661,6 @@ export default function IncidentReportScreen({ navigation }) {
             <Text style={styles.descText}>{getSeverityDescription()}</Text>
           </View>
 
-          {/* Detailed Description */}
-          <View style={{ marginTop: 12 }}>
-            <Text style={[styles.sectionLabel, { fontSize: 12, marginBottom: 6, color: '#475569' }]}>
-              ADDITIONAL DETAILS / DESCRIPTION
-            </Text>
-            <TextInput
-              style={[styles.input, { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
-              placeholder="Describe what is happening at the scene in detail..."
-              placeholderTextColor="#94A3B8"
-              multiline={true}
-              numberOfLines={3}
-              value={customDescription}
-              onChangeText={setCustomDescription}
-            />
-          </View>
 
           {generatedDescription ? (
             <View style={styles.autoDescBox}>
