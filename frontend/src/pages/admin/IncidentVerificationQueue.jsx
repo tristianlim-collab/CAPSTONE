@@ -429,7 +429,7 @@ export default function IncidentVerificationQueue() {
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-800'
                   }`}
               >
-                {tab.label} <span className={`ml-1.5 opacity-60 ${isActive ? 'text-white' : ''}`}>[{count}]</span>
+                {tab.label}
               </motion.button>
             );
           })()}

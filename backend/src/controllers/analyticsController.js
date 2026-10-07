@@ -19,7 +19,7 @@ export const getSummary = async (req, res) => {
     const [total, active, resolved, users] = await Promise.all([
       prisma.incident.count({ where: whereIncident }),
       prisma.incident.count({ where: { ...whereIncident, status: { in: ["REPORTED", "VERIFIED", "RESPONDING", "ON_SCENE"] } } }),
-      prisma.incident.count({ where: { ...whereIncident, status: { in: ["RESOLVED", "CLOSED"] } } }),
+      prisma.incident.count({ where: { ...whereIncident, status: "RESOLVED" } }),
       prisma.user.count({ where: userDistrict ? { congressional_district: { equals: userDistrict, mode: 'insensitive' } } : {} }),
     ]);
 
