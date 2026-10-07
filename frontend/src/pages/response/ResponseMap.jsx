@@ -50,7 +50,6 @@ const createUnitIcon = (unit) => {
   let iconContent = '🛡️';
   if (unit.unit_type === 'FIRE') iconContent = '🚒';
   else if (unit.unit_type === 'MEDICAL') iconContent = '🚑';
-  else if (unit.unit_type === 'POLICE') iconContent = '🚓';
   else if (unit.unit_type === 'BARANGAY') iconContent = '🏛️';
   else if (unit.unit_type === 'DRRMO') iconContent = '🚨';
 
@@ -888,8 +887,8 @@ const ResponseMap = () => {
                       key={incident.incident_id}
                       onClick={() => setSelectedIncidentId(incident.incident_id)}
                       className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col gap-2.5 ${isSelected
-                          ? 'border-blue-500 bg-blue-50/40 shadow-sm ring-2 ring-blue-500/10'
-                          : 'border-slate-100 bg-slate-50/60 hover:border-slate-300'
+                        ? 'border-blue-500 bg-blue-50/40 shadow-sm ring-2 ring-blue-500/10'
+                        : 'border-slate-100 bg-slate-50/60 hover:border-slate-300'
                         }`}
                     >
                       <div className="flex items-start justify-between">
