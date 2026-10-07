@@ -165,7 +165,7 @@ async function main() {
     const csvStatus = (r.Status || '').toUpperCase();
     if (csvStatus === 'CLOSED') statusEnum = 'CLOSED';
     else if (csvStatus === 'RESOLVED') statusEnum = 'RESOLVED';
-    else if (csvStatus === 'ONGOING' || csvStatus === 'RESPONDING') statusEnum = 'RESPONDING';
+    else if (csvStatus === 'ONGOING' || csvStatus === 'RESPONDING') statusEnum = 'RESOLVED';
     else if (csvStatus === 'FALSE ALARM') statusEnum = 'FALSE_ALARM';
     else if (csvStatus === 'VERIFIED') statusEnum = 'VERIFIED';
 

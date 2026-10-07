@@ -113,7 +113,7 @@ export async function seedCsvDataset() {
   const statusEnumMap = {
     'closed': 'CLOSED',
     'resolved': 'RESOLVED',
-    'ongoing': 'RESPONDING',
+    'ongoing': 'RESOLVED',
     'false alarm': 'FALSE_ALARM',
     'reported': 'REPORTED'
   };
