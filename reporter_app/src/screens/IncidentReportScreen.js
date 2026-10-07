@@ -122,7 +122,9 @@ const STATIC_LEAFLET_HTML = `
         marker.on('dragend', function(e) {
           var pos = marker.getLatLng();
           if (accCircle) accCircle.setLatLng(pos);
-          window.ReactNativeWebView.postMessage(JSON.stringify({ lat: pos.lat, lng: pos.lng }));
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ lat: pos.lat, lng: pos.lng }));
+          }
         });
       } else {
         marker.setLatLng([lat, lng]);
@@ -138,7 +140,9 @@ const STATIC_LEAFLET_HTML = `
       if (marker) {
         marker.setLatLng(e.latlng);
         if (accCircle) accCircle.setLatLng(e.latlng);
-        window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
+        }
       }
     });
   </script>

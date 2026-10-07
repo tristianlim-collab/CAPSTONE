@@ -77,6 +77,7 @@ export default function ReporterHomeScreen({ navigation }) {
 
   useEffect(() => {
     const unsub1 = on('incident_status_updated', (data) => {
+      if (!data?.incident_id) return;
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === data.incident_id
           ? { ...inc, status: data.status, ...(data.incident || {}) }
@@ -84,37 +85,45 @@ export default function ReporterHomeScreen({ navigation }) {
       ));
     });
     const unsub1b = on('incident_verified', (data) => {
+      if (!data) return;
       const incId = data.incident_id || data.incident?.incident_id;
+      if (!incId) return;
       const newStatus = data.status || 'RESPONDING';
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === incId ? { ...inc, status: newStatus, ...(data.incident || {}) } : inc
       ));
     });
     const unsub1c = on('incident_approved', (data) => {
+      if (!data) return;
       const incId = data.incident_id || data.incident?.incident_id;
+      if (!incId) return;
       const newStatus = data.status || 'RESPONDING';
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === incId ? { ...inc, status: newStatus, ...(data.incident || {}) } : inc
       ));
     });
     const unsub2 = on('incident_updated', (data) => {
+      if (!data?.incident_id) return;
       setIncidents(prev => prev.map(inc =>
         inc.incident_id === data.incident_id ? { ...inc, ...data } : inc
       ));
     });
     const unsub3 = on('new_incident', (incident) => {
+      if (!incident?.incident_id) return;
       setIncidents(prev => {
         if (prev.find(i => i.incident_id === incident.incident_id)) return prev;
         return [incident, ...prev];
       });
     });
     const unsub4 = on('incident_deleted', (data) => {
+      if (!data?.incident_id) return;
       setIncidents(prev => prev.filter(inc => inc.incident_id !== data.incident_id));
     });
     const unsub5 = on('incident_resolved', (data) => {
+      if (!data?.incident_id) return;
       Alert.alert(
         'Incident Resolved ✅',
-        data.message || `Your reported incident #${data.incident_code} has been resolved by the response team.`,
+        data.message || `Your reported incident #${data.incident_code || ''} has been resolved by the response team.`,
         [{ text: 'OK' }]
       );
       // Refresh list

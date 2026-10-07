@@ -54,13 +54,17 @@ export default function MyReportsScreen({ navigation }) {
   // Real-time status sync via socket
   useEffect(() => {
     const u1 = on('incident_status_updated', (data) => {
+      if (!data?.incident_id) return;
       setReports(prev => prev.map(r => r.incident_id === data.incident_id ? { ...r, status: data.status, ...(data.incident || {}) } : r));
     });
     const u2 = on('incident_verified', (data) => {
+      if (!data) return;
       const inc = data.incident || data;
+      if (!inc?.incident_id) return;
       setReports(prev => prev.map(r => r.incident_id === inc.incident_id ? { ...r, status: 'VERIFIED', ...inc } : r));
     });
     const u3 = on('incident_deleted', (data) => {
+      if (!data?.incident_id) return;
       setReports(prev => prev.filter(r => r.incident_id !== data.incident_id));
     });
     return () => { u1(); u2(); u3(); };

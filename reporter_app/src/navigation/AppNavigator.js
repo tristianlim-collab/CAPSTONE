@@ -96,6 +96,8 @@ function AppStack() {
       <Stack.Screen name="ReportSuccess" component={ReportSuccessScreen} />
       <Stack.Screen name="MyReports" component={MyReportsScreen} />
       <Stack.Screen name="ReportDetails" component={ReportDetailsScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }

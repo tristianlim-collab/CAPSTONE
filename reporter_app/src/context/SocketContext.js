@@ -44,12 +44,22 @@ export const SocketProvider = ({ children }) => {
   }, [isAuthenticated, user]);
 
   const on = useCallback((eventName, callback) => {
+    const safeCallback = (...args) => {
+      try {
+        if (typeof callback === 'function') {
+          callback(...args);
+        }
+      } catch (err) {
+        console.error(`[Socket] Exception handling event '${eventName}':`, err);
+      }
+    };
+
     if (socketRef.current) {
-      socketRef.current.on(eventName, callback);
+      socketRef.current.on(eventName, safeCallback);
     }
     return () => {
       if (socketRef.current) {
-        socketRef.current.off(eventName, callback);
+        socketRef.current.off(eventName, safeCallback);
       }
     };
   }, []);
