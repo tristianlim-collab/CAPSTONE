@@ -72,20 +72,24 @@ export const createIncident = async (req, res) => {
       });
     }
 
-    // Fallback: If PostGIS exact polygon match did not return a barangay ID, but location IS in NIR (e.g. Silay), assign nearest barangay in city
-    if (!detectedBarangayId) {
-      const cityMatch = addr.split(',').find(p => p.trim())?.trim();
-      const fallbackBarangay = await prisma.barangay.findFirst({
-        where: cityMatch ? {
-          OR: [
-            { city: { contains: cityMatch, mode: 'insensitive' } },
-            { municipality: { contains: cityMatch, mode: 'insensitive' } },
-            { name: { contains: cityMatch, mode: 'insensitive' } }
-          ]
-        } : undefined
-      });
-      if (fallbackBarangay) {
-        detectedBarangayId = fallbackBarangay.barangay_id;
+    // Fallback: If PostGIS exact polygon match did not return a barangay ID, match address tokens against DB barangays
+    if (!detectedBarangayId && addr) {
+      const parts = addr.split(/[\s,.-]+/).filter(w => w.length > 3);
+      if (parts.length > 0) {
+        const fallbackBarangay = await prisma.barangay.findFirst({
+          where: {
+            OR: parts.map(part => ({
+              OR: [
+                { name: { contains: part, mode: 'insensitive' } },
+                { city: { contains: part, mode: 'insensitive' } },
+                { municipality: { contains: part, mode: 'insensitive' } }
+              ]
+            }))
+          }
+        });
+        if (fallbackBarangay) {
+          detectedBarangayId = fallbackBarangay.barangay_id;
+        }
       }
     }
     const incident_code = `INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -295,9 +299,9 @@ export const getIncidents = async (req, res) => {
     if (req.user?.congressional_district) {
       const dist = req.user.congressional_district;
       const districtLgus = dist.includes('2')
-        ? ['Cadiz', 'Sagay', 'Manapla']
+        ? ['Cadiz', 'Sagay', 'Manapla', 'Vito', 'Fabrica']
         : dist.includes('3')
-          ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia']
+          ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia', 'Guinhalaran', 'Blumentritt', 'Patag', 'Dos Hermanas', 'Matab-ang', 'Alicante', 'Canlaon View', 'Cubay']
           : dist.includes('1')
             ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
             : [dist];

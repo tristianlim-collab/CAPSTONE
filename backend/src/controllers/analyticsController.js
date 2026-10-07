@@ -8,11 +8,23 @@ export const getSummary = async (req, res) => {
     const whereIncident = {};
 
     if (userDistrict) {
+      const dist = userDistrict;
+      const districtLgus = dist.includes('2')
+        ? ['Cadiz', 'Sagay', 'Manapla', 'Vito', 'Fabrica']
+        : dist.includes('3')
+          ? ['Silay', 'Talisay', 'Victorias', 'E.B. Magalona', 'Magalona', 'Murcia', 'Guinhalaran', 'Blumentritt', 'Patag', 'Dos Hermanas', 'Matab-ang', 'Alicante', 'Canlaon View', 'Cubay']
+          : dist.includes('1')
+            ? ['San Carlos', 'Escalante', 'Toboso', 'Calatrava']
+            : [dist];
+
+      const lguAddressConditions = districtLgus.map(lgu => ({ map_pin_address: { contains: lgu, mode: 'insensitive' } }));
+      const lguCityConditions = districtLgus.map(lgu => ({ city: { contains: lgu, mode: 'insensitive' } }));
+
       whereIncident.OR = [
         { barangay: { congressional_district: { equals: userDistrict, mode: 'insensitive' } } },
         { district: { name: { contains: userDistrict, mode: 'insensitive' } } },
-        { map_pin_address: { contains: userDistrict, mode: 'insensitive' } },
-        { city: { contains: userDistrict, mode: 'insensitive' } }
+        ...lguAddressConditions,
+        ...lguCityConditions
       ];
     }
 

@@ -62,9 +62,9 @@ export default function AdminDashboard() {
         const isDistrictMatch = distNum && (incDistrict.includes(distNum) || fullLocText.includes(`district ${distNum}`) || fullLocText.includes(`${distNum}rd district`) || fullLocText.includes(`${distNum}nd district`) || fullLocText.includes(`${distNum}st district`));
 
         const districtLgus = userDist.includes('2')
-          ? ['cadiz', 'sagay', 'manapla']
+          ? ['cadiz', 'sagay', 'manapla', 'vito', 'fabrica']
           : userDist.includes('3')
-            ? ['silay', 'talisay', 'victorias', 'e.b. magalona', 'magalona', 'murcia']
+            ? ['silay', 'talisay', 'victorias', 'e.b. magalona', 'magalona', 'murcia', 'guinhalaran', 'blumentritt', 'patag', 'dos hermanas', 'matab-ang', 'alicante', 'canlaon view', 'cubay']
             : userDist.includes('1')
               ? ['san carlos', 'escalante', 'toboso', 'calatrava']
               : [];
