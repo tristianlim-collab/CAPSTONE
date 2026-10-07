@@ -160,7 +160,7 @@ export default function IncidentVerificationQueue() {
   const handleExport = async (format = 'xlsx') => {
     try {
       setExporting(true);
-      
+
       // 1. Trigger export download
       const response = await reportAPI.export(format, {
         status: activeTab === 'ALL' ? undefined : activeTab,
@@ -371,7 +371,7 @@ export default function IncidentVerificationQueue() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
             >
               {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Export Data
+              Export
               <ChevronDown size={14} className={`transition-transform duration-300 ${showExportDropdown ? 'rotate-180' : ''}`} />
             </button>
 

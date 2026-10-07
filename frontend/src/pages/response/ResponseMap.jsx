@@ -116,28 +116,18 @@ function ResponseMapNavigationController({ incidents, selectedIncidentId, active
     const latestLat = Number(latestIncident?.latitude);
     const latestLng = Number(latestIncident?.longitude);
 
-    const selectedIncident = incidents.find(i => (i.incident_id || i.id) === selectedIncidentId);
+    const selectedIncident = incidents.find(i => String(i.incident_id || i.id) === String(selectedIncidentId));
     const selectedLat = Number(selectedIncident?.latitude);
     const selectedLng = Number(selectedIncident?.longitude);
 
-    // Initial load: don't fly to top incident automatically unless user explicitly selected one
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      previousLatestKeyRef.current = latestKey;
-      if (selectedIncidentId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-        previousSelectedIdRef.current = selectedIncidentId;
-        map.flyTo([selectedLat, selectedLng], 17, { duration: 1.5 });
-      }
-      return;
-    }
-
     // Explicit User Selection OR selection change
-    if (selectedIncidentId && selectedIncidentId !== previousSelectedIdRef.current) {
+    if (selectedIncidentId && String(selectedIncidentId) !== String(previousSelectedIdRef.current)) {
       previousSelectedIdRef.current = selectedIncidentId;
       if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        map.invalidateSize();
         map.flyTo([selectedLat, selectedLng], 17, { duration: 1.5 });
         map.eachLayer((layer) => {
-          if (layer.options && layer.options.incident_id === selectedIncidentId) {
+          if (layer.options && String(layer.options.incident_id) === String(selectedIncidentId)) {
             layer.openPopup();
           }
         });
@@ -151,6 +141,7 @@ function ResponseMapNavigationController({ incidents, selectedIncidentId, active
       previousLatestKeyRef.current = latestKey;
 
       if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
+        map.invalidateSize();
         map.flyTo([latestLat, latestLng], 16, { duration: 1.8, easeLinearity: 0.25 });
         if (isUpdate) {
           const message = `🚨 Incident #${latestIncident?.incident_code || ''} Updated! Auto-zooming to location...`;

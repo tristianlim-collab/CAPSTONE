@@ -23,7 +23,6 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
   const map = useMap();
   const previousLatestKeyRef = useRef(null);
   const previousSelectedIdRef = useRef(null);
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (!incidents || incidents.length === 0) return;
@@ -31,7 +30,7 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id || latestIncident?.id;
     const latestStatus = latestIncident?.status;
-    const latestKey = `${latestId}_${latestStatus}`;
+    const latestKey = latestId ? `${latestId}_${latestStatus}` : null;
     const latestLat = Number(latestIncident?.latitude);
     const latestLng = Number(latestIncident?.longitude);
 
@@ -39,32 +38,23 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
     const selectedLat = Number(selectedIncident?.latitude);
     const selectedLng = Number(selectedIncident?.longitude);
 
-    // Initial load: record the latest incident key without flying automatically
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      previousLatestKeyRef.current = latestKey;
-      if (selectedId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-        previousSelectedIdRef.current = selectedId;
-        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.5 });
-      }
-      return;
-    }
-
-    // Explicit user selection click
-    if (selectedId && selectedId !== previousSelectedIdRef.current) {
+    // 1. Explicit user selection click or selected ID change
+    if (selectedId && String(selectedId) !== String(previousSelectedIdRef.current)) {
       previousSelectedIdRef.current = selectedId;
       if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        map.invalidateSize();
         map.flyTo([selectedLat, selectedLng], 16, { duration: 1.5 });
         return;
       }
     }
 
-    // New real-time incident or status update arrival
+    // 2. New real-time incident or status update arrival
     if (autoZoomOnNewIncident && latestKey && latestKey !== previousLatestKeyRef.current) {
       const isNewArrival = previousLatestKeyRef.current !== null;
       previousLatestKeyRef.current = latestKey;
 
       if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
+        map.invalidateSize();
         map.flyTo([latestLat, latestLng], 16, { duration: 1.8, easeLinearity: 0.25 });
         if (isNewArrival) {
           toast(`📍 New incident auto-zoomed: ${latestIncident?.incident_code || ''}`, {
@@ -306,7 +296,7 @@ export default function LiveMap({
 
   // Determine the selected incident object (or fallback to latest for proximity calculation)
   const selectedIncident = selectedIncidentId
-    ? incidents.find(i => (i.incident_id || i.id) === selectedIncidentId)
+    ? incidents.find(i => String(i.incident_id || i.id) === String(selectedIncidentId))
     : null;
   const incidentCity = getIncidentCity(selectedIncident || incidents[0]);
 
