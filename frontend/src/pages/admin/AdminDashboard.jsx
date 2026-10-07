@@ -43,14 +43,12 @@ export default function AdminDashboard() {
       if (!inc || (!inc.incident_id && !inc.id)) return;
       const incId = inc.incident_id || inc.id;
 
-      // Ensure full incident details (with coordinates & barangay) are present
-      if (!inc.latitude || !inc.longitude || !inc.barangay) {
-        try {
-          const res = await incidentAPI.getById(incId);
-          if (res.data) inc = res.data?.data || res.data;
-        } catch (err) {
-          console.error('Failed to fetch full new incident details:', err);
-        }
+      // Always fetch full incident details (with evidence photos & reporter data)
+      try {
+        const res = await incidentAPI.getById(incId, { include: 'evidence,reporter,type,barangay,assignments' });
+        if (res.data) inc = res.data?.data || res.data;
+      } catch (err) {
+        console.error('Failed to fetch full new incident details:', err);
       }
 
       // Filter socket events by District for District Admins
@@ -132,7 +130,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const params = { limit: 50, ...filters };
+      const params = { limit: 50, include: 'evidence,reporter,type,barangay', ...filters };
       const [statsRes, incRes] = await Promise.all([
         analyticsAPI.getSummary(filters),
         incidentAPI.getAll(params)
