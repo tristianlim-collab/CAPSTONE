@@ -130,7 +130,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const params = { limit: 50, include: 'evidence,reporter,type,barangay', ...filters };
+      const params = { limit: 500, include: 'evidence,reporter,type,barangay', ...filters };
       const [statsRes, incRes] = await Promise.all([
         analyticsAPI.getSummary(filters),
         incidentAPI.getAll(params)

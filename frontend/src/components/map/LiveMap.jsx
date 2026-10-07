@@ -21,7 +21,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewIncident }) {
   const map = useMap();
-  const previousLatestIdRef = useRef(null);
+  const previousLatestKeyRef = useRef(null);
   const previousSelectedIdRef = useRef(null);
   const isFirstRender = useRef(true);
 
@@ -30,6 +30,8 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
 
     const latestIncident = incidents[0];
     const latestId = latestIncident?.incident_id || latestIncident?.id;
+    const latestStatus = latestIncident?.status;
+    const latestKey = `${latestId}_${latestStatus}`;
     const latestLat = Number(latestIncident?.latitude);
     const latestLng = Number(latestIncident?.longitude);
 
@@ -37,18 +39,40 @@ function MapNavigationController({ incidents, selectedIncident, autoZoomOnNewInc
     const selectedLat = Number(selectedIncident?.latitude);
     const selectedLng = Number(selectedIncident?.longitude);
 
-    // If explicit selected incident is set and changed
-    if (selectedId && selectedId !== previousSelectedIdRef.current && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
-      previousSelectedIdRef.current = selectedId;
-      previousLatestIdRef.current = latestId;
-      map.flyTo([selectedLat, selectedLng], 16, { duration: 1.2, easeLinearity: 0.25 });
+    // Initial load: record the latest incident key without flying automatically
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      previousLatestKeyRef.current = latestKey;
+      if (selectedId && Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        previousSelectedIdRef.current = selectedId;
+        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.5 });
+      }
       return;
     }
 
-    // Autozoom on new incident arriving or on initial autoZoom parameter
-    if (autoZoomOnNewIncident && latestId && latestId !== previousLatestIdRef.current && Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
-      previousLatestIdRef.current = latestId;
-      map.flyTo([latestLat, latestLng], 16, { duration: 1.2, easeLinearity: 0.25 });
+    // Explicit user selection click
+    if (selectedId && selectedId !== previousSelectedIdRef.current) {
+      previousSelectedIdRef.current = selectedId;
+      if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
+        map.flyTo([selectedLat, selectedLng], 16, { duration: 1.5 });
+        return;
+      }
+    }
+
+    // New real-time incident or status update arrival
+    if (autoZoomOnNewIncident && latestKey && latestKey !== previousLatestKeyRef.current) {
+      const isNewArrival = previousLatestKeyRef.current !== null;
+      previousLatestKeyRef.current = latestKey;
+
+      if (Number.isFinite(latestLat) && Number.isFinite(latestLng)) {
+        map.flyTo([latestLat, latestLng], 16, { duration: 1.8, easeLinearity: 0.25 });
+        if (isNewArrival) {
+          toast(`📍 New incident auto-zoomed: ${latestIncident?.incident_code || ''}`, {
+            icon: '🚨',
+            style: { fontWeight: 'bold', borderRadius: '12px', background: '#0F172A', color: '#fff' }
+          });
+        }
+      }
     }
   }, [incidents, selectedIncident, autoZoomOnNewIncident, map]);
 
