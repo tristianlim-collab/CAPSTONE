@@ -199,6 +199,78 @@ const generateSinglePostReportPDFKit = (report, res) => {
     y += 52;
   }
 
+  // Section 6: Attached Photo Evidence (Responder Photos & Reporter Evidence)
+  const allImages = [];
+  if (Array.isArray(report.photos)) {
+    report.photos.forEach((src, idx) => {
+      if (src) allImages.push({ src, label: `Responder Photo #${idx + 1}` });
+    });
+  }
+  if (Array.isArray(inc.evidence)) {
+    inc.evidence.forEach((ev, idx) => {
+      if (ev?.file_path) allImages.push({ src: ev.file_path, label: `Reporter Evidence #${idx + 1}` });
+    });
+  }
+
+  if (allImages.length > 0) {
+    // Check space on current page or add new page
+    if (y > 650) {
+      doc.addPage({ margin: 35, size: 'A4', layout: 'portrait' });
+      y = 40;
+    }
+
+    doc.fillColor('#312E81').fontSize(11).font('Helvetica-Bold').text('ATTACHED PHOTO EVIDENCE', 35, y);
+    doc.moveTo(35, y + 14).lineTo(560, y + 14).strokeColor('#E0E7FF').lineWidth(1).stroke();
+    y += 24;
+
+    const imgWidth = 245;
+    const imgHeight = 145;
+    let col = 0;
+
+    allImages.forEach((imgObj) => {
+      if (y + imgHeight + 25 > doc.page.height - 40) {
+        doc.addPage({ margin: 35, size: 'A4', layout: 'portrait' });
+        y = 40;
+        col = 0;
+      }
+
+      const posX = col === 0 ? 35 : 305;
+
+      try {
+        let imageBuffer = null;
+        if (imgObj.src.startsWith('data:image')) {
+          const base64Data = imgObj.src.replace(/^data:image\/\w+;base64,/, '');
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        } else if (fs.existsSync(imgObj.src)) {
+          imageBuffer = fs.readFileSync(imgObj.src);
+        }
+
+        if (imageBuffer) {
+          doc.rect(posX, y, imgWidth, imgHeight).fill('#000000');
+          doc.image(imageBuffer, posX, y, { width: imgWidth, height: imgHeight, fit: [imgWidth, imgHeight], align: 'center', valig: 'center' });
+          doc.rect(posX, y, imgWidth, imgHeight).strokeColor('#CBD5E1').lineWidth(1).stroke();
+
+          doc.rect(posX, y + imgHeight, imgWidth, 18).fill('#F8FAFC');
+          doc.rect(posX, y + imgHeight, imgWidth, 18).strokeColor('#CBD5E1').lineWidth(1).stroke();
+          doc.fillColor('#475569').fontSize(8).font('Helvetica-Bold').text(imgObj.label, posX + 6, y + imgHeight + 4, { width: imgWidth - 12, align: 'center', truncate: true });
+        }
+      } catch (err) {
+        console.warn('Failed to render image in PDFKit:', err.message);
+      }
+
+      if (col === 0) {
+        col = 1;
+      } else {
+        col = 0;
+        y += imgHeight + 28;
+      }
+    });
+
+    if (col === 1) {
+      y += imgHeight + 28;
+    }
+  }
+
   // Footer
   doc.fontSize(8).fillColor('#94A3B8').text('GAOIRS — Government Agency Operations Incident Response System • Official Single Incident Report', 35, doc.page.height - 30, { align: 'center' });
 
