@@ -100,10 +100,33 @@ const generateIncidentsPDFKit = (incidents, res) => {
   doc.end();
 };
 
+const getImageBuffer = async (src) => {
+  if (!src) return null;
+  try {
+    if (src.startsWith('data:image')) {
+      const base64Data = src.replace(/^data:image\/\w+;base64,/, '');
+      return Buffer.from(base64Data, 'base64');
+    }
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      const response = await fetch(src);
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      }
+    }
+    if (fs.existsSync(src)) {
+      return fs.readFileSync(src);
+    }
+  } catch (err) {
+    console.warn(`Failed to load image from ${src}:`, err.message);
+  }
+  return null;
+};
+
 /**
  * Helper: Generate PDF for a Single Post-Incident Report using PDFKit (Full detailed view guaranteed without Puppeteer)
  */
-const generateSinglePostReportPDFKit = (report, res) => {
+const generateSinglePostReportPDFKit = async (report, res) => {
   const doc = new PDFDocument({ margin: 35, size: 'A4', layout: 'portrait' });
   const inc = report.incident || {};
 
@@ -227,7 +250,7 @@ const generateSinglePostReportPDFKit = (report, res) => {
     const imgHeight = 145;
     let col = 0;
 
-    allImages.forEach((imgObj) => {
+    for (const imgObj of allImages) {
       if (y + imgHeight + 25 > doc.page.height - 40) {
         doc.addPage({ margin: 35, size: 'A4', layout: 'portrait' });
         y = 40;
@@ -237,13 +260,7 @@ const generateSinglePostReportPDFKit = (report, res) => {
       const posX = col === 0 ? 35 : 305;
 
       try {
-        let imageBuffer = null;
-        if (imgObj.src.startsWith('data:image')) {
-          const base64Data = imgObj.src.replace(/^data:image\/\w+;base64,/, '');
-          imageBuffer = Buffer.from(base64Data, 'base64');
-        } else if (fs.existsSync(imgObj.src)) {
-          imageBuffer = fs.readFileSync(imgObj.src);
-        }
+        const imageBuffer = await getImageBuffer(imgObj.src);
 
         if (imageBuffer) {
           doc.rect(posX, y, imgWidth, imgHeight).fill('#000000');
@@ -264,7 +281,7 @@ const generateSinglePostReportPDFKit = (report, res) => {
         col = 0;
         y += imgHeight + 28;
       }
-    });
+    }
 
     if (col === 1) {
       y += imgHeight + 28;
