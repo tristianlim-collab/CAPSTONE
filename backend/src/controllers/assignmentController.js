@@ -29,6 +29,10 @@ export const assignUnitToIncident = async (req, res) => {
         assigned_by: req.user.id,
         status, // allow passing initial status (e.g. ACCEPTED if self-assigning)
         acknowledged_at: status === 'ACCEPTED' ? new Date() : null
+      },
+      include: {
+        unit: true,
+        assigned_by_user: { select: { user_id: true, name: true, role: true } }
       }
     });
 
@@ -53,16 +57,51 @@ export const assignUnitToIncident = async (req, res) => {
         data: { status: 'VERIFIED' }
       });
       if (incident) incident.status = 'VERIFIED';
+    } else {
+      // If dispatching an unverified or responding incident, ensure incident status is updated to RESPONDING
+      await prisma.incident.update({
+        where: { incident_id },
+        data: { status: 'RESPONDING' }
+      });
+      if (incident) incident.status = 'RESPONDING';
     }
 
+    // Log the dispatch event to status logs for audit trail
+    await prisma.incidentStatusLog.create({
+      data: {
+        incident_id,
+        changed_by: req.user.id,
+        status: incident?.status || 'RESPONDING',
+        remarks: `Dispatched unit ${unit.unit_name} by ${req.user.name || 'Admin'} (${req.user.role || 'ADMIN'})`
+      }
+    });
+
+    const destinationText = incident?.map_pin_address || incident?.landmark || (incident?.barangay?.name ? `Barangay ${incident.barangay.name}` : 'Incident Location');
+
+    const enrichedAssignment = {
+      ...assignment,
+      responder_name: unit.unit_name,
+      responder_type: unit.unit_type,
+      responder_contact: unit.contact_number || 'N/A',
+      dispatch_time: assignment.assigned_at,
+      dispatch_status: assignment.status,
+      destination: destinationText,
+      destination_coordinates: incident ? { latitude: incident.latitude, longitude: incident.longitude } : null,
+      dispatched_by: {
+        user_id: req.user.id,
+        name: req.user.name,
+        role: req.user.role
+      }
+    };
+
     if (incident) {
-      await alertService.notifyUnitDispatch(incident, unit, assignment, req.user);
+      await alertService.notifyUnitDispatch(incident, unit, enrichedAssignment, req.user);
     }
 
     // Broadcast assignment via socket
-    socketService.emitAssignment(unit_id, { incident, assignment, unit });
+    socketService.emitAssignment(unit_id, { incident, assignment: enrichedAssignment, unit });
 
-    res.status(201).json(assignment);
+    res.status(201).json(enrichedAssignment);
   } catch (error) {
     res.status(500).json({ message: 'Error assigning unit', error: error.message });
   }
@@ -107,9 +146,28 @@ export const updateAssignmentStatus = async (req, res) => {
             reporter: { select: { name: true, contact_number: true } }
           }
         },
-        unit: true
+        unit: true,
+        assigned_by_user: { select: { user_id: true, name: true, role: true } }
       }
     });
+
+    const destinationText = assignment.incident?.map_pin_address || assignment.incident?.landmark || (assignment.incident?.barangay?.name ? `Barangay ${assignment.incident.barangay.name}` : 'Incident Location');
+
+    const enrichedAssignment = {
+      ...assignment,
+      responder_name: assignment.unit?.unit_name || 'Emergency Responder',
+      responder_type: assignment.unit?.unit_type || 'BARANGAY',
+      responder_contact: assignment.unit?.contact_number || 'N/A',
+      dispatch_time: assignment.assigned_at,
+      dispatch_status: assignment.status,
+      destination: destinationText,
+      destination_coordinates: assignment.incident ? { latitude: assignment.incident.latitude, longitude: assignment.incident.longitude } : null,
+      dispatched_by: assignment.assigned_by_user ? {
+        user_id: assignment.assigned_by_user.user_id,
+        name: assignment.assigned_by_user.name,
+        role: assignment.assigned_by_user.role
+      } : null
+    };
 
     // If the assignment status maps to an incident status, update the incident too
     const incidentStatusMap = {
@@ -153,7 +211,7 @@ export const updateAssignmentStatus = async (req, res) => {
       socketService.emitUnitAvailabilityChanged(assignment.unit_id, 'AVAILABLE');
     }
 
-    res.json(assignment);
+    res.json(enrichedAssignment);
   } catch (error) {
     res.status(500).json({ message: 'Error updating assignment', error: error.message });
   }

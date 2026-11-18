@@ -337,7 +337,18 @@ export const getIncidents = async (req, res) => {
       incident_type: true,
       barangay: { select: { barangay_id: true, name: true, city: true, municipality: true, congressional_district: true } },
       reporter: { select: { name: true, email: true, contact_number: true } },
-      assignments: { include: { unit: { select: { unit_id: true, unit_name: true, unit_type: true } } } },
+      assignments: { 
+        include: { 
+          unit: { select: { unit_id: true, unit_name: true, unit_type: true, contact_number: true } },
+          assigned_by_user: { select: { user_id: true, name: true, role: true } }
+        } 
+      },
+      status_logs: { 
+        include: { 
+          user: { select: { user_id: true, name: true, role: true, email: true } } 
+        }, 
+        orderBy: { changed_at: 'desc' } 
+      }
     };
 
     if (includeParam.includes('evidence')) {
@@ -345,9 +356,6 @@ export const getIncidents = async (req, res) => {
     }
     if (includeParam.includes('post_report')) {
       includeObj.post_report = true;
-    }
-    if (includeParam.includes('status_logs')) {
-      includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
     }
 
     const incidents = await prisma.incident.findMany({
@@ -358,16 +366,92 @@ export const getIncidents = async (req, res) => {
 
     const total = await prisma.incident.count({ where });
 
-    // Attach Same-Report / Duplicate tagging metadata
+    // Attach Same-Report / Duplicate tagging metadata and enrich with verification & dispatch audit details
     const taggedIncidents = tagSameReports(incidents);
+    const enrichedIncidents = taggedIncidents.map(inc => enrichIncidentDetails(inc));
 
     res.json({
-      data: taggedIncidents,
+      data: enrichedIncidents,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching incidents', error: error.message });
   }
+};
+
+/**
+ * Helper to enrich incident with verifier audit info and dispatch details
+ * Fulfills Capstone Defense Revisions:
+ * - Records the user who verified/confirmed each report (verified_by, verified_at, verification_notes)
+ * - Complete dispatch details (assigned responder, dispatch time, destination, and dispatch status)
+ */
+export const enrichIncidentDetails = (incident) => {
+  if (!incident) return incident;
+
+  // Find verification / confirmation log from status logs
+  const verifierLog = incident.status_logs?.find(log => 
+    log.status === 'VERIFIED' || 
+    log.status === 'RESPONDING' || 
+    (log.remarks && (
+      log.remarks.toLowerCase().includes('verified') || 
+      log.remarks.toLowerCase().includes('approved') || 
+      log.remarks.toLowerCase().includes('confirmed')
+    ))
+  );
+
+  const rejectionLog = incident.status_logs?.find(log => 
+    log.status === 'FALSE_ALARM' || 
+    (log.remarks && log.remarks.toLowerCase().includes('false alarm'))
+  );
+
+  const activeAuditLog = verifierLog || rejectionLog;
+
+  const verified_by = incident.verified_by || (activeAuditLog?.user ? {
+    user_id: activeAuditLog.user.user_id,
+    name: activeAuditLog.user.name,
+    role: activeAuditLog.user.role,
+    email: activeAuditLog.user.email
+  } : null);
+
+  const verified_at = incident.verified_at || activeAuditLog?.changed_at || null;
+  const verification_notes = incident.verification_notes || activeAuditLog?.remarks || null;
+
+  // Destination text (defaults to map pin address or landmark or barangay)
+  const destinationText = incident.map_pin_address || incident.landmark || (incident.barangay?.name ? `Barangay ${incident.barangay.name}` : 'Incident Location');
+
+  // Enrich each assignment with detailed dispatch specs:
+  // - Assigned Responder (responder_name, responder_type, responder_contact)
+  // - Dispatch Time (dispatch_time)
+  // - Destination (destination)
+  // - Dispatch Status (dispatch_status)
+  // - Dispatched By (dispatched_by)
+  const enrichedAssignments = (incident.assignments || []).map(asgn => ({
+    ...asgn,
+    responder_name: asgn.unit?.unit_name || 'Emergency Responder',
+    responder_type: asgn.unit?.unit_type || 'BARANGAY',
+    responder_contact: asgn.unit?.contact_number || 'N/A',
+    dispatch_time: asgn.assigned_at,
+    dispatch_status: asgn.status,
+    destination: asgn.destination || destinationText,
+    destination_coordinates: {
+      latitude: incident.latitude,
+      longitude: incident.longitude
+    },
+    dispatched_by: asgn.assigned_by_user ? {
+      user_id: asgn.assigned_by_user.user_id,
+      name: asgn.assigned_by_user.name,
+      role: asgn.assigned_by_user.role
+    } : null
+  }));
+
+  return {
+    ...incident,
+    verified_by,
+    verified_at,
+    verification_notes,
+    destination: destinationText,
+    assignments: enrichedAssignments
+  };
 };
 
 /**
@@ -442,8 +526,18 @@ export const getIncidentById = async (req, res) => {
       incident_type: true,
       barangay: true,
       reporter: { select: { name: true, email: true, contact_number: true } },
-      assignments: { include: { unit: true } },
-      status_logs: { orderBy: { changed_at: 'desc' } },
+      assignments: { 
+        include: { 
+          unit: true,
+          assigned_by_user: { select: { user_id: true, name: true, role: true } }
+        } 
+      },
+      status_logs: { 
+        include: { 
+          user: { select: { user_id: true, name: true, role: true, email: true } } 
+        }, 
+        orderBy: { changed_at: 'desc' } 
+      },
       evidence: true,
       post_report: true,
     };
@@ -454,12 +548,19 @@ export const getIncidentById = async (req, res) => {
         barangay: true,
         reporter: { select: { name: true, email: true, contact_number: true } },
         evidence: true,
-        assignments: { include: { unit: true } }
+        assignments: { 
+          include: { 
+            unit: true,
+            assigned_by_user: { select: { user_id: true, name: true, role: true } }
+          } 
+        },
+        status_logs: { 
+          include: { 
+            user: { select: { user_id: true, name: true, role: true, email: true } } 
+          }, 
+          orderBy: { changed_at: 'desc' } 
+        }
       };
-      // Only conditionally add status_logs if explicitly requested
-      if (includeParam.includes('status_logs')) {
-        includeObj.status_logs = { orderBy: { changed_at: 'desc' } };
-      }
     }
 
     const incident = await prisma.incident.findUnique({
@@ -490,8 +591,9 @@ export const getIncidentById = async (req, res) => {
 
     const taggedList = tagSameReports([incident, ...relatedIncidents]);
     const taggedIncident = taggedList.find(i => i.incident_id === incident.incident_id) || incident;
+    const enrichedIncident = enrichIncidentDetails(taggedIncident);
 
-    res.json(taggedIncident);
+    res.json(enrichedIncident);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching incident', error: error.message });
   }
@@ -771,7 +873,10 @@ export const verifyIncident = async (req, res) => {
               assigned_by: req.user.id,
               status: 'PENDING'
             },
-            include: { unit: true }
+            include: { 
+              unit: true,
+              assigned_by_user: { select: { user_id: true, name: true, role: true } }
+            }
           });
 
           // Create notification
@@ -801,23 +906,51 @@ export const verifyIncident = async (req, res) => {
           incident_type: true,
           reporter: { select: { name: true, email: true, contact_number: true } },
           barangay: true,
-          assignments: { include: { unit: { include: { barangay: true } } } },
+          assignments: { 
+            include: { 
+              unit: { include: { barangay: true } },
+              assigned_by_user: { select: { user_id: true, name: true, role: true } }
+            } 
+          },
+          status_logs: {
+            include: {
+              user: { select: { user_id: true, name: true, role: true, email: true } }
+            },
+            orderBy: { changed_at: 'desc' }
+          },
           evidence: true
         }
       });
 
-      // Log status change
+      const verificationRemark = message 
+        ? `Verified & confirmed by ${req.user.name || 'Admin'} (${req.user.role || 'ADMIN'}): ${message}` 
+        : `Verified & confirmed by ${req.user.name || 'Admin'} (${req.user.role || 'ADMIN'})`;
+
+      // Log status change with explicit verifier details
       await prisma.incidentStatusLog.create({
         data: {
           incident_id,
           changed_by: req.user.id,
           status: 'RESPONDING',
-          remarks: `Approved by admin and dispatched to units`
+          remarks: verificationRemark
         }
       });
 
+      // Enrich with verified_by and full dispatch details
+      const enrichedIncident = enrichIncidentDetails({
+        ...updatedIncident,
+        verified_by: {
+          user_id: req.user.id,
+          name: req.user.name,
+          role: req.user.role || 'ADMIN',
+          email: req.user.email
+        },
+        verified_at: new Date(),
+        verification_notes: message || 'Verified and approved for response deployment'
+      });
+
       // Broadcast verification event
-      socketService.emitIncidentVerified(updatedIncident, assignments);
+      socketService.emitIncidentVerified(enrichedIncident, enrichedIncident.assignments);
 
       // Log audit event
       await logAuditEvent({
@@ -825,36 +958,36 @@ export const verifyIncident = async (req, res) => {
         action: 'VERIFIED_INCIDENT',
         resource: 'INCIDENT',
         resource_id: incident_id,
-        details: `Approved and dispatched incident ${incident.incident_code}`,
+        details: `Approved and dispatched incident ${incident.incident_code}. Verified by ${req.user.name || 'Admin'}.`,
         ip_address: req.ip
       });
 
       // Emit dispatch-with-directions for each assigned unit that has a pinned base location
-      for (const assignment of assignments) {
+      for (const assignment of enrichedIncident.assignments) {
         const unit = assignment.unit;
         if (unit && unit.latitude && unit.longitude) {
           socketService.emitDispatchWithDirections(unit.unit_id, {
             unit_id: unit.unit_id,
             unit_name: unit.unit_name,
-            incident_id: updatedIncident.incident_id,
-            incident_code: updatedIncident.incident_code,
+            incident_id: enrichedIncident.incident_id,
+            incident_code: enrichedIncident.incident_code,
             incident_lat: incidentLat,
             incident_lng: incidentLng,
             unit_lat: unit.latitude,
             unit_lng: unit.longitude,
             distance_meters: assignment.distance_meters || null,
-            incident_description: updatedIncident.description,
-            incident_type: updatedIncident.incident_type?.name,
-            severity: updatedIncident.severity,
-            priority: updatedIncident.priority
+            incident_description: enrichedIncident.description,
+            incident_type: enrichedIncident.incident_type?.name,
+            severity: enrichedIncident.severity,
+            priority: enrichedIncident.priority
           });
         }
       }
 
       res.json({
         message: 'Incident approved and dispatched',
-        incident: updatedIncident,
-        assignments
+        incident: enrichedIncident,
+        assignments: enrichedIncident.assignments
       });
 
     } else if (action === 'REJECT') {
@@ -865,14 +998,30 @@ export const verifyIncident = async (req, res) => {
         include: { incident_type: true, reporter: true }
       });
 
+      const rejectionRemark = message 
+        ? `Marked as false alarm by ${req.user.name || 'Admin'} (${req.user.role || 'ADMIN'}): ${message}` 
+        : `Marked as false alarm by ${req.user.name || 'Admin'} (${req.user.role || 'ADMIN'})`;
+
       // Log status change
       await prisma.incidentStatusLog.create({
         data: {
           incident_id,
           changed_by: req.user.id,
           status: 'FALSE_ALARM',
-          remarks: message || 'Marked as false alarm by admin'
+          remarks: rejectionRemark
         }
+      });
+
+      const enrichedRejectedIncident = enrichIncidentDetails({
+        ...updatedIncident,
+        verified_by: {
+          user_id: req.user.id,
+          name: req.user.name,
+          role: req.user.role || 'ADMIN',
+          email: req.user.email
+        },
+        verified_at: new Date(),
+        verification_notes: message || 'Marked as false alarm'
       });
 
       // Notify reporter (if not anonymous)
@@ -889,7 +1038,7 @@ export const verifyIncident = async (req, res) => {
       }
 
       // Broadcast rejection event
-      socketService.emitIncidentRejected(updatedIncident);
+      socketService.emitIncidentRejected(enrichedRejectedIncident);
 
       // Log audit event
       await logAuditEvent({
@@ -897,13 +1046,13 @@ export const verifyIncident = async (req, res) => {
         action: 'REJECTED_INCIDENT',
         resource: 'INCIDENT',
         resource_id: incident_id,
-        details: `Rejected incident ${incident.incident_code} as false alarm: ${message || 'No remarks'}`,
+        details: `Rejected incident ${incident.incident_code} as false alarm by ${req.user.name || 'Admin'}: ${message || 'No remarks'}`,
         ip_address: req.ip
       });
 
       res.json({
         message: 'Incident rejected',
-        incident: updatedIncident
+        incident: enrichedRejectedIncident
       });
 
     } else if (action === 'REQUEST_INFO') {

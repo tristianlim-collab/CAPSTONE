@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocketContext } from '../../context/SocketContext';
+import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, ShieldAlert, AlertTriangle,
@@ -20,7 +22,41 @@ const AdminLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const { on } = useSocketContext();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Fetch pending reports count for sidebar badge
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await api.get('/incidents', { params: { status: 'REPORTED', limit: 500 } });
+        if (isMounted) {
+          const count = res.data?.data?.length ?? res.data?.pagination?.total ?? 0;
+          setPendingCount(count);
+        }
+      } catch (err) {
+        console.warn('Could not fetch pending incident count for badge:', err);
+      }
+    };
+
+    fetchPendingCount();
+
+    // Listen to real-time events to update pending badge
+    const unsubNew = on?.('new_incident', () => setPendingCount(prev => prev + 1));
+    const unsubWait = on?.('incident_awaiting_verification', () => setPendingCount(prev => prev + 1));
+    const unsubVer = on?.('incident_verified', () => setPendingCount(prev => Math.max(0, prev - 1)));
+    const unsubRej = on?.('incident_rejected', () => setPendingCount(prev => Math.max(0, prev - 1)));
+
+    return () => {
+      isMounted = false;
+      unsubNew?.();
+      unsubWait?.();
+      unsubVer?.();
+      unsubRej?.();
+    };
+  }, [on]);
 
   const handleLogoutConfirm = async () => {
     setLoggingOut(true);
@@ -32,7 +68,12 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Incident Reports', path: '/admin/verification', icon: <FileText size={20} /> },
+    { 
+      name: 'Pending Queue & Reports', 
+      path: '/admin/verification', 
+      icon: <FileText size={20} />,
+      badge: pendingCount > 0 ? pendingCount : null
+    },
     { name: 'Incident Archive', path: '/admin/archive', icon: <Archive size={20} /> },
     { name: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
     { name: 'Response Units', path: '/admin/response-units', icon: <Truck size={20} /> },
@@ -111,7 +152,12 @@ const AdminLayout = () => {
                     {item.icon}
                   </div>
                   <span className="text-sm font-semibold whitespace-nowrap">{item.name}</span>
-                  {isActive && (
+                  {item.badge && (
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-sm animate-pulse">
+                      {item.badge}
+                    </span>
+                  )}
+                  {isActive && !item.badge && (
                     <motion.div
                       layoutId="activeNav"
                       className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_8px_rgba(79,70,229,0.6)]"

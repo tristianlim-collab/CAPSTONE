@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, XCircle, AlertTriangle, MessageSquare, MapPin,
   Clock, User, FileText, Loader2, X, Send, Flame, Stethoscope, Car, ShieldAlert, Filter,
-  ExternalLink, ChevronRight, Download, ChevronDown
+  ExternalLink, ChevronRight, Download, ChevronDown, Phone, Navigation, PlusCircle, CheckCheck, Check, ShieldCheck
 } from 'lucide-react';
-import { reportAPI } from '../../api';
+import { reportAPI, assignmentAPI } from '../../api';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -22,8 +22,8 @@ const INCIDENT_TYPE_ICONS = {
 };
 
 const STATUS_TABS = [
+  { key: 'REPORTED', label: 'Pending Queue' },
   { key: 'ALL', label: 'All Reports' },
-  { key: 'REPORTED', label: 'Pending Review' },
   { key: 'RESPONDING', label: 'Responding' },
   { key: 'ON_SCENE', label: 'On Scene' },
   { key: 'RESOLVED', label: 'Resolved' },
@@ -51,7 +51,7 @@ function ChangeView({ center, zoom }) {
 
 export default function IncidentVerificationQueue() {
   const { on, connected } = useSocketContext();
-  const [activeTab, setActiveTab] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('REPORTED'); // Default to Pending Queue
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState(null);
@@ -67,6 +67,13 @@ export default function IncidentVerificationQueue() {
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
+
+  // Revision 2 & 3: Verification & Dispatch Modal States
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [verifyNotes, setVerifyNotes] = useState('');
+  const [verifyDestination, setVerifyDestination] = useState('');
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [extraUnitId, setExtraUnitId] = useState('');
 
   // Track new incident IDs for pulse effect
   const [newIncidentIds, setNewIncidentIds] = useState(new Set());
@@ -221,7 +228,21 @@ export default function IncidentVerificationQueue() {
   const handleSelectIncident = async (incident) => {
     setSelectedIncident(incident);
     setLoadingDetails(true);
-    setSelectedUnitIds([]);
+    setVerifyNotes('');
+    setVerifyDestination(incident.map_pin_address || incident.landmark || 'Incident Location');
+
+    // Pre-select matching unit immediately for fast dispatch
+    try {
+      const defaultType = Array.isArray(incidentTypes)
+        ? incidentTypes.find(t => t.type_id === incident.incident_type_id)?.default_unit_type
+        : null;
+      const matchingUnit = (Array.isArray(responseUnits) && defaultType)
+        ? responseUnits.find(u => u.unit_type === defaultType && u.availability_status === 'AVAILABLE')
+        : (Array.isArray(responseUnits) ? responseUnits.find(u => u.availability_status === 'AVAILABLE') : null);
+      setSelectedUnitIds(matchingUnit ? [matchingUnit.unit_id] : []);
+    } catch {
+      setSelectedUnitIds([]);
+    }
 
     try {
       const res = await api.get(`/incidents/${incident.incident_id}`);
@@ -241,24 +262,90 @@ export default function IncidentVerificationQueue() {
     }
   };
 
-  const handleApprove = async () => {
+  const handleOpenVerifyModal = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!selectedIncident) return;
+    setVerifyDestination(selectedIncident.map_pin_address || selectedIncident.landmark || 'Incident Location');
+    try {
+      if (selectedUnitIds.length === 0) {
+        const defaultType = Array.isArray(incidentTypes)
+          ? incidentTypes.find(t => t.type_id === selectedIncident.incident_type_id)?.default_unit_type
+          : null;
+        const matchingUnit = (Array.isArray(responseUnits) && defaultType)
+          ? responseUnits.find(u => u.unit_type === defaultType && u.availability_status === 'AVAILABLE')
+          : (Array.isArray(responseUnits) ? responseUnits.find(u => u.availability_status === 'AVAILABLE') : null);
+        if (matchingUnit) setSelectedUnitIds([matchingUnit.unit_id]);
+      }
+    } catch {
+      // safe fallback
+    }
+    setVerifyModalOpen(true);
+  };
+
+  const handleConfirmVerifyAndDispatch = async () => {
     if (!selectedIncident) return;
     setSubmitting(true);
     try {
       const res = await api.post(`/incidents/${selectedIncident.incident_id}/verify`, {
         action: 'APPROVE',
+        message: verifyNotes?.trim() || 'Verified and responder assigned by dispatcher',
         manual_unit_ids: selectedUnitIds.length > 0 ? selectedUnitIds : undefined
       });
       const updatedIncident = res.data?.incident || { ...selectedIncident, status: 'RESPONDING' };
       const newAssignments = res.data?.assignments || [];
 
-      toast.success('Incident verified and dispatched successfully');
+      toast.success('Incident verified & responder dispatched successfully!');
       setIncidents(prev => prev.map(i => i.incident_id === selectedIncident.incident_id ? { ...i, ...updatedIncident, assignments: newAssignments } : i));
       setSelectedIncident(prev => ({ ...prev, ...updatedIncident, assignments: newAssignments }));
-      setActionModal({ open: false, action: null, message: '' });
+      setVerifyModalOpen(false);
+      setVerifyNotes('');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to approve incident');
-    } finally { setSubmitting(false); }
+    } finally { 
+      setSubmitting(false); 
+    }
+  };
+
+  const handleUpdateDispatchStatus = async (assignmentId, newStatus) => {
+    try {
+      const res = await assignmentAPI.updateStatus(assignmentId, { status: newStatus });
+      const updatedAsgn = res.data;
+      toast.success(`Dispatch status updated to ${newStatus.replace('_', ' ')}`);
+      setSelectedIncident(prev => {
+        if (!prev) return prev;
+        const updatedAssignments = (prev.assignments || []).map(a => 
+          a.assignment_id === assignmentId ? { ...a, ...updatedAsgn, status: newStatus, dispatch_status: newStatus } : a
+        );
+        return { ...prev, assignments: updatedAssignments };
+      });
+      fetchIncidents(searchFilters, true);
+    } catch (err) {
+      toast.error('Failed to update dispatch status');
+    }
+  };
+
+  const handleAssignAdditionalUnit = async () => {
+    if (!selectedIncident || !extraUnitId) return;
+    setSubmitting(true);
+    try {
+      const res = await assignmentAPI.assignUnit({
+        incident_id: selectedIncident.incident_id,
+        unit_id: extraUnitId
+      });
+      toast.success('Additional responder deployed!');
+      const newAsgn = res.data;
+      setSelectedIncident(prev => ({
+        ...prev,
+        assignments: [...(prev.assignments || []), newAsgn]
+      }));
+      setAssignModalOpen(false);
+      setExtraUnitId('');
+      fetchIncidents(searchFilters, true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to dispatch additional responder');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReject = async () => {
@@ -404,41 +491,69 @@ export default function IncidentVerificationQueue() {
         </div>
       </motion.div>
 
+      {/* Revision 1: Dedicated Queue for Pending Reports Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border-2 border-amber-300 dark:border-amber-500/30 rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-sm"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-amber-500/30 shrink-0">
+            {incidents.filter(i => i.status === 'REPORTED').length}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Emergency Pending Reports Queue</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-sm">
+                Priority Triage
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-1">
+              {incidents.filter(i => i.status === 'REPORTED').length === 0
+                ? "Pending Queue is clear — all incoming reports have been verified & deployed."
+                : `${incidents.filter(i => i.status === 'REPORTED').length} incoming report${incidents.filter(i => i.status === 'REPORTED').length > 1 ? 's' : ''} awaiting dispatcher verification, validation, & responder assignment.`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={() => handleTabChange('REPORTED')}
+            className={`w-full md:w-auto px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'REPORTED'
+                ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25 ring-2 ring-amber-400'
+                : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 hover:bg-amber-50'
+            }`}
+          >
+            <Clock size={16} /> Pending Queue [{incidents.filter(i => i.status === 'REPORTED').length}]
+          </button>
+          <button
+            onClick={() => handleTabChange('ALL')}
+            className={`w-full md:w-auto px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+              activeTab === 'ALL'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            All Reports [{incidents.length}]
+          </button>
+        </div>
+      </motion.div>
+
       {/* Search & Tabs */}
       <div className="space-y-3">
-        {/* Row 1: Search bar with ALL REPORTS embedded before severity */}
+        {/* Row 1: Search bar */}
         <IncidentSearch
           onFiltersChange={handleFiltersChange}
           incidentTypes={incidentTypes}
           responseUnits={responseUnits}
           showStatusFilter={false}
           compact
-          leadingActions={(() => {
-            const tab = STATUS_TABS[0];
-            const count = incidents.length;
-            const isActive = activeTab === tab.key;
-            return (
-              <motion.button
-                key={tab.key}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-none px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap
-                  ${isActive
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-800'
-                  }`}
-              >
-                {tab.label}
-              </motion.button>
-            );
-          })()}
         />
 
-        {/* Row 2: Remaining status tabs */}
+        {/* Row 2: Status Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-          {STATUS_TABS.slice(1).map((tab, idx) => {
-            const count = incidents.filter(i => i.status === tab.key).length;
+          {STATUS_TABS.map((tab, idx) => {
+            const count = tab.key === 'ALL' ? incidents.length : incidents.filter(i => i.status === tab.key).length;
             const isActive = activeTab === tab.key;
             return (
               <motion.button
@@ -446,14 +561,15 @@ export default function IncidentVerificationQueue() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-none px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all
+                onClick={() => handleTabChange(tab.key)}
+                className={`flex-none px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2
                   ${isActive
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
                     : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800'
                   }`}
               >
-                {tab.label} <span className={`ml-1.5 opacity-60 ${isActive ? 'text-white' : ''}`}>[{count}]</span>
+                {tab.key === 'REPORTED' && <Clock size={14} className={isActive ? 'text-white' : 'text-amber-500'} />}
+                {tab.label} <span className={`ml-1 text-[11px] font-bold ${isActive ? 'text-white opacity-80' : 'text-slate-400'}`}>[{count}]</span>
               </motion.button>
             );
           })}
@@ -543,6 +659,11 @@ export default function IncidentVerificationQueue() {
                             <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-400" /> {getTimeAgo(incident.reported_at)}</span>
                             <span className="flex items-center gap-1.5"><User size={14} className="text-emerald-400" /> {incident.reporter?.name || incident.reporter_name || 'Local Resident'}</span>
                             <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> {incident.landmark ? `${incident.barangay?.name || 'Area'} (${incident.landmark})` : (incident.barangay?.name || 'Area Known')}</span>
+                            {incident.verified_by?.name && (
+                              <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-black">
+                                <CheckCircle size={14} className="text-indigo-500" /> Verified: {incident.verified_by.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className={`self-center ${isSelected ? 'text-indigo-500' : 'text-slate-300'} transition-all group-hover:translate-x-1`}>
@@ -750,47 +871,314 @@ export default function IncidentVerificationQueue() {
 
 
 
-                  {/* Assigned Units List (For already verified) */}
-                  {selectedIncident.assignments?.length > 0 && (
-                    <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Dispatches</p>
-                      <div className="space-y-2">
-                        {selectedIncident.assignments.map((asgn, idx) => (
-                          <div key={idx} className="flex items-center gap-4 p-4 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 rounded-3xl">
-                            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
-                              <Car size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{asgn.unit?.unit_name}</p>
-                              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none mt-1">{asgn.status}</p>
-                            </div>
+                  {/* Revision 2: Verification & Confirmation Record */}
+                  {(selectedIncident.verified_by || selectedIncident.verified_at || selectedIncident.status !== 'REPORTED') && (
+                    <div className="p-5 rounded-3xl bg-indigo-50/70 dark:bg-indigo-950/30 border-2 border-indigo-200/80 dark:border-indigo-800/60 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                            <CheckCircle size={16} />
                           </div>
-                        ))}
+                          <p className="text-xs font-black text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                            Verification & Confirmation Record
+                          </p>
+                        </div>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm ${
+                          selectedIncident.status === 'FALSE_ALARM'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-indigo-600 text-white'
+                        }`}>
+                          {selectedIncident.status === 'FALSE_ALARM' ? 'Marked False Alarm' : 'Verified & Confirmed'}
+                        </span>
                       </div>
+                      <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <User size={12} className="text-indigo-500" /> Confirmed / Verified By
+                          </p>
+                          <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate">
+                            {selectedIncident.verified_by?.name || 'Authorized Dispatcher'}
+                          </p>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                            {selectedIncident.verified_by?.role || 'ADMIN'}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <Clock size={12} className="text-indigo-500" /> Verification Time
+                          </p>
+                          <p className="font-extrabold text-slate-800 dark:text-slate-200">
+                            {selectedIncident.verified_at
+                              ? new Date(selectedIncident.verified_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                              : selectedIncident.updated_at
+                                ? new Date(selectedIncident.updated_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                : 'Recorded'}
+                          </p>
+                          <p className="text-[9px] font-bold text-slate-400">
+                            {selectedIncident.verified_at
+                              ? new Date(selectedIncident.verified_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : selectedIncident.updated_at
+                                ? new Date(selectedIncident.updated_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : ''}
+                          </p>
+                        </div>
+                      </div>
+                      {selectedIncident.verification_notes && (
+                        <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 text-xs text-slate-600 dark:text-slate-300">
+                          <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Verification Remarks:</span>
+                          "{selectedIncident.verification_notes}"
+                        </div>
+                      )}
                     </div>
                   )}
+
+                  {/* Revision 3: Dispatch Details Section (Assigned Responder, Dispatch Time, Destination, Dispatch Status) */}
+                  <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                          <Navigation size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Dispatch Details</p>
+                          <p className="text-[10px] text-slate-400 font-medium">Assigned responders, time, destination & status</p>
+                        </div>
+                      </div>
+                      {selectedIncident.status !== 'REPORTED' && selectedIncident.status !== 'FALSE_ALARM' && (
+                        <button
+                          onClick={() => setAssignModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                        >
+                          <PlusCircle size={14} /> Dispatch Unit
+                        </button>
+                      )}
+                    </div>
+
+                    {(!selectedIncident.assignments || selectedIncident.assignments.length === 0) ? (
+                      <div className="p-4 sm:p-5 bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/40 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-800/40 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/60 space-y-3.5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                            <Car size={15} className="text-indigo-600 dark:text-indigo-400" />
+                            Dispatch Details Setup
+                          </span>
+                          <span className="text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            Awaiting Dispatch
+                          </span>
+                        </div>
+
+                        {/* Revision 3: Choose Unit / Assigned Responder */}
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1.5 flex items-center justify-between">
+                            <span className="flex items-center gap-1">
+                              <Car size={12} className="text-indigo-500" />
+                              1. Choose Response Unit to Deploy:
+                            </span>
+                            {selectedUnitIds.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUnitIds([])}
+                                className="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                              >
+                                Reset to Auto
+                              </button>
+                            )}
+                          </label>
+                          <select
+                            value={selectedUnitIds[0] || ''}
+                            onChange={(e) => setSelectedUnitIds(e.target.value ? [e.target.value] : [])}
+                            className="w-full p-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl text-xs font-black text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"
+                          >
+                            <option value="">⚡ Auto-Assign Nearest Available Responder</option>
+                            {Array.isArray(responseUnits) && responseUnits.map(unit => (
+                              <option key={unit.unit_id} value={unit.unit_id}>
+                                {unit.unit_name} ({unit.unit_type}) — {unit.availability_status}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Revision 3: Destination */}
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1 flex items-center gap-1">
+                            <MapPin size={11} className="text-rose-500" /> 2. Target Destination:
+                          </label>
+                          <p className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title={selectedIncident.map_pin_address || selectedIncident.landmark}>
+                            {selectedIncident.map_pin_address || selectedIncident.landmark || 'Incident Location Coordinates'}
+                          </p>
+                        </div>
+
+                        {/* Revision 2: Verification Remarks */}
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1 flex items-center gap-1">
+                            <CheckCircle size={11} className="text-emerald-500" /> 3. Verification Remarks (Audit Trail):
+                          </label>
+                          <input
+                            type="text"
+                            value={verifyNotes}
+                            onChange={(e) => setVerifyNotes(e.target.value)}
+                            placeholder="e.g. Caller verified via phone call; responder dispatched"
+                            className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                          />
+                        </div>
+
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          💡 Verifying will permanently record your dispatcher name, time, chosen unit, and destination in the audit log.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedIncident.assignments.map((asgn, idx) => {
+                          const responderName = asgn.responder_name || asgn.unit?.unit_name || 'Emergency Responder';
+                          const responderType = asgn.responder_type || asgn.unit?.unit_type || 'BARANGAY';
+                          const responderContact = asgn.responder_contact || asgn.unit?.contact_number || 'N/A';
+                          const dispatchTime = asgn.dispatch_time || asgn.assigned_at;
+                          const destination = asgn.destination || selectedIncident.map_pin_address || selectedIncident.landmark || 'Incident Location';
+                          const dispatchStatus = asgn.dispatch_status || asgn.status || 'PENDING';
+
+                          return (
+                            <div
+                              key={asgn.assignment_id || idx}
+                              className="p-5 bg-white dark:bg-slate-900 rounded-3xl border-2 border-emerald-500/20 dark:border-emerald-500/30 shadow-sm space-y-3"
+                            >
+                              {/* 1. Assigned Responder Header */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shrink-0">
+                                    <Car size={18} />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{responderName}</p>
+                                      <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                        {responderType}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                      <Phone size={10} className="text-slate-400" /> {responderContact}
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* 4. Dispatch Status Badge */}
+                                <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                                  dispatchStatus === 'ON_SCENE' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' :
+                                  dispatchStatus === 'RESOLVED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                                  dispatchStatus === 'RESPONDING' || dispatchStatus === 'ACCEPTED' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' :
+                                  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                }`}>
+                                  {dispatchStatus.replace('_', ' ')}
+                                </span>
+                              </div>
+
+                              {/* 2 & 3: Dispatch Time & Destination Grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                {/* Item 2: Dispatch Time */}
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 flex items-center gap-1">
+                                    <Clock size={11} className="text-indigo-500" /> Dispatch Time
+                                  </span>
+                                  <p className="font-extrabold text-slate-800 dark:text-slate-200">
+                                    {dispatchTime ? new Date(dispatchTime).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}
+                                  </p>
+                                  <p className="text-[9px] text-slate-400">
+                                    {dispatchTime ? new Date(dispatchTime).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                                  </p>
+                                </div>
+
+                                {/* Item 3: Destination */}
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 flex items-center gap-1">
+                                    <MapPin size={11} className="text-rose-500" /> Destination
+                                  </span>
+                                  <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate" title={destination}>
+                                    {destination}
+                                  </p>
+                                  {selectedIncident.landmark && (
+                                    <p className="text-[9px] text-indigo-600 dark:text-indigo-400 truncate">
+                                      Near: {selectedIncident.landmark}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Dispatch Status Action Controls */}
+                              {dispatchStatus !== 'RESOLVED' && (
+                                <div className="flex items-center gap-2 pt-1">
+                                  {dispatchStatus === 'PENDING' && (
+                                    <button
+                                      onClick={() => handleUpdateDispatchStatus(asgn.assignment_id, 'RESPONDING')}
+                                      className="flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                                    >
+                                      Mark En Route
+                                    </button>
+                                  )}
+                                  {(dispatchStatus === 'PENDING' || dispatchStatus === 'RESPONDING' || dispatchStatus === 'ACCEPTED') && (
+                                    <button
+                                      onClick={() => handleUpdateDispatchStatus(asgn.assignment_id, 'ON_SCENE')}
+                                      className="flex-1 py-1.5 px-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                                    >
+                                      Mark On Scene
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleUpdateDispatchStatus(asgn.assignment_id, 'RESOLVED')}
+                                    className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                                  >
+                                    Mark Resolved
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Foot Action Area */}
-                <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                <div className="p-6 sm:p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 space-y-3">
                   {canVerify ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleApprove} disabled={submitting}
-                        className="col-span-2 py-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white font-black uppercase tracking-widest text-xs rounded-3xl shadow-xl shadow-indigo-500/30 disabled:opacity-50 flex items-center justify-center gap-3">
-                        {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />} Verify & Initiate Response
-                      </motion.button>
+                    <div className="space-y-2.5">
+                      {/* Button 1: Immediate Verify & Dispatch with Chosen Responder */}
                       <button
-                        onClick={handleReject}
+                        type="button"
                         disabled={submitting}
-                        className="col-span-2 py-3 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-red-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        onClick={handleConfirmVerifyAndDispatch}
+                        className="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-indigo-500/25 disabled:opacity-50 flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-98"
                       >
-                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                        Mark as False Alarm
+                        {submitting ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+                        Verify Report & Dispatch Responder
                       </button>
+
+                      {/* Button 2: Choose Unit Modal & False Alarm */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOpenVerifyModal(e);
+                          }}
+                          disabled={submitting}
+                          className="py-3 px-3 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                        >
+                          <Car size={14} className="text-indigo-500" />
+                          Choose Unit Modal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleReject}
+                          disabled={submitting}
+                          className="py-3 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-red-600 hover:text-red-700 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
+                        >
+                          {submitting ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                          False Alarm
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-center py-2 px-4 rounded-2xl bg-slate-200 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Response Strategy Finalized
+                    <div className="text-center py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700">
+                      <CheckCircle size={16} className="text-emerald-500" /> Report Already Verified & Dispatched
                     </div>
                   )}
                 </div>
@@ -831,19 +1219,277 @@ export default function IncidentVerificationQueue() {
         document.body
       )}
 
-      {/* Verification Modals Wrapper */}
-      <AnimatePresence>
-        {actionModal.open && (
-          <div className="fixed inset-0 z-[1500] flex items-center justify-center p-6">
+      {/* Verification Modals Wrapper mounted via createPortal directly into document.body */}
+      {/* Revision 2 & 3: Verification & Dispatch Modal */}
+        {verifyModalOpen && selectedIncident && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setActionModal({ open: false, action: null, message: '' })}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/75 backdrop-blur-md"
+              onClick={() => !submitting && setVerifyModalOpen(false)}
             />
             <motion.div
-              initial={{ opacity: 0, y: 100, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-              className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-6 sm:p-8 overflow-hidden z-10 my-auto border border-slate-100 dark:border-slate-800"
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-blue-50 dark:bg-blue-500/10 text-blue-600">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold shadow-sm">
+                    <ShieldCheck size={26} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">Verify Report & Dispatch</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">#{selectedIncident.incident_code}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !submitting && setVerifyModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="py-5 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {/* Destination Confirmation */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                    <MapPin size={12} className="text-rose-500" /> Target Destination
+                  </span>
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-snug">
+                    {verifyDestination || selectedIncident.map_pin_address || selectedIncident.landmark || 'Incident Location'}
+                  </p>
+                  {selectedIncident.landmark && (
+                    <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                      Landmark: {selectedIncident.landmark}
+                    </p>
+                  )}
+                </div>
+
+                {/* Revision 2: Verification Remarks / Confirmation Notes */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <CheckCircle size={14} className="text-emerald-500" /> Verification Remarks / Confirmation Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={verifyNotes}
+                    onChange={(e) => setVerifyNotes(e.target.value)}
+                    placeholder="e.g. Caller identity confirmed via callback; reported fire is active..."
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none resize-none transition-all"
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    This will be recorded with your account name and exact timestamp for the official audit trail.
+                  </p>
+                </div>
+
+                {/* Revision 3: Assigned Responder Selection */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Car size={14} className="text-indigo-500" /> Assign Responder / Unit
+                    </label>
+                    {selectedUnitIds.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUnitIds([])}
+                        className="text-[10px] text-indigo-600 dark:text-indigo-400 font-black hover:underline"
+                      >
+                        Reset to Auto-Assign
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        Smart Proximity Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-slate-200 dark:border-slate-700 rounded-2xl p-2.5 bg-slate-50/50 dark:bg-slate-800/30">
+                    {!Array.isArray(responseUnits) || responseUnits.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-4">No units registered.</p>
+                    ) : (
+                      responseUnits.map(unit => {
+                        const isSelected = selectedUnitIds.includes(unit.unit_id);
+                        return (
+                          <button
+                            type="button"
+                            key={unit.unit_id}
+                            onClick={() => {
+                              setSelectedUnitIds(isSelected ? [] : [unit.unit_id]);
+                            }}
+                            className={`w-full text-left p-3 rounded-xl border text-xs cursor-pointer flex items-center justify-between transition-all ${
+                              isSelected
+                                ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-indigo-900 dark:text-indigo-200 shadow-sm ring-1 ring-indigo-500'
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                              }`}>
+                                {isSelected && <Check size={12} />}
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-800 dark:text-slate-200">{unit.unit_name}</p>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  {unit.unit_type}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
+                              unit.availability_status === 'AVAILABLE'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            }`}>
+                              {unit.availability_status}
+                            </span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {selectedUnitIds.length === 0 && (
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
+                      💡 Nearest available response unit will be automatically dispatched based on incident location.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setVerifyModalOpen(false)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-xs rounded-2xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleConfirmVerifyAndDispatch}
+                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-wider text-xs rounded-2xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={16} />}
+                  Verify & Dispatch Now
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+
+        {/* Modal: Dispatch Additional Unit via createPortal */}
+        {assignModalOpen && selectedIncident && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/75 backdrop-blur-md"
+              onClick={() => !submitting && setAssignModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 0 }}
+              className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-6 sm:p-8 overflow-hidden space-y-5 z-10 my-auto border border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                    <PlusCircle size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">Dispatch Additional Responder</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Incident #{selectedIncident.incident_code}</p>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => !submitting && setAssignModalOpen(false)} 
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                    Destination
+                  </label>
+                  <p className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
+                    {selectedIncident.map_pin_address || selectedIncident.landmark || 'Incident Location'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                    Select Response Unit
+                  </label>
+                  <select
+                    value={extraUnitId}
+                    onChange={(e) => setExtraUnitId(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="">-- Choose Unit to Deploy --</option>
+                    {responseUnits.map(unit => (
+                      <option key={unit.unit_id} value={unit.unit_id}>
+                        {unit.unit_name} ({unit.unit_type}) - {unit.availability_status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setAssignModalOpen(false)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-xs rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting || !extraUnitId}
+                  onClick={handleAssignAdditionalUnit}
+                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                >
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                  Deploy Unit
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+
+        {/* Intelligence Request Modal via createPortal */}
+        {actionModal.open && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/75 backdrop-blur-md" 
+              onClick={() => setActionModal({ open: false, action: null, message: '' })}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95 }} 
+              animate={{ opacity: 1, y: 0, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 overflow-hidden z-10 my-auto border border-slate-100 dark:border-slate-800"
+            >
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-blue-50 dark:bg-blue-500/10 text-blue-600">
                 <MessageSquare size={32} />
               </div>
               <h3 className="text-xl font-black tracking-tight mb-2">Intelligence Request</h3>
@@ -867,9 +1513,9 @@ export default function IncidentVerificationQueue() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 }

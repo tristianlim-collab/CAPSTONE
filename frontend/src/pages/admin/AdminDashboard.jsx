@@ -236,12 +236,14 @@ export default function AdminDashboard() {
         <div className="w-80 flex flex-col gap-3 overflow-y-auto">
 
           {/* Helper for severity badge style */}
-          {/* New Reports */}
+          {/* New Reports Queue */}
           <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100">
               <FileText size={16} className="text-amber-600 shrink-0" />
-              <span className="font-bold text-amber-800 text-sm">New Reports</span>
-              <span className="ml-auto bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              <Link to="/admin/verification" className="font-bold text-amber-800 text-sm hover:underline flex items-center gap-1.5" title="Open full Pending Queue">
+                Pending Queue
+              </Link>
+              <span className="ml-auto bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                 {recentIncidents.filter(i => i.status === 'REPORTED').length}
               </span>
             </div>
